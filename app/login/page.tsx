@@ -9,17 +9,59 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { signInOrUp, signInWithGoogle } from "@/lib/auth";
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  function handleContinue() {
-    // TODO (backend — Jerry/H2O): call the real sign-in / sign-up here.
-    // For now, move the user forward so the flow is testable.
-    router.push("/dashboard");
+  // Email/password — signs in, or creates the account if it's new.
+  async function handleContinue() {
+    if (loading) return;
+    setError(null);
+    setNotice(null);
+    setLoading(true);
+    try {
+      const result = await signInOrUp(email, password);
+      if (!result.ok) {
+        setError(result.error ?? "Something went wrong. Please try again.");
+      } else if (result.needsEmailConfirmation) {
+        setNotice("Almost there — check your email to confirm your account, then sign in.");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch {
+      setError("Couldn't reach the server. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Continue with Google (OAuth redirect in live mode; instant in demo mode).
+  async function handleGoogle() {
+    if (loading) return;
+    setError(null);
+    setNotice(null);
+    setLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      if (result.redirectUrl) {
+        window.location.href = result.redirectUrl;
+      } else if (result.ok) {
+        router.push("/dashboard");
+      } else {
+        setError(result.error ?? "Google sign-in failed. Please try again.");
+        setLoading(false);
+      }
+    } catch {
+      setError("Couldn't start Google sign-in. Please try again.");
+      setLoading(false);
+    }
   }
 
   return (
@@ -125,6 +167,7 @@ export default function LoginScreen() {
           className="tap"
           role="button"
           tabIndex={0}
+          aria-disabled={loading}
           onClick={handleContinue}
           onKeyDown={(e) => e.key === "Enter" && handleContinue()}
           style={{
@@ -137,10 +180,24 @@ export default function LoginScreen() {
             justifyContent: "center",
             fontWeight: 700,
             fontSize: 16,
+            opacity: loading ? 0.6 : 1,
+            pointerEvents: loading ? "none" : "auto",
           }}
         >
-          Continue
+          {loading ? "Please wait…" : "Continue"}
         </div>
+
+        {/* error / notice */}
+        {error && (
+          <p role="alert" style={{ marginTop: 14, fontSize: 13, color: "#ff6b81", lineHeight: 1.5 }}>
+            {error}
+          </p>
+        )}
+        {notice && (
+          <p style={{ marginTop: 14, fontSize: 13, color: "#4ade80", lineHeight: 1.5 }}>
+            {notice}
+          </p>
+        )}
 
         {/* divider */}
         <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "24px 0" }}>
@@ -154,8 +211,9 @@ export default function LoginScreen() {
           className="tap"
           role="button"
           tabIndex={0}
-          onClick={handleContinue}
-          onKeyDown={(e) => e.key === "Enter" && handleContinue()}
+          aria-disabled={loading}
+          onClick={handleGoogle}
+          onKeyDown={(e) => e.key === "Enter" && handleGoogle()}
           style={{
             height: 56,
             borderRadius: 14,
@@ -167,6 +225,8 @@ export default function LoginScreen() {
             gap: 12,
             fontWeight: 700,
             fontSize: 15,
+            opacity: loading ? 0.6 : 1,
+            pointerEvents: loading ? "none" : "auto",
           }}
         >
           <svg width="20" height="20" viewBox="0 0 48 48">
