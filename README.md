@@ -79,9 +79,18 @@ app/
 ├── page.tsx          # Landing / Get Started
 ├── login/page.tsx    # Sign up / Log in
 ├── dashboard/page.tsx# Dashboard (placeholder — built next)
-└── api/              # backend routes — Jerry & H2O (coming)
+└── api/              # backend routes
+    ├── trust-score/  # AI Trust Score (H2O)
+    ├── scam-check/   # AI scam detector (H2O)
+    ├── dispute/      # AI dispute judge (H2O)
+    └── ai-health/    # AI layer status
+lib/ai/               # the AI backend — prompts, Claude client, demo mode (H2O)
 docs/                 # the design prototype + master plan
 ```
+
+The three AI features are live as API routes — see [`lib/ai/README.md`](lib/ai/README.md).
+They call **Claude** when an `ANTHROPIC_API_KEY` is set, and fall back to a
+deterministic offline "demo mode" so the app still works on stage with no key.
 
 ## Where the backend plugs in
 
