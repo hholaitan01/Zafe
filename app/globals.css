@@ -1,0 +1,74 @@
+/* ---- TrustFlow AI · global styles ---------------------------------------- */
+/* Shared reset, fonts and animations. Each screen sets its own background.    */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: #050506;
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* the app is a phone screen; on desktop we centre it, on mobile it fills */
+.device {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.statusbar {
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* buttons behave like buttons */
+.tap {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+.tap:hover { filter: brightness(1.06); }
+.tap:active { transform: scale(0.985); }
+
+:focus-visible { outline: 2px solid #ff7aa0; outline-offset: 2px; }
+
+/* the floating shield on the splash screen */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+/* real form fields, styled to match the design */
+.field {
+  width: 100%;
+  height: 56px;
+  border-radius: 14px;
+  background: #1a1a1d;
+  border: 1px solid #26262b;
+  padding: 0 16px;
+  font-size: 15px;
+  color: #fff;
+  font-family: inherit;
+  outline: none;
+}
+.field::placeholder { color: #6d6d74; }
+.field:focus { border-color: #E4144F; }

@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TrustFlow AI — Concept Prototype | Wema Hackaholics 7.0</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @property --p { syntax: '<number>'; inherits: false; initial-value: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+  html, body { background: radial-gradient(1200px 800px at 50% -10%, #17070c 0%, #060608 55%, #040405 100%); }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #fff; }
+  a { color: #E4144F; text-decoration: none; }
+  a:hover { color: #ff4f7d; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #26262b; border-radius: 8px; }
+  .fscroll::-webkit-scrollbar { width: 0; }
+  @keyframes fillLow { from { --p: 0; } to { --p: 88; } }
+  @keyframes fillHigh { from { --p: 0; } to { --p: 21; } }
+  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(228,20,79,0); } 50% { box-shadow: 0 0 0 6px rgba(228,20,79,.10); } }
+  @keyframes flagIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes framePulse { 0% { box-shadow: 0 0 0 0 rgba(228,20,79,.55), 0 40px 90px -30px rgba(0,0,0,.9); } 100% { box-shadow: 0 0 0 22px rgba(228,20,79,0), 0 40px 90px -30px rgba(0,0,0,.9); } }
+  .ring { --p: 0; }
+  .ring.in-view.low  { animation: fillLow 1.5s cubic-bezier(.22,1,.36,1) forwards; }
+  .ring.in-view.high { animation: fillHigh 1.5s cubic-bezier(.22,1,.36,1) forwards; }
+  .flag.in-view { animation: flagIn .5s ease both; }
+  .flag:nth-child(2) { animation-delay: .12s; }
+  .flag:nth-child(3) { animation-delay: .24s; }
+  .flag:nth-child(4) { animation-delay: .36s; }
+  .frame { transition: transform .3s ease; }
+  .frame.flash { animation: framePulse 1.1s ease-out; }
+  .navbtn { cursor: pointer; }
+  .navbtn:active { transform: scale(.97); }
+
+  /* ===== FLOW MAP: arrows connecting a button to the screen it opens ===== */
+  #flowlayer {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 0; overflow: visible;
+  }
+  /* screen blocks sit ABOVE the arrow layer, so lines tuck behind the phones
+     instead of scribbling across them */
+  #gallery > div { position: relative; z-index: 2; }
+  #flowlayer .fl-path {
+    fill: none;
+    stroke: url(#flowGrad);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 9 11;
+    filter: url(#flowGlow);
+    opacity: .62;
+    animation: dashFlow 1.5s linear infinite;
+  }
+  @keyframes dashFlow { to { stroke-dashoffset: -40; } }
+  #flowlayer .fl-halo {
+    fill: none; stroke: #E4144F; stroke-width: 9;
+    opacity: .07; stroke-linecap: round; filter: blur(5px);
+  }
+  #flowlayer .fl-dot { fill: #E4144F; opacity: .95; }
+  #flowlayer .fl-dot-ring { fill: none; stroke: #E4144F; stroke-width: 1.6; opacity: .5; }
+  #flowlayer .fl-label {
+    font: 700 12px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    fill: #ffd7e1; letter-spacing: .01em;
+  }
+  #flowlayer .fl-label-bg { fill: #1b0710; stroke: rgba(228,20,79,.55); stroke-width: 1; }
+  #flowlayer .fl-spark { fill: #fff; opacity: .9; }
+
+  /* dim everything except the hovered screen's connections */
+  #flowlayer.focusing .fl-group { opacity: .1; transition: opacity .25s ease; }
+  #flowlayer.focusing .fl-group.lit { opacity: 1; }
+  #flowlayer .fl-group { transition: opacity .25s ease; }
+  #flowlayer.hidden { display: none; }
+
+  .frame.lit-src { box-shadow: 0 0 0 3px rgba(228,20,79,.75), 0 40px 90px -30px rgba(0,0,0,.9) !important; }
+  .frame.lit-dst { box-shadow: 0 0 0 3px rgba(35,178,109,.75), 0 40px 90px -30px rgba(0,0,0,.9) !important; }
+
+  #flowbar {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: 22px; z-index: 60;
+    display: flex; align-items: center; gap: 14px;
+    padding: 11px 16px; border-radius: 999px;
+    background: rgba(12,12,14,.92); border: 1px solid #26262b;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 50px -14px rgba(0,0,0,.9);
+    font: 600 12.5px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #b8b8bf;
+  }
+  #flowbar button {
+    font: inherit; font-weight: 700; cursor: pointer;
+    padding: 7px 13px; border-radius: 999px;
+    background: #E4144F; color: #fff; border: none;
+  }
+  #flowbar button.off { background: #26262b; color: #9A9AA0; }
+  #flowbar .legend { display: flex; align-items: center; gap: 7px; }
+  #flowbar .dash {
+    width: 26px; height: 0; border-top: 2.5px dashed #E4144F; opacity: .8;
+  }
+  @media (max-width: 900px) { #flowbar { display: none; } }
+</style>
+
+</head>
+<body>
+
+
+<div style="min-height:100vh; padding:64px 32px 120px;">
+
+  <!-- ===== SHOWCASE HEADER ===== -->
+  <div style="max-width:1120px; margin:0 auto 72px; text-align:center;">
+    <div style="display:inline-flex; align-items:center; gap:10px; padding:8px 16px; border-radius:999px; background:rgba(228,20,79,.12); border:1px solid rgba(228,20,79,.35); font-size:12.5px; font-weight:600; letter-spacing:.02em; color:#ff8fa8;">
+      <span style="width:8px; height:8px; border-radius:50%; background:#E4144F; box-shadow:0 0 10px #E4144F;"></span>
+      Wema Hackaholics 7.0 · Concept prototype
+    </div>
+    <h1 style="margin-top:22px; font-size:64px; font-weight:800; letter-spacing:-0.035em; line-height:.98; background:linear-gradient(180deg,#fff,#ffbecd); -webkit-background-clip:text; background-clip:text; color:transparent;">TrustFlow AI</h1>
+    <p style="margin-top:18px; font-size:18px; line-height:1.55; color:#9A9AA0; max-width:640px; margin-left:auto; margin-right:auto;">AI-powered escrow for peer-to-peer trades. Money held safe in an ALAT-powered wallet, a Trust Score that flags scams before anyone ships, and an AI mediator that settles disputes — designed to live inside the world of ALAT by Wema.</p>
+    <div style="margin-top:26px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+      <div class="navbtn" data-nav="splash" style="padding:12px 22px; border-radius:999px; background:#E4144F; font-weight:700; font-size:14px;">Start the flow</div>
+      <div style="padding:12px 22px; border-radius:999px; background:#141416; border:1px solid #26262b; font-weight:600; font-size:14px; color:#9A9AA0;">Tap the pink buttons to move screen → screen</div>
+    </div>
+  </div>
+
+  <!-- ===== GALLERY GRID ===== -->
+  <div id="gallery" style="position:relative; display:flex; flex-wrap:wrap; gap:190px 150px; justify-content:center; align-items:flex-start; max-width:1720px; margin:0 auto;">
+
+    <!-- ===== FLOW MAP OVERLAY: drawn from the DOM, connects each button to the screen it opens ===== -->
+    <svg id="flowlayer" aria-hidden="true">
+      <defs>
+        <linearGradient id="flowGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#E4144F"/>
+          <stop offset="55%" stop-color="#ff7aa0"/>
+          <stop offset="100%" stop-color="#7C3AED"/>
+        </linearGradient>
+        <filter id="flowGlow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="3.4" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <marker id="flowHead" viewBox="0 0 12 12" refX="9" refY="6"
+                markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+          <path d="M1 1 L11 6 L1 11 z" fill="#ff7aa0"/>
+        </marker>
+      </defs>
+    </svg>
+
+
+    <!-- ========================================================= 1. SPLASH ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">01</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Splash / Get Started</span></div>
+      <div class="frame" id="frame-splash" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div style="width:366px; height:820px; border-radius:42px; overflow:hidden; position:relative; background:radial-gradient(120% 90% at 50% 0%, #C4123F 0%, #4A0A1E 52%, #1A0710 100%);">
+          <!-- status bar -->
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.85;">▂▃▄ ᯤ ▮</span></div>
+          <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 32px; text-align:center;">
+            <!-- shield orb -->
+            <div style="position:relative; width:132px; height:150px; animation:floaty 5s ease-in-out infinite;">
+              <div style="position:absolute; inset:0; clip-path:path('M66 4 L124 26 L124 78 C124 122 98 142 66 150 C34 142 8 122 8 78 L8 26 Z'); background:radial-gradient(circle at 36% 28%, #ffd0dd 0%, #E4144F 42%, #7C3AED 100%); box-shadow:0 24px 60px -12px rgba(228,20,79,.7), inset -8px -12px 26px rgba(60,0,20,.55), inset 6px 8px 22px rgba(255,255,255,.35);"></div>
+              <div style="position:absolute; top:20px; left:26px; width:44px; height:34px; border-radius:50%; background:radial-gradient(circle at 40% 30%, rgba(255,255,255,.85), rgba(255,255,255,0) 70%); filter:blur(1px);"></div>
+              <svg width="46" height="46" viewBox="0 0 24 24" fill="none" style="position:absolute; top:52px; left:43px;"><path d="M20 6 L9 17 L4 12" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h2 style="margin-top:36px; font-size:42px; font-weight:800; letter-spacing:-.035em;">TrustFlow</h2>
+            <p style="margin-top:14px; font-size:18px; color:#ffc2d0; font-weight:500;">Trust, before you pay.</p>
+            <div style="position:absolute; left:32px; right:32px; bottom:40px;">
+              <div class="navbtn" data-nav="dashboard" style="height:56px; border-radius:16px; background:#E4144F; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; box-shadow:0 14px 30px -8px rgba(228,20,79,.7);">Get Started</div>
+              <div class="navbtn" data-nav="auth" style="margin-top:14px; height:56px; border-radius:16px; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px;">Log in</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the very first screen a person sees when they open TrustFlow. Its only job is to make a strong first impression and let the user either create an account ("Get Started") or sign in if they already have one ("Log in"). We deliberately use the exact crimson gradient, logo style, and button shapes of the real ALAT by Wema app so that from the first second it feels like an official Wema product, not a random side app. This matters because our whole pitch is that TrustFlow could be a built-in ALAT feature — the design has to sell that idea before a single word is spoken.</p></div>
+    </div>
+
+    <!-- ========================================================= 2. AUTH ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">02</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Sign up / Log in</span></div>
+      <div class="frame" id="frame-auth" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div style="width:366px; height:820px; border-radius:42px; overflow:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:20px 28px 0;">
+            <div style="width:52px; height:60px; position:relative;"><div style="position:absolute; inset:0; clip-path:path('M26 2 L50 11 L50 32 C50 50 39 58 26 60 C13 58 2 50 2 32 L2 11 Z'); background:radial-gradient(circle at 36% 28%, #ffd0dd, #E4144F 45%, #7C3AED 100%);"></div><svg width="20" height="20" viewBox="0 0 24 24" style="position:absolute; top:21px; left:16px;"><path d="M20 6 L9 17 L4 12" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+            <h2 style="margin-top:26px; font-size:30px; font-weight:800; letter-spacing:-.03em;">Welcome back</h2>
+            <p style="margin-top:8px; font-size:15px; color:#9A9AA0;">Create your account or sign in to keep your trades protected.</p>
+            <div style="margin-top:32px;">
+              <label style="font-size:12px; font-weight:600; color:#9A9AA0;">Email</label>
+              <div style="margin-top:8px; height:56px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; padding:0 16px; font-size:15px; color:#fff;">you@example.com</div>
+            </div>
+            <div style="margin-top:18px;">
+              <label style="font-size:12px; font-weight:600; color:#9A9AA0;">Password</label>
+              <div style="margin-top:8px; height:56px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:space-between; padding:0 16px; font-size:15px; color:#fff;"><span style="letter-spacing:3px;">••••••••••</span><span style="font-size:13px; color:#9A9AA0;">Show</span></div>
+            </div>
+            <div class="navbtn" data-nav="dashboard" style="margin-top:26px; height:56px; border-radius:14px; background:#E4144F; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px;">Continue</div>
+            <div style="display:flex; align-items:center; gap:14px; margin:24px 0;"><div style="flex:1; height:1px; background:#1e1e22;"></div><span style="font-size:12px; color:#6d6d74;">or</span><div style="flex:1; height:1px; background:#1e1e22;"></div></div>
+            <div class="navbtn" data-nav="dashboard" style="height:56px; border-radius:14px; background:#fff; color:#0B0B0D; display:flex; align-items:center; justify-content:center; gap:12px; font-weight:700; font-size:15px;"><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.9 6.1C12.2 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.7-9.9 6.7-17.4z"/><path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.3-5.7c-2 1.4-4.6 2.2-7.9 2.2-6.4 0-11.8-4.1-13.6-9.9l-7.9 6.1C6.4 42.6 14.6 48 24 48z"/></svg>Continue with Google</div>
+            <p style="margin-top:22px; text-align:center; font-size:12.5px; color:#6d6d74; line-height:1.5;">We never ask for your bank details here. You'll only add them later — right when a payout or refund is due.</p>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is where a new user creates their account or an existing user signs back in. We only ask for the bare minimum here — an email and password, or the one-tap "Continue with Google" option — because long sign-up forms make people give up. Notice we do NOT ask for bank account details on this screen. We only collect those later, at the exact moment they're needed (when a seller is about to get paid, or a buyer is about to receive a refund). Asking for bank details too early scares people off, so we delay it until there's an obvious reason.</p></div>
+    </div>
+
+    <!-- ========================================================= 3. DASHBOARD ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">03</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Home / Dashboard</span><span style="font-size:10px; font-weight:800; color:#0B0B0D; background:#ffbecd; padding:3px 8px; border-radius:6px; letter-spacing:.04em;">HERO</span></div>
+      <div class="frame" id="frame-dashboard" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div class="fscroll" style="width:366px; height:820px; border-radius:42px; overflow-y:auto; overflow-x:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <!-- top bar -->
+          <div style="padding:8px 22px 0; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:44px; height:44px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #ff9dbb, #E4144F 55%, #7C3AED); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">AO</div><div><div style="font-size:12px; color:#9A9AA0;">Good afternoon,</div><div style="font-size:17px; font-weight:700; letter-spacing:-.01em;">Ada Okafor</div></div></div>
+            <div style="display:flex; gap:10px;"><div style="width:40px; height:40px; border-radius:12px; background:#17171a; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e9e9ee" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div><div style="width:40px; height:40px; border-radius:12px; background:#17171a; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e9e9ee" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.42l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15H4.5a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 6.4 9.6L6.34 9.54A2 2 0 1 1 9.17 6.7l.06.06A1.65 1.65 0 0 0 12 5.6V4.5a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 19.42 9l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 21 15z"/></svg></div></div>
+          </div>
+          <!-- MY TRUST SCORE hero card -->
+          <div style="margin:20px 22px 0; border-radius:24px; padding:22px; background:radial-gradient(130% 120% at 85% 0%, #4A0A1E 0%, #1A0710 60%), #140409; border:1px solid rgba(228,20,79,.28); position:relative; overflow:hidden;">
+            <div style="position:absolute; top:-30px; right:-30px; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle at 40% 40%, rgba(124,58,237,.5), transparent 70%); filter:blur(10px);"></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; position:relative;">
+              <div>
+                <div style="font-size:12.5px; color:#ffb9c8; font-weight:600; letter-spacing:.02em;">MY TRUST SCORE</div>
+                <div style="display:flex; align-items:flex-end; gap:8px; margin-top:8px;"><span style="font-size:52px; font-weight:800; letter-spacing:-.04em; line-height:1;">92</span><span style="font-size:15px; color:#9A9AA0; margin-bottom:8px;">/ 100</span></div>
+                <div style="margin-top:10px; display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px; background:rgba(52,208,126,.15); color:#34D07E; font-size:12px; font-weight:700;"><span style="width:6px; height:6px; border-radius:50%; background:#34D07E;"></span>Highly trusted trader</div>
+              </div>
+              <!-- glossy dial orb -->
+              <div style="position:relative; width:96px; height:96px;">
+                <div class="ring in-view low" style="position:absolute; inset:0; border-radius:50%; background:conic-gradient(#34D07E calc(var(--p)*3.6deg), rgba(255,255,255,.09) 0);"></div>
+                <div style="position:absolute; inset:11px; border-radius:50%; background:radial-gradient(circle at 36% 30%, #2a1018, #140409); box-shadow:inset 0 3px 10px rgba(0,0,0,.6);"></div>
+                <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 3 L20 6 L20 12 C20 17 16 20 12 21 C8 20 4 17 4 12 L4 6 Z" fill="rgba(52,208,126,.18)" stroke="#34D07E" stroke-width="1.5"/><path d="M15.5 9.5 L10.8 14.5 L8.5 12.2" stroke="#34D07E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+            </div>
+          </div>
+          <!-- primary actions -->
+          <div style="margin:16px 22px 0; display:flex; gap:12px;">
+            <div class="navbtn" data-nav="new-escrow" style="flex:1; height:64px; border-radius:18px; background:#E4144F; display:flex; align-items:center; gap:11px; padding:0 16px; font-weight:700; font-size:15px; box-shadow:0 12px 26px -10px rgba(228,20,79,.8);"><div style="width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>New Escrow</div>
+            <div style="flex:1; height:64px; border-radius:18px; background:#17171a; border:1px solid #26262b; display:flex; align-items:center; gap:11px; padding:0 16px; font-weight:700; font-size:15px; color:#e9e9ee;"><div style="width:34px; height:34px; border-radius:10px; background:#26262b; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#9A9AA0" stroke-width="1.9" fill="none"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg></div>History</div>
+          </div>
+          <!-- promo banner -->
+          <div style="margin:16px 22px 0; border-radius:18px; padding:15px 16px; background:linear-gradient(100deg,#7C3AED22,#C026D322); border:1px solid rgba(124,58,237,.3); display:flex; align-items:center; gap:12px;"><div style="width:38px; height:38px; border-radius:11px; background:radial-gradient(circle at 35% 30%, #d9a6ff, #7C3AED); flex-shrink:0;"></div><div style="font-size:12.5px; color:#d9c9f7; line-height:1.4;"><b style="color:#fff;">Every safe deal raises your score.</b> Trusted traders get priority dispute reviews.</div></div>
+          <!-- active transactions -->
+          <div style="margin:22px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:16px; font-weight:700;">Active escrows</span><span style="font-size:13px; color:#E4144F; font-weight:600;">See all</span></div>
+          <div style="margin:12px 22px 0; display:flex; flex-direction:column; gap:10px;">
+            <div class="navbtn" data-nav="timeline" style="border-radius:18px; background:#141416; border:1px solid #202024; padding:15px 16px; display:flex; align-items:center; gap:13px;"><div style="width:46px; height:46px; border-radius:13px; background:#1e1e22; display:flex; align-items:center; justify-content:center;">💻</div><div style="flex:1;"><div style="font-size:14.5px; font-weight:700;">MacBook Air M2</div><div style="font-size:12.5px; color:#9A9AA0; margin-top:2px;">₦450,000 · Chidi (seller)</div></div><span style="padding:5px 10px; border-radius:999px; background:rgba(52,208,126,.15); color:#34D07E; font-size:11px; font-weight:700;">Shipped</span></div>
+            <div style="border-radius:18px; background:#141416; border:1px solid #202024; padding:15px 16px; display:flex; align-items:center; gap:13px;"><div style="width:46px; height:46px; border-radius:13px; background:#1e1e22; display:flex; align-items:center; justify-content:center;">📦</div><div style="flex:1;"><div style="font-size:14.5px; font-weight:700;">Shop restock — hair bundles</div><div style="font-size:12.5px; color:#9A9AA0; margin-top:2px;">₦150,000 · Bimpe Supplies</div></div><span style="padding:5px 10px; border-radius:999px; background:rgba(224,162,60,.16); color:#E0A23C; font-size:11px; font-weight:700;">Funded</span></div>
+            <div style="border-radius:18px; background:#141416; border:1px solid #202024; padding:15px 16px; display:flex; align-items:center; gap:13px;"><div style="width:46px; height:46px; border-radius:13px; background:#1e1e22; display:flex; align-items:center; justify-content:center;">📱</div><div style="flex:1;"><div style="font-size:14.5px; font-weight:700;">iPhone 14 Pro</div><div style="font-size:12.5px; color:#9A9AA0; margin-top:2px;">₦620,000 · Kelvin_deals</div></div><span style="padding:5px 10px; border-radius:999px; background:rgba(255,77,77,.16); color:#FF4D4D; font-size:11px; font-weight:700;">Disputed</span></div>
+          </div>
+          <div style="height:100px;"></div>
+          <!-- bottom nav -->
+          <div style="position:absolute; left:0; right:0; bottom:0; height:92px; background:linear-gradient(180deg, rgba(11,11,13,0), #0B0B0D 40%);">
+            <div style="position:absolute; bottom:22px; left:24px; right:24px; height:58px; border-radius:22px; background:#17171a; border:1px solid #26262b; display:flex; align-items:center; justify-content:space-between; padding:0 44px;">
+              <div style="display:flex; flex-direction:column; align-items:center; gap:3px; color:#fff;"><svg width="22" height="22" viewBox="0 0 24 24" fill="#E4144F"><path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span style="font-size:10px; font-weight:600;">Home</span></div>
+              <div style="display:flex; flex-direction:column; align-items:center; gap:3px; color:#6d6d74;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6d6d74" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg><span style="font-size:10px;">Profile</span></div>
+            </div>
+            <!-- raised orb -->
+            <div class="navbtn" data-nav="new-escrow" style="position:absolute; bottom:52px; left:50%; transform:translateX(-50%); width:64px; height:64px; border-radius:50%; background:radial-gradient(circle at 35% 28%, #ffb0c8, #E4144F 46%, #7C3AED 100%); display:flex; align-items:center; justify-content:center; box-shadow:0 0 26px rgba(228,20,79,.65), inset -5px -7px 16px rgba(60,0,20,.5), inset 4px 5px 14px rgba(255,255,255,.4);"><svg width="26" height="26" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the home base — the screen users land on every time they open the app after logging in. At the top it greets them by name (just like ALAT does). The big card shows their own personal "Trust Score" — a reputation number that goes up as they complete honest deals, so buyers and sellers can prove they're trustworthy. Below that are the two main things people come here to do: start a new protected deal ("New Escrow") or look at past ones ("History"). Underneath is a live list of their ongoing deals, each with a coloured status label so they can see at a glance which ones are waiting for payment, which have shipped, and which are in dispute. We copy ALAT's home-screen layout on purpose so the app feels instantly familiar to Wema users.</p></div>
+    </div>
+
+    <!-- ========================================================= 4. NEW ESCROW ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">04</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">New Escrow</span></div>
+      <div class="frame" id="frame-new-escrow" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div class="fscroll" style="width:366px; height:820px; border-radius:42px; overflow-y:auto; overflow-x:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:8px 22px 0; display:flex; align-items:center; gap:14px;"><div class="navbtn" data-nav="dashboard" style="width:40px; height:40px; border-radius:12px; background:#17171a; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><h2 style="font-size:20px; font-weight:800; letter-spacing:-.02em;">New Escrow</h2></div>
+          <div style="padding:6px 22px 0;">
+            <p style="font-size:13.5px; color:#9A9AA0; line-height:1.5;">Set up a protected deal. Your money stays locked until you confirm you got what you paid for.</p>
+            <div style="margin-top:22px;">
+              <label style="font-size:12px; font-weight:600; color:#9A9AA0;">Amount</label>
+              <div style="margin-top:8px; height:70px; border-radius:16px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; padding:0 18px; gap:6px;"><span style="font-size:30px; font-weight:800; color:#6d6d74;">₦</span><span style="font-size:30px; font-weight:800; letter-spacing:-.02em;">450,000</span></div>
+            </div>
+            <div style="margin-top:16px;">
+              <label style="font-size:12px; font-weight:600; color:#9A9AA0;">Item description</label>
+              <div style="margin-top:8px; min-height:56px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; padding:0 16px; font-size:15px;">MacBook Air M2, Space Grey, 256GB</div>
+            </div>
+            <div style="margin-top:16px;">
+              <label style="font-size:12px; font-weight:600; color:#9A9AA0;">Seller's phone or email</label>
+              <div style="margin-top:8px; height:56px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; padding:0 16px; font-size:15px;">+234 803 555 0142</div>
+            </div>
+            <!-- PASTE CHAT box, hero of this screen -->
+            <div style="margin-top:22px;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><label style="font-size:13px; font-weight:700; color:#fff;">Paste your chat with the seller</label><span style="font-size:10px; font-weight:800; color:#7C3AED; background:rgba(124,58,237,.16); padding:3px 7px; border-radius:6px;">AI SCANS THIS</span></div>
+              <div style="border-radius:18px; background:#120a14; border:1.5px dashed rgba(124,58,237,.5); padding:16px; min-height:150px; position:relative;">
+                <div style="font-size:12.5px; color:#7c7c84; line-height:1.55;">Seller: This one na the last unit, buy now before person carry am 😤<br>You: Can we do a quick video call to confirm?<br>Seller: No time abeg, just send the money sharp sharp...</div>
+                <div style="position:absolute; bottom:14px; right:14px; font-size:11px; color:#7C3AED; font-weight:600;">Paste from WhatsApp / Telegram</div>
+              </div>
+              <p style="margin-top:10px; font-size:12px; color:#6d6d74; line-height:1.5;">Our AI reads this conversation to spot scam warning signs before you pay.</p>
+            </div>
+            <div class="navbtn" data-nav="trust-low" style="margin:24px 0; height:56px; border-radius:14px; background:#E4144F; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:700; font-size:16px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg>Run Trust Score</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the screen a BUYER uses to start a safe deal. Say someone agrees to buy a phone from a seller on WhatsApp — instead of just sending money and hoping, they come here and fill in how much the item costs, what it is, and the seller's phone number or email. There is also a special box that says "Paste your chat with the seller." This is important: whatever conversation they had with the seller gets pasted in here, and our AI reads it in the next step to sniff out scam warning signs (pressure to pay fast, refusal to do a video call, and so on). Make that paste box big and obvious, because it is what powers the whole scam-detection feature.</p></div>
+    </div>
+
+    <!-- ========================================================= 5a. TRUST SCORE — LOW RISK ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">05a</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Trust Score — LOW risk</span><span style="font-size:10px; font-weight:800; color:#0B0B0D; background:#ffbecd; padding:3px 8px; border-radius:6px; letter-spacing:.04em;">SIGNATURE</span></div>
+      <div class="frame" id="frame-trust-low" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div class="fscroll" style="width:366px; height:820px; border-radius:42px; overflow-y:auto; overflow-x:hidden; position:relative; background:radial-gradient(120% 70% at 50% 0%, #0d2418 0%, #0B0B0D 55%);">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:8px 22px 0; display:flex; align-items:center; gap:14px;"><div class="navbtn" data-nav="new-escrow" style="width:40px; height:40px; border-radius:12px; background:rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><h2 style="font-size:20px; font-weight:800; letter-spacing:-.02em;">Trust Score</h2></div>
+          <!-- big dial -->
+          <div style="display:flex; flex-direction:column; align-items:center; margin-top:20px;">
+            <div style="position:relative; width:210px; height:210px; animation:floaty 6s ease-in-out infinite;">
+              <div class="ring low" data-animate style="position:absolute; inset:0; border-radius:50%; background:conic-gradient(#34D07E calc(var(--p)*3.6deg), rgba(255,255,255,.07) 0); box-shadow:0 0 50px -6px rgba(52,208,126,.4);"></div>
+              <div style="position:absolute; inset:16px; border-radius:50%; background:radial-gradient(circle at 38% 30%, #14261d, #0B0B0D 70%); box-shadow:inset 0 6px 20px rgba(0,0,0,.7);"></div>
+              <div style="position:absolute; top:34px; left:60px; width:70px; height:44px; border-radius:50%; background:radial-gradient(circle at 40% 30%, rgba(52,208,126,.35), transparent 70%); filter:blur(4px);"></div>
+              <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div class="score-num" data-countup="88" style="font-size:66px; font-weight:800; letter-spacing:-.05em; line-height:1; color:#fff;">0</div><div style="font-size:13px; color:#9A9AA0; margin-top:2px;">out of 100</div></div>
+            </div>
+            <div style="margin-top:18px; display:inline-flex; align-items:center; gap:8px; padding:9px 18px; border-radius:999px; background:rgba(52,208,126,.15); border:1px solid rgba(52,208,126,.4); color:#34D07E; font-size:14px; font-weight:800; letter-spacing:.02em;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34D07E" stroke-width="2.4"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>LOW RISK</div>
+          </div>
+          <!-- verdict -->
+          <div style="margin:22px 22px 0; padding:16px; border-radius:18px; background:rgba(52,208,126,.08); border:1px solid rgba(52,208,126,.25);"><p style="font-size:15px; line-height:1.5; color:#d7f5e6; font-weight:600;">This seller looks safe. Established account and a calm, normal conversation — you can go ahead.</p></div>
+          <!-- flags -->
+          <div style="margin:20px 22px 0;"><div style="font-size:13px; font-weight:700; color:#9A9AA0; letter-spacing:.02em; margin-bottom:12px;">WHAT WE CHECKED</div>
+            <div class="flag" data-animate style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid #1a1a1e;"><div style="width:26px; height:26px; border-radius:8px; background:rgba(52,208,126,.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" stroke="#34D07E" stroke-width="2.6" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="font-size:14px; color:#e9e9ee; line-height:1.4;">Account is <b>3 years old</b> with a verified phone number</div></div>
+            <div class="flag" data-animate style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid #1a1a1e;"><div style="width:26px; height:26px; border-radius:8px; background:rgba(52,208,126,.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" stroke="#34D07E" stroke-width="2.6" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="font-size:14px; color:#e9e9ee; line-height:1.4;"><b>41 completed deals</b>, no disputes on record</div></div>
+            <div class="flag" data-animate style="display:flex; gap:12px; align-items:flex-start; padding:12px 0;"><div style="width:26px; height:26px; border-radius:8px; background:rgba(52,208,126,.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" stroke="#34D07E" stroke-width="2.6" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="font-size:14px; color:#e9e9ee; line-height:1.4;">Chat was calm — <b>no pressure or rush language</b> detected</div></div>
+          </div>
+          <div class="navbtn" data-nav="fund" style="margin:24px 22px; height:56px; border-radius:14px; background:#E4144F; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px;">Proceed to fund escrow</div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the most important screen in the entire app — the one that makes people go "wow." After the buyer submits the deal and the chat, the AI analyses everything and shows a Trust Score from 0 to 100, drawn as a big glossy dial that fills up as it calculates. A green badge means LOW risk (safe to proceed), amber means MEDIUM (be careful), red means HIGH risk (likely a scam). Below the score is a plain-English list of exactly WHY it scored that way — for example "This seller's account is only 2 days old" or "They used pressure language: 'pay now, it's the last one'." Finally there's a one-line verdict a child could understand. This is the screen the judges will photograph and remember, so it has to feel alive: animate the dial filling, make the warning flags light up. Design TWO versions — a calm green LOW-RISK one and a scary red HIGH-RISK one — so we can show both during the demo.</p></div>
+    </div>
+
+    <!-- ========================================================= 5b. TRUST SCORE — HIGH RISK ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">05b</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Trust Score — HIGH risk</span><span style="font-size:10px; font-weight:800; color:#0B0B0D; background:#ffbecd; padding:3px 8px; border-radius:6px; letter-spacing:.04em;">SIGNATURE</span></div>
+      <div class="frame" id="frame-trust-high" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div class="fscroll" style="width:366px; height:820px; border-radius:42px; overflow-y:auto; overflow-x:hidden; position:relative; background:radial-gradient(120% 70% at 50% 0%, #2a0a0a 0%, #0B0B0D 55%);">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:8px 22px 0; display:flex; align-items:center; gap:14px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><h2 style="font-size:20px; font-weight:800; letter-spacing:-.02em;">Trust Score</h2></div>
+          <div style="display:flex; flex-direction:column; align-items:center; margin-top:20px;">
+            <div style="position:relative; width:210px; height:210px;">
+              <div class="ring high" data-animate style="position:absolute; inset:0; border-radius:50%; background:conic-gradient(#FF4D4D calc(var(--p)*3.6deg), rgba(255,255,255,.07) 0); box-shadow:0 0 50px -6px rgba(255,77,77,.45); animation:pulseGlow 2s ease-in-out infinite;"></div>
+              <div style="position:absolute; inset:16px; border-radius:50%; background:radial-gradient(circle at 38% 30%, #2a1414, #0B0B0D 70%); box-shadow:inset 0 6px 20px rgba(0,0,0,.7);"></div>
+              <div style="position:absolute; top:34px; left:60px; width:70px; height:44px; border-radius:50%; background:radial-gradient(circle at 40% 30%, rgba(255,77,77,.35), transparent 70%); filter:blur(4px);"></div>
+              <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div class="score-num" data-countup="21" style="font-size:66px; font-weight:800; letter-spacing:-.05em; line-height:1; color:#fff;">0</div><div style="font-size:13px; color:#9A9AA0; margin-top:2px;">out of 100</div></div>
+            </div>
+            <div style="margin-top:18px; display:inline-flex; align-items:center; gap:8px; padding:9px 18px; border-radius:999px; background:rgba(255,77,77,.15); border:1px solid rgba(255,77,77,.45); color:#FF4D4D; font-size:14px; font-weight:800; letter-spacing:.02em;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="2.4"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>HIGH RISK</div>
+          </div>
+          <div style="margin:22px 22px 0; padding:16px; border-radius:18px; background:rgba(255,77,77,.09); border:1px solid rgba(255,77,77,.3);"><p style="font-size:15px; line-height:1.5; color:#ffd4d4; font-weight:600;">Strong scam signals. We'd stop here — do not pay this seller until they prove they're real.</p></div>
+          <div style="margin:20px 22px 0;"><div style="font-size:13px; font-weight:700; color:#9A9AA0; letter-spacing:.02em; margin-bottom:12px;">WHY WE FLAGGED IT</div>
+            <div class="flag" data-animate style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid #1a1a1e;"><div style="width:26px; height:26px; border-radius:8px; background:rgba(255,77,77,.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" stroke="#FF4D4D" stroke-width="2.6" fill="none"><path d="M12 8v5m0 3h.01" stroke-linecap="round"/></svg></div><div style="font-size:14px; color:#e9e9ee; line-height:1.4;">Account is only <b>2 days old</b>, no verified identity</div></div>
+            <div class="flag" data-animate style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid #1a1a1e;"><div style="width:26px; height:26px; border-radius:8px; background:rgba(255,77,77,.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" stroke="#FF4D4D" stroke-width="2.6" fill="none"><path d="M12 8v5m0 3h.01" stroke-linecap="round"/></svg></div><div style="font-size:14px; color:#e9e9ee; line-height:1.4;">Pressure language: <b>"pay now, it's the last one"</b></div></div>
+            <div class="flag" data-animate style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid #1a1a1e;"><div style="width:26px; height:26px; border-radius:8px; background:rgba(255,77,77,.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" stroke="#FF4D4D" stroke-width="2.6" fill="none"><path d="M12 8v5m0 3h.01" stroke-linecap="round"/></svg></div><div style="font-size:14px; color:#e9e9ee; line-height:1.4;"><b>Refused a video call</b> to confirm the item exists</div></div>
+            <div class="flag" data-animate style="display:flex; gap:12px; align-items:flex-start; padding:12px 0;"><div style="width:26px; height:26px; border-radius:8px; background:rgba(224,162,60,.16); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" stroke="#E0A23C" stroke-width="2.6" fill="none"><path d="M12 8v5m0 3h.01" stroke-linecap="round"/></svg></div><div style="font-size:14px; color:#e9e9ee; line-height:1.4;">Price is <b>40% below market</b> for this item</div></div>
+          </div>
+          <div style="margin:24px 22px; display:flex; gap:12px;"><div style="flex:1; height:56px; border-radius:14px; background:rgba(255,255,255,.06); border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; color:#e9e9ee;">Cancel deal</div><div style="flex:1; height:56px; border-radius:14px; background:rgba(255,77,77,.14); border:1px solid rgba(255,77,77,.4); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; color:#FF4D4D;">Pay anyway</div></div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">The scary twin of screen 05a — same layout, opposite outcome — so we can flip between "safe" and "danger" live in the demo. The dial glows red and pulses, the badge screams HIGH RISK, and each flag names a concrete, human-readable reason: a brand-new account, classic pressure lines, a refused video call, a too-good-to-be-true price. Crucially, we don't hard-block the user — we make the safe choice ("Cancel deal") the obvious one and force friction on "Pay anyway", so the app protects people without treating them like children.</p></div>
+    </div>
+
+    <!-- ========================================================= 6. FUND ESCROW ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">06</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Fund Escrow (Payment)</span></div>
+      <div class="frame" id="frame-fund" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div style="width:366px; height:820px; border-radius:42px; overflow:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <!-- dimmed backdrop hint -->
+          <div style="position:absolute; inset:0; background:rgba(0,0,0,.4);"></div>
+          <!-- checkout sheet -->
+          <div style="position:absolute; left:0; right:0; bottom:0; border-radius:28px 28px 42px 42px; background:#141416; border-top:1px solid #26262b; padding:12px 24px 28px;">
+            <div style="width:44px; height:5px; border-radius:99px; background:#33333a; margin:0 auto 20px;"></div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;"><div style="font-size:13px; color:#9A9AA0;">Locking into escrow</div></div>
+            <div style="display:flex; align-items:flex-end; gap:8px;"><span style="font-size:38px; font-weight:800; letter-spacing:-.03em;">₦450,000</span></div>
+            <div style="margin-top:6px; display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border-radius:999px; background:rgba(52,208,126,.13); color:#34D07E; font-size:11.5px; font-weight:700;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34D07E" stroke-width="2.4"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg>Held safe, not sent to seller yet</div>
+            <div style="margin-top:22px; font-size:13px; font-weight:700; color:#9A9AA0;">Pay with</div>
+            <div style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+              <div style="height:60px; border-radius:16px; background:#1A1A1D; border:1.5px solid #E4144F; display:flex; align-items:center; gap:13px; padding:0 16px;"><div style="width:40px; height:40px; border-radius:11px; background:#26262b; display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg></div><div style="flex:1;"><div style="font-size:14.5px; font-weight:700;">Debit card</div><div style="font-size:12px; color:#9A9AA0;">•••• 4821 · ALAT</div></div><div style="width:20px; height:20px; border-radius:50%; border:6px solid #E4144F; box-shadow:inset 0 0 0 2px #141416;"></div></div>
+              <div style="height:60px; border-radius:16px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; gap:13px; padding:0 16px;"><div style="width:40px; height:40px; border-radius:11px; background:#26262b; display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9A9AA0" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg></div><div style="flex:1;"><div style="font-size:14.5px; font-weight:700;">USSD</div><div style="font-size:12px; color:#9A9AA0;">Dial a short code to pay</div></div><div style="width:20px; height:20px; border-radius:50%; border:2px solid #33333a;"></div></div>
+              <div style="height:60px; border-radius:16px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; gap:13px; padding:0 16px;"><div style="width:40px; height:40px; border-radius:11px; background:#26262b; display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9A9AA0" stroke-width="1.8"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg></div><div style="flex:1;"><div style="font-size:14.5px; font-weight:700;">Bank transfer</div><div style="font-size:12px; color:#9A9AA0;">Move from any bank app</div></div><div style="width:20px; height:20px; border-radius:50%; border:2px solid #33333a;"></div></div>
+            </div>
+            <div class="navbtn" data-nav="locked" style="margin-top:20px; height:56px; border-radius:14px; background:#E4144F; display:flex; align-items:center; justify-content:center; gap:9px; font-weight:700; font-size:16px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Pay ₦450,000 into escrow</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">Once the buyer is happy with the Trust Score, this is where they actually pay — but the money does NOT go to the seller yet. It goes into a secure holding account (an "escrow" wallet powered by ALAT) where it sits safely until the buyer confirms they received their item. The payment sheet looks like a normal ALAT checkout (pay by card, USSD, or bank transfer). The key moment is the confirmation afterwards: a big reassuring message like "₦150,000 is locked safely in escrow — the seller can now ship." That feeling of "my money is safe and can't just vanish" is the entire reason this product exists, so the design must make it feel protected.</p></div>
+    </div>
+
+    <!-- ========================================================= 7. ESCROW LOCKED ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">07</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Escrow Locked (confirmation)</span><span style="font-size:10px; font-weight:800; color:#0B0B0D; background:#ffbecd; padding:3px 8px; border-radius:6px; letter-spacing:.04em;">HERO</span></div>
+      <div class="frame" id="frame-locked" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div style="width:366px; height:820px; border-radius:42px; overflow:hidden; position:relative; background:radial-gradient(120% 80% at 50% 12%, #C4123F 0%, #4A0A1E 50%, #1A0710 100%);">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.85;">▂▃▄ ᯤ ▮</span></div>
+          <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 34px; text-align:center;">
+            <!-- locked orb -->
+            <div style="position:relative; width:150px; height:150px; animation:floaty 5.5s ease-in-out infinite;">
+              <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 35% 28%, #ffd0dd 0%, #E4144F 44%, #7C3AED 100%); box-shadow:0 30px 70px -14px rgba(228,20,79,.7), inset -10px -14px 30px rgba(60,0,20,.5), inset 8px 10px 26px rgba(255,255,255,.35);"></div>
+              <div style="position:absolute; top:22px; left:32px; width:52px; height:38px; border-radius:50%; background:radial-gradient(circle at 40% 30%, rgba(255,255,255,.85), transparent 70%); filter:blur(2px);"></div>
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="position:absolute; top:47px; left:47px;"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-linecap="round"/></svg>
+            </div>
+            <div style="margin-top:34px; font-size:34px; font-weight:800; letter-spacing:-.03em;">₦450,000</div>
+            <h2 style="margin-top:10px; font-size:23px; font-weight:800; letter-spacing:-.02em; line-height:1.25;">is locked safely in escrow</h2>
+            <p style="margin-top:14px; font-size:15px; color:#ffc2d0; line-height:1.5;">The seller can now ship. Your money is released only when <b style="color:#fff;">you</b> confirm you got the item.</p>
+            <div style="margin-top:22px; display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:999px; background:rgba(255,255,255,.12); font-size:13px; font-weight:600;"><span style="width:7px; height:7px; border-radius:50%; background:#34D07E; box-shadow:0 0 8px #34D07E;"></span>Escrow ID · TF-4821-AO</div>
+            <div style="position:absolute; left:34px; right:34px; bottom:40px;"><div class="navbtn" data-nav="timeline" style="height:56px; border-radius:16px; background:#fff; color:#0B0B0D; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">Track this deal</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">The emotional payoff of paying. The instant the money lands in escrow we show a full crimson-gradient moment built around the glossy padlock-orb — the same 3D sphere motif from the logo and bottom nav — so "my money is safe and can't just vanish" is felt, not just read. We restate the exact amount, spell out the one rule that makes escrow trustworthy (funds release only when the buyer confirms), and give a copyable escrow ID. This is the single most reassuring second in the whole product.</p></div>
+    </div>
+
+    <!-- ========================================================= 8. TIMELINE ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">08</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Transaction Detail + Timeline</span></div>
+      <div class="frame" id="frame-timeline" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div class="fscroll" style="width:366px; height:820px; border-radius:42px; overflow-y:auto; overflow-x:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:8px 22px 0; display:flex; align-items:center; gap:14px;"><div class="navbtn" data-nav="dashboard" style="width:40px; height:40px; border-radius:12px; background:#17171a; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><h2 style="font-size:18px; font-weight:800; letter-spacing:-.02em;">MacBook Air M2</h2></div>
+          <!-- summary card -->
+          <div style="margin:16px 22px 0; border-radius:20px; background:#141416; border:1px solid #202024; padding:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-size:12px; color:#9A9AA0;">Amount in escrow</div><div style="font-size:26px; font-weight:800; letter-spacing:-.02em; margin-top:2px;">₦450,000</div></div><div style="display:inline-flex; align-items:center; gap:7px; padding:7px 12px; border-radius:999px; background:rgba(52,208,126,.15); color:#34D07E; font-size:12px; font-weight:700;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34D07E" stroke-width="2.4"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg>Score 88 · Low risk</div></div>
+            <div style="margin-top:16px; padding-top:16px; border-top:1px solid #202024; display:flex; justify-content:space-between; font-size:13px;"><div><div style="color:#9A9AA0;">Buyer</div><div style="font-weight:600; margin-top:3px;">You (Ada)</div></div><div style="text-align:right;"><div style="color:#9A9AA0;">Seller</div><div style="font-weight:600; margin-top:3px;">Chidi · +234 803…</div></div></div>
+          </div>
+          <!-- stepper -->
+          <div style="margin:22px 22px 0; font-size:13px; font-weight:700; color:#9A9AA0;">PROGRESS</div>
+          <div style="margin:14px 22px 0; position:relative; padding-left:8px;">
+            <div style="position:absolute; left:19px; top:6px; bottom:34px; width:2px; background:#26262b;"></div>
+            <div style="position:absolute; left:19px; top:6px; height:112px; width:2px; background:#34D07E;"></div>
+            <!-- done -->
+            <div style="display:flex; gap:16px; padding-bottom:20px; position:relative;"><div style="width:24px; height:24px; border-radius:50%; background:#34D07E; display:flex; align-items:center; justify-content:center; flex-shrink:0; z-index:1;"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#0B0B0D" stroke-width="3.4" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-size:14.5px; font-weight:700;">Funded</div><div style="font-size:12px; color:#6d6d74; margin-top:1px;">Today · 2:14 PM</div></div></div>
+            <div style="display:flex; gap:16px; padding-bottom:20px; position:relative;"><div style="width:24px; height:24px; border-radius:50%; background:#34D07E; display:flex; align-items:center; justify-content:center; flex-shrink:0; z-index:1;"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#0B0B0D" stroke-width="3.4" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-size:14.5px; font-weight:700;">Shipped</div><div style="font-size:12px; color:#6d6d74; margin-top:1px;">Seller sent tracking · GIG-88213</div></div></div>
+            <!-- current -->
+            <div style="display:flex; gap:16px; padding-bottom:20px; position:relative;"><div style="width:24px; height:24px; border-radius:50%; background:#0B0B0D; border:2px solid #E4144F; display:flex; align-items:center; justify-content:center; flex-shrink:0; z-index:1; box-shadow:0 0 0 4px rgba(228,20,79,.18);"><div style="width:8px; height:8px; border-radius:50%; background:#E4144F;"></div></div><div><div style="font-size:14.5px; font-weight:700; color:#fff;">Delivered</div><div style="font-size:12px; color:#E4144F; margin-top:1px; font-weight:600;">Waiting for you to confirm</div></div></div>
+            <!-- upcoming -->
+            <div style="display:flex; gap:16px; padding-bottom:20px; position:relative;"><div style="width:24px; height:24px; border-radius:50%; background:#141416; border:2px solid #26262b; flex-shrink:0; z-index:1;"></div><div><div style="font-size:14.5px; font-weight:700; color:#6d6d74;">Confirmed</div></div></div>
+            <div style="display:flex; gap:16px; position:relative;"><div style="width:24px; height:24px; border-radius:50%; background:#141416; border:2px solid #26262b; flex-shrink:0; z-index:1;"></div><div><div style="font-size:14.5px; font-weight:700; color:#6d6d74;">Released to seller</div></div></div>
+          </div>
+          <div style="margin:8px 22px 24px;"><div class="navbtn" data-nav="released" style="height:56px; border-radius:14px; background:#E4144F; display:flex; align-items:center; justify-content:center; gap:9px; font-weight:700; font-size:16px;"><svg width="17" height="17" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.4" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Confirm Received</div><div class="navbtn" data-nav="dispute" style="margin-top:12px; height:56px; border-radius:14px; background:transparent; border:1px solid #33333a; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; color:#e9e9ee;">Open Dispute</div></div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the full page for a single deal — the one place where you can see everything about it. It shows a step-by-step progress tracker so anyone (buyer or seller) can see exactly where things stand right now: has the money been paid in? has the item been shipped? delivered? confirmed? The buyer gets two buttons here. When their item arrives and is fine, they tap "Confirm Received" and the held money is instantly released to the seller. If something is wrong — item never came, or it's fake — they tap "Open Dispute" instead. Think of this screen as the single source of truth that both people check to know what's happening with the money.</p></div>
+    </div>
+
+    <!-- ========================================================= 9. DISPUTE ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">09</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Dispute + AI Mediator</span><span style="font-size:10px; font-weight:800; color:#0B0B0D; background:#ffbecd; padding:3px 8px; border-radius:6px; letter-spacing:.04em;">HERO</span></div>
+      <div class="frame" id="frame-dispute" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div class="fscroll" style="width:366px; height:820px; border-radius:42px; overflow-y:auto; overflow-x:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:8px 22px 0; display:flex; align-items:center; gap:14px;"><div class="navbtn" data-nav="timeline" style="width:40px; height:40px; border-radius:12px; background:#17171a; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><h2 style="font-size:20px; font-weight:800; letter-spacing:-.02em;">Dispute</h2></div>
+          <!-- two sides -->
+          <div style="padding:14px 22px 0;">
+            <div style="border-radius:16px; background:#141416; border:1px solid #202024; padding:14px;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><div style="width:24px; height:24px; border-radius:50%; background:#E4144F; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800;">A</div><span style="font-size:13px; font-weight:700;">Buyer's claim</span></div><p style="font-size:13px; color:#c8c8ce; line-height:1.5;">"Screen has a dead pixel line, not shown in the listing photos."</p><div style="margin-top:10px; display:flex; gap:8px;"><div style="width:56px; height:56px; border-radius:10px; background:repeating-linear-gradient(45deg,#1e1e22,#1e1e22 6px,#242429 6px,#242429 12px); display:flex; align-items:center; justify-content:center; font-size:9px; color:#6d6d74; text-align:center;">photo</div><div style="width:56px; height:56px; border-radius:10px; background:repeating-linear-gradient(45deg,#1e1e22,#1e1e22 6px,#242429 6px,#242429 12px); display:flex; align-items:center; justify-content:center; font-size:9px; color:#6d6d74;">video</div></div></div>
+            <div style="margin-top:10px; border-radius:16px; background:#141416; border:1px solid #202024; padding:14px;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><div style="width:24px; height:24px; border-radius:50%; background:#7C3AED; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800;">C</div><span style="font-size:13px; font-weight:700;">Seller's response</span></div><p style="font-size:13px; color:#c8c8ce; line-height:1.5;">"Item was fine when shipped. Willing to refund part of it."</p><div style="margin-top:10px; display:flex; gap:8px;"><div style="width:56px; height:56px; border-radius:10px; background:repeating-linear-gradient(45deg,#1e1e22,#1e1e22 6px,#242429 6px,#242429 12px); display:flex; align-items:center; justify-content:center; font-size:9px; color:#6d6d74;">photo</div></div></div>
+          </div>
+          <!-- AI MEDIATOR card -->
+          <div style="margin:20px 22px 24px; border-radius:22px; padding:2px; background:linear-gradient(135deg,#7C3AED,#C026D3,#E4144F);">
+            <div style="border-radius:20px; background:#120a16; padding:20px;">
+              <div style="display:flex; align-items:center; gap:10px;"><div style="width:34px; height:34px; border-radius:11px; background:radial-gradient(circle at 35% 30%, #d9a6ff, #7C3AED); display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M12 3v4M6 7l2 2M18 7l-2 2M4 21v-4a8 8 0 0 1 16 0v4" stroke-linecap="round"/><circle cx="12" cy="13" r="1.6" fill="#fff"/></svg></div><div><div style="font-size:11px; color:#c99cff; font-weight:700; letter-spacing:.04em;">AI MEDIATOR · NEUTRAL</div><div style="font-size:15px; font-weight:800;">Recommendation</div></div></div>
+              <div style="margin-top:16px; display:flex; align-items:center; gap:12px;"><div style="font-size:26px; font-weight:800; letter-spacing:-.02em; color:#E0A23C;">PARTIAL REFUND</div></div>
+              <div style="margin-top:14px; display:flex; gap:10px;"><div style="flex:1; text-align:center; padding:12px 0; border-radius:12px; background:rgba(52,208,126,.1);"><div style="font-size:11px; color:#9A9AA0;">To seller</div><div style="font-size:17px; font-weight:800; color:#34D07E; margin-top:2px;">₦330,000</div></div><div style="flex:1; text-align:center; padding:12px 0; border-radius:12px; background:rgba(228,20,79,.1);"><div style="font-size:11px; color:#9A9AA0;">Refund buyer</div><div style="font-size:17px; font-weight:800; color:#ff8fa8; margin-top:2px;">₦120,000</div></div></div>
+              <p style="margin-top:16px; font-size:13px; line-height:1.55; color:#c8c8ce;"><b style="color:#fff;">Why:</b> Buyer's video confirms a real screen defect, but the item is genuine and usable. A ~27% price reduction matches the repair cost for this model — fair to both sides.</p>
+              <div style="margin-top:16px; display:flex; gap:10px;"><div style="flex:1; height:48px; border-radius:12px; background:#E4144F; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;">Accept</div><div style="flex:1; height:48px; border-radius:12px; background:rgba(255,255,255,.06); border:1px solid #33333a; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:#e9e9ee;">Escalate to human</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This screen handles what happens when a deal goes wrong and the two people disagree. The buyer explains the problem and can upload evidence (photos, screenshots); the seller can respond with their side too. Then our AI acts as a neutral judge: it reads both sides and the evidence and recommends one of three outcomes — give the money to the seller (RELEASE), split it (PARTIAL REFUND), or return everything to the buyer (FULL REFUND) — and it explains its reasoning in plain language. This is our standout feature: normal escrow apps make a human sit and manually settle every argument, which doesn't scale. Ours does it fairly and instantly with AI, so show that AI verdict clearly and make it feel trustworthy and even-handed to both sides.</p></div>
+    </div>
+
+    <!-- ========================================================= 10. PROFILE ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">10</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Profile / Trust History</span></div>
+      <div class="frame" id="frame-profile" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div class="fscroll" style="width:366px; height:820px; border-radius:42px; overflow-y:auto; overflow-x:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:12px 22px 0; display:flex; flex-direction:column; align-items:center;">
+            <div style="width:76px; height:76px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #ff9dbb, #E4144F 55%, #7C3AED); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:26px;">AO</div>
+            <div style="margin-top:12px; font-size:20px; font-weight:800;">Ada Okafor</div>
+            <div style="margin-top:6px; display:inline-flex; align-items:center; gap:7px; padding:6px 13px; border-radius:999px; background:rgba(52,208,126,.15); color:#34D07E; font-size:12.5px; font-weight:700;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D07E" stroke-width="2.4"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg>Trust Score 92 · Highly trusted</div>
+          </div>
+          <!-- line chart -->
+          <div style="margin:22px 22px 0; border-radius:20px; background:#141416; border:1px solid #202024; padding:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:13.5px; font-weight:700;">Score over time</span><span style="font-size:12px; color:#34D07E; font-weight:700;">▲ +18 this year</span></div>
+            <svg viewBox="0 0 300 90" style="width:100%; height:90px; margin-top:14px; overflow:visible;"><defs><linearGradient id="tfgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34D07E" stop-opacity=".35"/><stop offset="1" stop-color="#34D07E" stop-opacity="0"/></linearGradient></defs><path d="M0 70 L50 62 L100 66 L150 44 L200 40 L250 22 L300 14" fill="none" stroke="#34D07E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M0 70 L50 62 L100 66 L150 44 L200 40 L250 22 L300 14 L300 90 L0 90 Z" fill="url(#tfgrad)"/><circle cx="300" cy="14" r="4.5" fill="#34D07E" stroke="#0B0B0D" stroke-width="2"/></svg>
+            <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#6d6d74; margin-top:6px;"><span>Jan</span><span>Apr</span><span>Jul</span><span>Oct</span><span>Now</span></div>
+          </div>
+          <!-- bank details -->
+          <div style="margin:16px 22px 0; border-radius:18px; background:#141416; border:1px solid #202024; padding:16px; display:flex; align-items:center; gap:13px;"><div style="width:42px; height:42px; border-radius:12px; background:#1e1e22; display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9A9AA0" stroke-width="1.8"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg></div><div style="flex:1;"><div style="font-size:14px; font-weight:700;">Payout account</div><div style="font-size:12.5px; color:#9A9AA0; margin-top:2px;">ALAT by Wema · ••• 4821</div></div><span style="font-size:12.5px; color:#E4144F; font-weight:700;">Edit</span></div>
+          <!-- completed deals -->
+          <div style="margin:22px 22px 0; font-size:13px; font-weight:700; color:#9A9AA0;">COMPLETED DEALS</div>
+          <div style="margin:12px 22px 0; display:flex; flex-direction:column; gap:10px;">
+            <div style="border-radius:16px; background:#141416; border:1px solid #202024; padding:13px 15px; display:flex; align-items:center; gap:12px;"><div style="width:38px; height:38px; border-radius:11px; background:#1e1e22; display:flex; align-items:center; justify-content:center;">🎧</div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700;">Sony headphones</div><div style="font-size:11.5px; color:#6d6d74;">₦85,000 · released</div></div><span style="font-size:11.5px; color:#34D07E; font-weight:700;">+2 score</span></div>
+            <div style="border-radius:16px; background:#141416; border:1px solid #202024; padding:13px 15px; display:flex; align-items:center; gap:12px;"><div style="width:38px; height:38px; border-radius:11px; background:#1e1e22; display:flex; align-items:center; justify-content:center;">👟</div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700;">Nike Air sneakers</div><div style="font-size:11.5px; color:#6d6d74;">₦62,000 · released</div></div><span style="font-size:11.5px; color:#34D07E; font-weight:700;">+2 score</span></div>
+          </div>
+          <div style="height:40px;"></div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the user's personal profile. It holds the bank account details we use to pay sellers or refund buyers, a small graph showing how their Trust Score has grown over time, and a list of all the deals they've successfully completed. The point of this screen is reputation: every honest transaction makes their score go up, which makes future partners trust them more — exactly the way sellers build a track record on crypto trading platforms. Over time a high score becomes valuable, giving people a real reason to keep behaving honestly and keep using TrustFlow.</p></div>
+    </div>
+
+    <!-- ========================================================= 11. RELEASED ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">11</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Released / Success</span></div>
+      <div class="frame" id="frame-released" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div style="width:366px; height:820px; border-radius:42px; overflow:hidden; position:relative; background:radial-gradient(120% 80% at 50% 14%, #0d3b26 0%, #08160f 55%, #060a08 100%);">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.85;">▂▃▄ ᯤ ▮</span></div>
+          <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 36px; text-align:center;">
+            <div style="position:relative; width:150px; height:150px; animation:floaty 5.5s ease-in-out infinite;">
+              <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 35% 28%, #c9ffe4 0%, #23B26D 44%, #0d7a4a 100%); box-shadow:0 30px 70px -14px rgba(35,178,109,.65), inset -10px -14px 30px rgba(0,40,20,.5), inset 8px 10px 26px rgba(255,255,255,.4);"></div>
+              <div style="position:absolute; top:22px; left:32px; width:52px; height:38px; border-radius:50%; background:radial-gradient(circle at 40% 30%, rgba(255,255,255,.85), transparent 70%); filter:blur(2px);"></div>
+              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" style="position:absolute; top:45px; left:45px;"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h2 style="margin-top:36px; font-size:30px; font-weight:800; letter-spacing:-.03em;">Deal complete</h2>
+            <p style="margin-top:14px; font-size:16px; color:#a8e6c8; line-height:1.5;">₦450,000 released to the seller. Both Trust Scores updated.</p>
+            <div style="margin-top:24px; display:flex; gap:14px;"><div style="padding:14px 20px; border-radius:16px; background:rgba(255,255,255,.06); border:1px solid rgba(52,208,126,.25);"><div style="font-size:11px; color:#9A9AA0;">Your score</div><div style="font-size:22px; font-weight:800; color:#34D07E; margin-top:3px;">92 <span style="font-size:12px;">▲2</span></div></div><div style="padding:14px 20px; border-radius:16px; background:rgba(255,255,255,.06); border:1px solid rgba(52,208,126,.25);"><div style="font-size:11px; color:#9A9AA0;">Seller</div><div style="font-size:22px; font-weight:800; color:#34D07E; margin-top:3px;">90 <span style="font-size:12px;">▲1</span></div></div></div>
+            <div style="position:absolute; left:36px; right:36px; bottom:40px;"><div class="navbtn" data-nav="dashboard" style="height:56px; border-radius:16px; background:#fff; color:#0B0B0D; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">Back to home</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the happy ending screen, shown the moment a deal finishes successfully and the money has been released to the seller. It's a small celebration — a green "secured" orb and a message like "Deal complete. Both Trust Scores updated." Its job is emotional: it rewards the user for doing the right thing and leaves them feeling safe and satisfied, so they'll trust the app again next time and tell their friends. Small moment, but it's what makes people come back.</p></div>
+    </div>
+
+    <!-- ========================================================= 12. SELLER KYC ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">12</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Seller Registration / KYC</span><span style="font-size:10px; font-weight:800; color:#0B0B0D; background:#c9ffe4; padding:3px 8px; border-radius:6px; letter-spacing:.04em;">FRAUD-PROOF</span></div>
+      <div class="frame" id="frame-kyc" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div class="fscroll" style="width:366px; height:820px; border-radius:42px; overflow-y:auto; overflow-x:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:8px 22px 0; display:flex; align-items:center; gap:14px;"><div style="width:40px; height:40px; border-radius:12px; background:#17171a; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><h2 style="font-size:20px; font-weight:800; letter-spacing:-.02em;">Become a seller</h2></div>
+          <!-- explainer -->
+          <div style="margin:14px 22px 0; border-radius:16px; padding:14px 15px; background:rgba(228,20,79,.09); border:1px solid rgba(228,20,79,.3); display:flex; gap:11px; align-items:flex-start;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff8fa8" stroke-width="1.9" style="flex-shrink:0; margin-top:1px;"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg><p style="font-size:12.5px; color:#ffc7d3; line-height:1.5;"><b style="color:#fff;">Sellers must be verified to receive money.</b> Buyers pay in freely — but payouts only go to a verified identity.</p></div>
+          <div style="padding:18px 22px 0;">
+            <label style="font-size:12px; font-weight:600; color:#9A9AA0;">Full name (as on ID)</label>
+            <div style="margin-top:8px; height:56px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; padding:0 16px; font-size:15px;">Chidi Nwosu</div>
+            <label style="display:block; margin-top:16px; font-size:12px; font-weight:600; color:#9A9AA0;">BVN or NIN</label>
+            <div style="margin-top:8px; height:56px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:space-between; padding:0 16px; font-size:15px;"><span style="letter-spacing:2px;">2213•••••42</span><span style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#34D07E; font-weight:700;"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#34D07E" stroke-width="2.6" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>NIN</span></div>
+          </div>
+          <!-- liveness -->
+          <div style="margin:22px 22px 0;"><div style="font-size:12px; font-weight:600; color:#9A9AA0; margin-bottom:10px;">Liveness check</div>
+            <div style="border-radius:20px; background:#111318; border:1px solid #202024; padding:20px; display:flex; flex-direction:column; align-items:center;">
+              <div style="position:relative; width:130px; height:130px;">
+                <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 40% 32%, #23324a, #0d1420); box-shadow:inset 0 4px 14px rgba(0,0,0,.6);"></div>
+                <svg width="66" height="66" viewBox="0 0 24 24" fill="none" stroke="#5a6b82" stroke-width="1.4" style="position:absolute; top:32px; left:32px;"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                <div style="position:absolute; inset:-4px; border-radius:50%; border:3px solid transparent; border-top-color:#34D07E; border-right-color:#34D07E; box-shadow:0 0 18px rgba(52,208,126,.4);"></div>
+              </div>
+              <div style="margin-top:14px; display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:#34D07E; font-weight:700;"><span style="width:7px; height:7px; border-radius:50%; background:#34D07E; box-shadow:0 0 8px #34D07E;"></span>Liveness confirmed — real person</div>
+              <p style="margin-top:6px; font-size:11.5px; color:#6d6d74;">Blink detected · face matches ID photo</p>
+            </div>
+          </div>
+          <!-- payout account verified -->
+          <div style="margin:18px 22px 0;"><label style="font-size:12px; font-weight:600; color:#9A9AA0;">Payout bank account</label>
+            <div style="margin-top:8px; border-radius:16px; background:#141416; border:1px solid rgba(52,208,126,.35); padding:15px 16px;">
+              <div style="display:flex; align-items:center; gap:12px;"><div style="width:40px; height:40px; border-radius:11px; background:#1e1e22; display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9A9AA0" stroke-width="1.8"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg></div><div style="flex:1;"><div style="font-size:14.5px; font-weight:700;">GTBank · 0122••••81</div><div style="font-size:12.5px; color:#34D07E; margin-top:2px; font-weight:600;">CHIDI NWOSU</div></div></div>
+              <div style="margin-top:12px; padding-top:12px; border-top:1px solid #202024; display:flex; align-items:center; gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34D07E" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:12.5px; color:#34D07E; font-weight:700;">Account name verified — matches your ID</span></div>
+            </div>
+          </div>
+          <div style="margin:22px 22px 24px;"><div style="height:56px; border-radius:14px; background:#E4144F; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px;">Finish verification</div></div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the gate every SELLER must pass before they can receive a single naira. Buyers can stay lightweight because they're only paying in, but sellers receive money, so we verify their real identity (BVN or NIN + a live selfie) and lock their payouts to a bank account whose name matches that identity. This does two powerful things: a scammer can no longer get banned and simply come back with a new profile (their real identity is on file), and money can never be paid out to a stranger's "mule" account. Show the green "identity verified / account name matches" state clearly — that verification is what makes the whole platform safe.</p></div>
+    </div>
+
+    <!-- ========================================================= 13. FUND VIA EXPIRING ACCOUNT ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">13</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Fund via Expiring Account</span><span style="font-size:10px; font-weight:800; color:#0B0B0D; background:#c9ffe4; padding:3px 8px; border-radius:6px; letter-spacing:.04em;">FRAUD-PROOF</span></div>
+      <div class="frame" id="frame-expiry" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div style="width:366px; height:820px; border-radius:42px; overflow:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <!-- WAITING STATE -->
+          <div data-fundwait style="position:absolute; inset:44px 0 0; padding:8px 24px 0;">
+            <div style="display:flex; align-items:center; gap:14px;"><div style="width:40px; height:40px; border-radius:12px; background:#17171a; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><h2 style="font-size:20px; font-weight:800; letter-spacing:-.02em;">Fund escrow</h2></div>
+            <p style="margin-top:14px; font-size:13.5px; color:#9A9AA0; line-height:1.5;">Send exactly this amount from <b style="color:#fff;">any bank</b> to the account below. We detect it automatically — no receipt needed.</p>
+            <!-- amount -->
+            <div style="margin-top:18px; text-align:center;"><div style="font-size:12px; color:#9A9AA0;">Send exactly</div><div style="font-size:38px; font-weight:800; letter-spacing:-.03em; margin-top:2px;">₦450,000</div></div>
+            <!-- generated account -->
+            <div style="margin-top:20px; border-radius:20px; background:#141416; border:1px solid #26262b; padding:18px;">
+              <div style="font-size:11.5px; color:#9A9AA0; letter-spacing:.04em;">ONE-TIME ACCOUNT FOR THIS DEAL</div>
+              <div style="margin-top:10px; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:28px; font-weight:800; letter-spacing:.06em;">8042 116 903</span><div class="navbtn" style="display:inline-flex; align-items:center; gap:6px; padding:8px 13px; border-radius:10px; background:#E4144F; font-size:12.5px; font-weight:700;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</div></div>
+              <div style="margin-top:12px; padding-top:12px; border-top:1px solid #202024; display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9A9AA0;">Bank</span><span style="font-weight:600;">Wema / ALAT (TrustFlow)</span></div>
+            </div>
+            <!-- countdown -->
+            <div style="margin-top:16px; border-radius:16px; background:rgba(224,162,60,.1); border:1px solid rgba(224,162,60,.3); padding:14px 16px; display:flex; align-items:center; gap:12px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E0A23C" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg><div style="flex:1;"><div style="font-size:12px; color:#E0A23C;">Account expires in</div><div data-countdown="598" style="font-size:22px; font-weight:800; letter-spacing:.02em; color:#fff; font-variant-numeric:tabular-nums;">09:58</div></div></div>
+            <!-- listening -->
+            <div style="margin-top:18px; display:flex; align-items:center; justify-content:center; gap:9px; font-size:13px; color:#9A9AA0;"><span style="position:relative; width:9px; height:9px;"><span style="position:absolute; inset:0; border-radius:50%; background:#34D07E;"></span><span style="position:absolute; inset:0; border-radius:50%; background:#34D07E; animation:pulseGlow 1.6s infinite;"></span></span>Waiting for your transfer…</div>
+            <p style="margin-top:14px; text-align:center; font-size:11.5px; color:#6d6d74; line-height:1.5;">You don't need to be a Wema customer.<br>Fake receipts don't work here — we only confirm real, arrived money.</p>
+          </div>
+          <!-- SUCCESS STATE -->
+          <div data-funddone style="position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; padding:0 34px; text-align:center; background:radial-gradient(120% 80% at 50% 14%, #0d3b26 0%, #08160f 55%, #060a08 100%);">
+            <div style="position:relative; width:130px; height:130px; animation:floaty 5.5s ease-in-out infinite;">
+              <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 35% 28%, #c9ffe4, #23B26D 46%, #0d7a4a); box-shadow:0 26px 60px -14px rgba(35,178,109,.6), inset -9px -12px 26px rgba(0,40,20,.5), inset 7px 9px 22px rgba(255,255,255,.4);"></div>
+              <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" style="position:absolute; top:40px; left:40px;"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h2 style="margin-top:30px; font-size:26px; font-weight:800; letter-spacing:-.02em;">Payment received</h2>
+            <p style="margin-top:12px; font-size:15px; color:#a8e6c8; line-height:1.5;">₦450,000 detected automatically and locked in escrow. The seller can now ship.</p>
+            <div style="margin-top:18px; display:inline-flex; align-items:center; gap:7px; padding:7px 14px; border-radius:999px; background:rgba(255,255,255,.08); font-size:12.5px; font-weight:600;"><span style="width:7px; height:7px; border-radius:50%; background:#34D07E; box-shadow:0 0 8px #34D07E;"></span>No receipt uploaded — verified at source</div>
+            <div style="position:absolute; left:34px; right:34px; bottom:40px;"><div class="navbtn" data-nav="deliverycode" style="height:56px; border-radius:16px; background:#fff; color:#0B0B0D; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">Continue</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the anti-fake-receipt engine, and one of the smartest parts of the app. Instead of asking the buyer to send a screenshot of their transfer (which fraudsters photoshop), we generate a fresh bank account number that belongs only to this one deal and expires in about ten minutes. The buyer sends money to it from ANY bank — they do NOT need to be a Wema customer. The app watches the account directly, so the deal only becomes "funded" when the money truly lands. A fake receipt is useless because we never look at receipts — we look at whether the cash actually arrived. The screen should update itself to the green "funds locked" state on its own, to show the payment was detected automatically. The countdown makes it feel secure and prevents old account numbers being reused.</p></div>
+    </div>
+
+    <!-- ========================================================= 14. DELIVERY CODE ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">14</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Delivery Code (handover lock)</span><span style="font-size:10px; font-weight:800; color:#0B0B0D; background:#c9ffe4; padding:3px 8px; border-radius:6px; letter-spacing:.04em;">FRAUD-PROOF</span></div>
+      <div class="frame" id="frame-deliverycode" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div class="fscroll" data-tabs style="width:366px; height:820px; border-radius:42px; overflow-y:auto; overflow-x:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:8px 22px 0;"><h2 style="font-size:20px; font-weight:800; letter-spacing:-.02em;">Handover code</h2></div>
+          <!-- segmented -->
+          <div style="margin:14px 22px 0; height:46px; border-radius:14px; background:#141416; border:1px solid #202024; display:flex; padding:4px;">
+            <span data-tab="pane-buyer" style="flex:1; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:13.5px; font-weight:700; cursor:pointer; background:#E4144F; color:#fff;">Buyer</span>
+            <span data-tab="pane-seller" style="flex:1; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:13.5px; font-weight:700; cursor:pointer; background:transparent; color:#9A9AA0;">Seller</span>
+          </div>
+          <!-- BUYER pane -->
+          <div id="pane-buyer" data-pane style="padding:24px 22px 0;">
+            <p style="font-size:13.5px; color:#9A9AA0; line-height:1.5; text-align:center;">Your secret release code</p>
+            <div style="margin:18px 0; display:flex; gap:10px; justify-content:center;">
+              <div style="width:56px; height:70px; border-radius:14px; background:radial-gradient(130% 120% at 50% 0%, #4A0A1E, #1A0710); border:1px solid rgba(228,20,79,.4); display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:800;">7</div>
+              <div style="width:56px; height:70px; border-radius:14px; background:radial-gradient(130% 120% at 50% 0%, #4A0A1E, #1A0710); border:1px solid rgba(228,20,79,.4); display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:800;">2</div>
+              <div style="width:56px; height:70px; border-radius:14px; background:radial-gradient(130% 120% at 50% 0%, #4A0A1E, #1A0710); border:1px solid rgba(228,20,79,.4); display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:800;">9</div>
+              <div style="width:56px; height:70px; border-radius:14px; background:radial-gradient(130% 120% at 50% 0%, #4A0A1E, #1A0710); border:1px solid rgba(228,20,79,.4); display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:800;">4</div>
+            </div>
+            <div style="border-radius:16px; background:rgba(228,20,79,.08); border:1px solid rgba(228,20,79,.28); padding:15px 16px; display:flex; gap:11px; align-items:flex-start;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff8fa8" stroke-width="1.9" style="flex-shrink:0;"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-linecap="round"/></svg><p style="font-size:13px; color:#ffc7d3; line-height:1.5;">Give this code to the seller <b style="color:#fff;">only when you have received and checked your item.</b> It releases your ₦450,000.</p></div>
+          </div>
+          <!-- SELLER pane -->
+          <div id="pane-seller" data-pane style="display:none; padding:22px 22px 0;">
+            <p style="font-size:13.5px; color:#9A9AA0; line-height:1.5; text-align:center;">Enter the buyer's code to release your payment</p>
+            <div data-keypad data-code="7294" style="margin-top:18px;">
+              <div data-dots style="display:flex; gap:12px; justify-content:center; margin-bottom:18px;">
+                <div class="kd" style="width:16px; height:16px; border-radius:50%; background:#26262b;"></div>
+                <div class="kd" style="width:16px; height:16px; border-radius:50%; background:#26262b;"></div>
+                <div class="kd" style="width:16px; height:16px; border-radius:50%; background:#26262b;"></div>
+                <div class="kd" style="width:16px; height:16px; border-radius:50%; background:#26262b;"></div>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+                <span data-key="1" class="navbtn" style="height:58px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">1</span>
+                <span data-key="2" class="navbtn" style="height:58px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">2</span>
+                <span data-key="3" class="navbtn" style="height:58px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">3</span>
+                <span data-key="4" class="navbtn" style="height:58px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">4</span>
+                <span data-key="5" class="navbtn" style="height:58px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">5</span>
+                <span data-key="6" class="navbtn" style="height:58px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">6</span>
+                <span data-key="7" class="navbtn" style="height:58px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">7</span>
+                <span data-key="8" class="navbtn" style="height:58px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">8</span>
+                <span data-key="9" class="navbtn" style="height:58px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">9</span>
+                <span style="height:58px;"></span>
+                <span data-key="0" class="navbtn" style="height:58px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700;">0</span>
+                <span data-key="del" class="navbtn" style="height:58px; border-radius:14px; display:flex; align-items:center; justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9A9AA0" stroke-width="1.8"><path d="M20 5H8L2 12l6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M14 9l-4 6M10 9l4 6" stroke-linecap="round"/></svg></span>
+              </div>
+              <div data-keyhint style="margin-top:16px; text-align:center; font-size:12px; color:#6d6d74;">Try the buyer's code: 7 2 9 4</div>
+            </div>
+            <!-- success -->
+            <div data-keydone style="display:none; margin-top:26px; text-align:center;">
+              <div style="width:96px; height:96px; margin:0 auto; border-radius:50%; background:radial-gradient(circle at 35% 28%, #c9ffe4, #23B26D 46%, #0d7a4a); display:flex; align-items:center; justify-content:center; box-shadow:0 20px 50px -14px rgba(35,178,109,.6);"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <h3 style="margin-top:20px; font-size:22px; font-weight:800;">Code correct</h3>
+              <p style="margin-top:10px; font-size:14px; color:#a8e6c8; line-height:1.5;">₦450,000 released to your account. Both Trust Scores updated.</p>
+            </div>
+          </div>
+          <div style="height:24px;"></div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the clever lock that protects BOTH sides at once. When the money goes into escrow, the buyer is given a secret code. The seller only gets paid when they enter that exact code — and the buyer only gives out the code once they actually have the item in hand and are happy with it. That means a seller cannot get paid for something they never delivered, AND a buyer cannot lie that "it never arrived" if the code they were holding was used to release the money. One simple code makes it impossible for either side to cheat the other on the handover.</p></div>
+    </div>
+
+    <!-- ========================================================= 15. PROOF OF DELIVERY ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">15</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Proof of Delivery (live capture)</span><span style="font-size:10px; font-weight:800; color:#0B0B0D; background:#c9ffe4; padding:3px 8px; border-radius:6px; letter-spacing:.04em;">FRAUD-PROOF</span></div>
+      <div class="frame" id="frame-proof" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div data-tabs style="width:366px; height:820px; border-radius:42px; overflow:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600; position:relative; z-index:3;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:6px 22px 0; position:relative; z-index:3;"><h2 style="font-size:20px; font-weight:800; letter-spacing:-.02em;">Live proof</h2></div>
+          <div style="margin:12px 22px 0; position:relative; z-index:3; height:44px; border-radius:14px; background:rgba(20,20,22,.7); border:1px solid #202024; display:flex; padding:4px; backdrop-filter:blur(6px);">
+            <span data-tab="pane-sellcam" style="flex:1; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; cursor:pointer; background:#E4144F; color:#fff;">Seller · photo</span>
+            <span data-tab="pane-buycam" style="flex:1; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; cursor:pointer; background:transparent; color:#9A9AA0;">Buyer · unboxing</span>
+          </div>
+          <!-- SELLER camera -->
+          <div id="pane-sellcam" data-pane style="position:absolute; inset:0; z-index:1;">
+            <div style="position:absolute; inset:0; background:radial-gradient(120% 90% at 50% 30%, #1a1e26, #070809);"></div>
+            <!-- framing brackets -->
+            <div style="position:absolute; top:150px; left:44px; width:30px; height:30px; border-top:3px solid rgba(255,255,255,.7); border-left:3px solid rgba(255,255,255,.7); border-radius:6px 0 0 0;"></div>
+            <div style="position:absolute; top:150px; right:44px; width:30px; height:30px; border-top:3px solid rgba(255,255,255,.7); border-right:3px solid rgba(255,255,255,.7); border-radius:0 6px 0 0;"></div>
+            <div style="position:absolute; bottom:250px; left:44px; width:30px; height:30px; border-bottom:3px solid rgba(255,255,255,.7); border-left:3px solid rgba(255,255,255,.7); border-radius:0 0 0 6px;"></div>
+            <div style="position:absolute; bottom:250px; right:44px; width:30px; height:30px; border-bottom:3px solid rgba(255,255,255,.7); border-right:3px solid rgba(255,255,255,.7); border-radius:0 0 6px 0;"></div>
+            <div style="position:absolute; top:290px; left:0; right:0; text-align:center; color:#7a7f88; font-size:13px;">Point at the item + packaging</div>
+            <!-- live stamp -->
+            <div style="position:absolute; bottom:170px; left:44px; padding:8px 12px; border-radius:10px; background:rgba(0,0,0,.55); font-size:11px; font-family:ui-monospace,monospace; color:#c9ffe4; line-height:1.6; backdrop-filter:blur(4px);">23 JUL 2026 · 14:22:07<br>6.5244° N, 3.3792° E · Lagos</div>
+            <!-- live badge -->
+            <div style="position:absolute; bottom:170px; right:44px; display:inline-flex; align-items:center; gap:6px; padding:7px 11px; border-radius:999px; background:rgba(255,77,77,.9); font-size:11px; font-weight:800; letter-spacing:.04em;"><span style="width:7px; height:7px; border-radius:50%; background:#fff;"></span>LIVE</div>
+            <!-- shutter -->
+            <div style="position:absolute; bottom:70px; left:0; right:0; display:flex; flex-direction:column; align-items:center; gap:14px;">
+              <div style="width:74px; height:74px; border-radius:50%; border:4px solid rgba(255,255,255,.85); padding:5px;"><div style="width:100%; height:100%; border-radius:50%; background:#fff;"></div></div>
+              <div style="display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:#9A9AA0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8" stroke-linecap="round"/></svg>Gallery upload disabled — live camera only</div>
+            </div>
+          </div>
+          <!-- BUYER video -->
+          <div id="pane-buycam" data-pane style="display:none; position:absolute; inset:0; z-index:1;">
+            <div style="position:absolute; inset:0; background:radial-gradient(120% 90% at 50% 30%, #221a20, #090708);"></div>
+            <div style="position:absolute; top:150px; left:44px; width:30px; height:30px; border-top:3px solid rgba(255,255,255,.7); border-left:3px solid rgba(255,255,255,.7); border-radius:6px 0 0 0;"></div>
+            <div style="position:absolute; top:150px; right:44px; width:30px; height:30px; border-top:3px solid rgba(255,255,255,.7); border-right:3px solid rgba(255,255,255,.7); border-radius:0 6px 0 0;"></div>
+            <div style="position:absolute; top:290px; left:0; right:0; text-align:center; color:#8a7f86; font-size:13px;">Record yourself opening the parcel</div>
+            <div style="position:absolute; top:150px; right:44px; display:inline-flex; align-items:center; gap:6px; padding:7px 11px; border-radius:999px; background:rgba(255,77,77,.9); font-size:12px; font-weight:800; transform:translateY(-42px);"><span style="width:7px; height:7px; border-radius:50%; background:#fff;"></span>REC 0:08</div>
+            <div style="position:absolute; bottom:170px; left:44px; padding:8px 12px; border-radius:10px; background:rgba(0,0,0,.55); font-size:11px; font-family:ui-monospace,monospace; color:#c9ffe4; line-height:1.6; backdrop-filter:blur(4px);">23 JUL 2026 · 16:03:41<br>Unboxing · geo-stamped</div>
+            <div style="position:absolute; bottom:70px; left:0; right:0; display:flex; flex-direction:column; align-items:center; gap:14px;">
+              <div style="width:74px; height:74px; border-radius:50%; border:4px solid rgba(255,255,255,.85); padding:6px;"><div style="width:100%; height:100%; border-radius:12px; background:#FF4D4D;"></div></div>
+              <div style="display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:#9A9AA0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8" stroke-linecap="round"/></svg>Captured live — cannot upload from gallery</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This collects honest proof of what was actually sent and received, for use if there's ever a dispute. The key design detail: the photos and video must be taken with the app's own camera on the spot — you cannot upload an old picture from your gallery. This is deliberate, because it stops people faking evidence with a photoshopped or borrowed image. The seller proves what they shipped; the buyer proves what they unboxed. If the two ever disagree, our dispute AI has real, tamper-resistant evidence to judge fairly instead of just one person's word.</p></div>
+    </div>
+
+    <!-- ========================================================= 16. INSPECTION WINDOW ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">16</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Inspection Window / Auto-Release</span><span style="font-size:10px; font-weight:800; color:#0B0B0D; background:#c9ffe4; padding:3px 8px; border-radius:6px; letter-spacing:.04em;">FRAUD-PROOF</span></div>
+      <div class="frame" id="frame-inspection" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div style="width:366px; height:820px; border-radius:42px; overflow:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:8px 22px 0; display:flex; align-items:center; gap:14px;"><div style="width:40px; height:40px; border-radius:12px; background:#17171a; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><h2 style="font-size:20px; font-weight:800; letter-spacing:-.02em;">Inspection window</h2></div>
+          <!-- delivery proven -->
+          <div style="margin:14px 22px 0; display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px; background:rgba(52,208,126,.14); color:#34D07E; font-size:12.5px; font-weight:700;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D07E" stroke-width="2.4"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Delivery proven · live photo + video on file</div>
+          <!-- countdown hero -->
+          <div style="margin:22px 22px 0; border-radius:24px; padding:26px 22px; text-align:center; background:radial-gradient(130% 120% at 50% 0%, #1a1207, #0e0a05), #100c06; border:1px solid rgba(224,162,60,.28); position:relative; overflow:hidden;">
+            <div style="position:absolute; top:-30px; right:-30px; width:130px; height:130px; border-radius:50%; background:radial-gradient(circle at 40% 40%, rgba(224,162,60,.28), transparent 70%); filter:blur(8px);"></div>
+            <div style="position:relative;">
+              <div style="width:64px; height:64px; margin:0 auto; border-radius:50%; background:radial-gradient(circle at 35% 30%, #ffe0a8, #E0A23C 60%, #a56e1e); display:flex; align-items:center; justify-content:center; box-shadow:0 14px 34px -10px rgba(224,162,60,.6);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3a2606" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg></div>
+              <div style="margin-top:16px; font-size:12.5px; color:#E0A23C; font-weight:600; letter-spacing:.02em;">TIME LEFT TO CONFIRM OR DISPUTE</div>
+              <div style="margin-top:8px; font-size:40px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums;">2d <span data-countdown="15071">04:11</span></div>
+            </div>
+          </div>
+          <!-- auto-release explainer -->
+          <div style="margin:18px 22px 0; border-radius:16px; background:#141416; border:1px solid #202024; padding:15px 16px; display:flex; gap:11px; align-items:flex-start;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9A9AA0" stroke-width="1.9" style="flex-shrink:0;"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg><p style="font-size:13px; color:#b8b8bf; line-height:1.55;">If you do nothing, the funds <b style="color:#fff;">release to the seller automatically</b> when the timer ends. Nobody can freeze a seller's money by going silent.</p></div>
+          <div style="position:absolute; left:22px; right:22px; bottom:28px;">
+            <div class="navbtn" data-nav="released" style="height:56px; border-radius:14px; background:#E4144F; display:flex; align-items:center; justify-content:center; gap:9px; font-weight:700; font-size:16px;"><svg width="17" height="17" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.4" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Confirm Received</div>
+            <div class="navbtn" data-nav="dispute" style="margin-top:12px; height:56px; border-radius:14px; background:transparent; border:1px solid #33333a; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; color:#e9e9ee;">Open Dispute</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This solves a sneaky trick where a buyer receives their item but then just goes silent forever, trapping the seller's money in escrow out of spite or to pressure them. After delivery is proven, the buyer gets a fair window to check the item and either confirm they're happy or open a dispute. But if they simply ignore it, the money automatically releases to the seller when the timer runs out. This keeps the system fair: honest buyers have time to inspect, but nobody can freeze a seller's money forever by staying quiet.</p></div>
+    </div>
+
+    <!-- ========================================================= 17. RECEIPT ========================================================= -->
+    <div style="width:390px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><span style="font-size:13px; font-weight:800; color:#E4144F; letter-spacing:.06em;">17</span><span style="font-size:15px; font-weight:700; letter-spacing:-.01em;">Transaction Receipt / Proof</span></div>
+      <div class="frame" id="frame-receipt" style="width:390px; border-radius:52px; padding:12px; background:#050506; box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+        <div class="fscroll" style="width:366px; height:820px; border-radius:42px; overflow-y:auto; overflow-x:hidden; position:relative; background:#0B0B0D;">
+          <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
+          <div style="padding:16px 22px 0;">
+            <!-- receipt card -->
+            <div style="border-radius:22px; background:#fff; color:#0B0B0D; overflow:hidden;">
+              <!-- header -->
+              <div style="padding:26px 22px 20px; text-align:center; border-bottom:1.5px dashed #d9d9de;">
+                <div style="width:64px; height:64px; margin:0 auto; border-radius:50%; background:radial-gradient(circle at 35% 30%, #c9ffe4, #23B26D 55%, #0d7a4a); display:flex; align-items:center; justify-content:center; box-shadow:0 14px 30px -10px rgba(35,178,109,.55);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <div style="margin-top:14px; font-size:13px; color:#7a7a80;">Transaction successful</div>
+                <div style="margin-top:4px; font-size:32px; font-weight:800; letter-spacing:-.03em;">₦450,000.00</div>
+                <div style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; background:rgba(35,178,109,.12); color:#0d7a4a; font-size:12px; font-weight:700;">RELEASED TO SELLER</div>
+              </div>
+              <!-- rows -->
+              <div style="padding:18px 22px;">
+                <div style="display:flex; justify-content:space-between; padding:9px 0; font-size:13.5px;"><span style="color:#8a8a90;">From</span><span style="font-weight:600; text-align:right;">Ada Okafor</span></div>
+                <div style="display:flex; justify-content:space-between; padding:9px 0; font-size:13.5px;"><span style="color:#8a8a90;">Beneficiary</span><span style="font-weight:600; text-align:right;">Chidi Nwosu<br><span style="font-weight:400; color:#8a8a90; font-size:12px;">GTBank · 0122••••81</span></span></div>
+                <div style="display:flex; justify-content:space-between; padding:9px 0; font-size:13.5px;"><span style="color:#8a8a90;">Item</span><span style="font-weight:600; text-align:right;">MacBook Air M2</span></div>
+                <div style="display:flex; justify-content:space-between; padding:9px 0; font-size:13.5px;"><span style="color:#8a8a90;">Date / time</span><span style="font-weight:600; text-align:right;">23 Jul 2026 · 4:20 PM</span></div>
+                <div style="display:flex; justify-content:space-between; padding:9px 0; font-size:13.5px;"><span style="color:#8a8a90;">Transaction ID</span><span style="font-weight:600; text-align:right; font-family:ui-monospace,monospace; font-size:12.5px;">TF-4821-AO-RLS</span></div>
+                <div style="display:flex; justify-content:space-between; padding:9px 0; font-size:13.5px;"><span style="color:#8a8a90;">Session ID</span><span style="font-weight:600; text-align:right; font-family:ui-monospace,monospace; font-size:12.5px;">0998211466032210</span></div>
+              </div>
+              <!-- footer brand -->
+              <div style="padding:14px 22px 20px; border-top:1.5px dashed #d9d9de; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <div style="width:22px; height:26px; position:relative;"><div style="position:absolute; inset:0; clip-path:path('M11 1 L21 5 L21 14 C21 22 16 25 11 26 C6 25 1 22 1 14 L1 5 Z'); background:radial-gradient(circle at 36% 28%, #ffd0dd, #E4144F 45%, #7C3AED);"></div></div>
+                <span style="font-size:12.5px; font-weight:700; color:#5a5a60;">Secured by TrustFlow · ALAT by Wema</span>
+              </div>
+            </div>
+            <div style="margin:20px 0 24px; display:flex; gap:12px;">
+              <div class="navbtn" style="flex:1; height:56px; border-radius:14px; background:#E4144F; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; font-size:15px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3M8 7l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>Share Receipt</div>
+              <div class="navbtn" data-nav="dashboard" style="flex:1; height:56px; border-radius:14px; background:#17171a; border:1px solid #26262b; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; color:#e9e9ee;">Done</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:18px 20px; border-radius:18px; background:#101012; border:1px solid #1e1e22;"><div style="font-size:11px; font-weight:800; color:#E4144F; letter-spacing:.14em; margin-bottom:8px;">TEAM NOTE</div><p style="font-size:13.5px; line-height:1.62; color:#b8b8bf;">This is the official record of what happened, generated automatically at each key moment — when money is locked in escrow, when it's released to the seller, or when it's refunded to the buyer. It looks like a proper bank transfer receipt so it feels trustworthy and official, and it can be shared. It does double duty: it reassures both people that the money moved exactly as it should, and it acts as hard evidence with unique IDs if anything is ever questioned later.</p></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Standalone shim: the design was authored against the Claude Design runtime (DCLogic).
+// Here we run the same logic directly in the browser, with no external runtime.
+class DCLogic {}
+
+class Component extends DCLogic {
+  componentDidMount() {
+    // --- clickable flow: scroll to the target frame + flash it ---
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-nav]');
+      if (!btn) return;
+      const target = document.getElementById('frame-' + btn.getAttribute('data-nav'));
+      if (!target) return;
+      const y = target.getBoundingClientRect().top + window.scrollY - 40;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+      target.classList.remove('flash');
+      void target.offsetWidth;
+      target.classList.add('flash');
+    });
+
+    // --- reveal + count-up when a dial scrolls into view ---
+    const seen = new WeakSet();
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting || seen.has(en.target)) return;
+        seen.add(en.target);
+        en.target.classList.add('in-view');
+        if (en.target.hasAttribute('data-countup')) this.countUp(en.target);
+      });
+    }, { threshold: 0.4 });
+
+    document.querySelectorAll('[data-animate], .ring.in-view, [data-countup]').forEach((el) => io.observe(el));
+
+    // --- segmented tabs (Buyer/Seller, camera panes) ---
+    document.addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-tab]');
+      if (!tab) return;
+      const scope = tab.closest('[data-tabs]');
+      if (!scope) return;
+      scope.querySelectorAll('[data-tab]').forEach((t) => {
+        const on = t === tab;
+        t.style.background = on ? '#E4144F' : 'transparent';
+        t.style.color = on ? '#fff' : '#9A9AA0';
+      });
+      scope.querySelectorAll('[data-pane]').forEach((p) => {
+        p.style.display = (p.id === tab.getAttribute('data-tab')) ? '' : 'none';
+      });
+    });
+
+    // --- release keypad ---
+    document.addEventListener('click', (e) => {
+      const key = e.target.closest('[data-key]');
+      if (!key) return;
+      const pad = key.closest('[data-keypad]');
+      if (!pad) return;
+      let entered = pad.getAttribute('data-entered') || '';
+      const v = key.getAttribute('data-key');
+      if (v === 'del') entered = entered.slice(0, -1);
+      else if (entered.length < 4) entered += v;
+      pad.setAttribute('data-entered', entered);
+      const dots = pad.querySelectorAll('.kd');
+      dots.forEach((d, i) => { d.style.background = i < entered.length ? '#E4144F' : '#26262b'; });
+      if (entered.length === 4) {
+        if (entered === pad.getAttribute('data-code')) {
+          pad.style.display = 'none';
+          const done = pad.parentElement.querySelector('[data-keydone]');
+          if (done) done.style.display = 'block';
+        } else {
+          const hint = pad.querySelector('[data-keyhint]');
+          if (hint) { hint.textContent = 'Wrong code — ask the buyer to confirm the item first'; hint.style.color = '#FF4D4D'; }
+          setTimeout(() => {
+            pad.setAttribute('data-entered', '');
+            dots.forEach((d) => { d.style.background = '#26262b'; });
+          }, 700);
+        }
+      }
+    });
+
+    // --- countdown timers (mm:ss, ticking down from data-countdown seconds) ---
+    document.querySelectorAll('[data-countdown]').forEach((el) => {
+      let s = parseInt(el.getAttribute('data-countdown'), 10) || 0;
+      const paint = () => {
+        const m = Math.floor(s / 60) % 60, sec = s % 60;
+        el.textContent = String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+      };
+      paint();
+      const id = setInterval(() => { if (s <= 0) return clearInterval(id); s--; paint(); }, 1000);
+    });
+
+    // --- expiring-account auto payment detection: flip to green when in view ---
+    const fundFrame = document.getElementById('frame-expiry');
+    if (fundFrame) {
+      const fio = new IntersectionObserver((ents) => {
+        ents.forEach((en) => {
+          if (!en.isIntersecting || fundFrame.dataset.armed) return;
+          fundFrame.dataset.armed = '1';
+          setTimeout(() => {
+            const wait = fundFrame.querySelector('[data-fundwait]');
+            const done = fundFrame.querySelector('[data-funddone]');
+            if (wait && done) { wait.style.display = 'none'; done.style.display = 'flex'; }
+          }, 4200);
+        });
+      }, { threshold: 0.5 });
+      fio.observe(fundFrame);
+    }
+  }
+
+  countUp(el) {
+    const end = parseInt(el.getAttribute('data-countup'), 10) || 0;
+    const dur = 1500, t0 = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(end * eased);
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  try { new Component().componentDidMount(); }
+  catch (err) { console.error('TrustFlow prototype init failed:', err); }
+});
+
+/* =====================================================================
+   FLOW MAP — draws a labelled, animated arrow from every button that
+   navigates ([data-nav]) to the screen frame it opens. Positions are
+   measured from the live DOM, so it re-draws correctly on any resize
+   or reflow. Nothing inside the phone screens is modified.
+   ===================================================================== */
+(function () {
+  "use strict";
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var gallery, layer, enabled = true;
+
+  // Friendly label for each arrow. Falls back to the button's own text.
+  function labelFor(btn, target) {
+    var t = (btn.textContent || "").trim().replace(/\s+/g, " ");
+    if (t.length > 26) { t = t.slice(0, 24) + "…"; }
+    return t ? "“" + t + "”" : "opens " + target;
+  }
+
+  function el(name, attrs) {
+    var n = document.createElementNS(SVGNS, name);
+    for (var k in attrs) { if (attrs[k] != null) { n.setAttribute(k, attrs[k]); } }
+    return n;
+  }
+
+  function draw() {
+    if (!gallery || !layer) { return; }
+
+    // clear previous groups (keep <defs>)
+    Array.prototype.slice.call(layer.querySelectorAll(".fl-group")).forEach(function (g) {
+      g.parentNode.removeChild(g);
+    });
+
+    var base = gallery.getBoundingClientRect();
+    layer.setAttribute("width", base.width);
+    layer.setAttribute("height", base.height);
+    layer.setAttribute("viewBox", "0 0 " + base.width + " " + base.height);
+
+    var seen = {};
+    var buttons = gallery.querySelectorAll("[data-nav]");
+
+    Array.prototype.forEach.call(buttons, function (btn) {
+      var id = btn.getAttribute("data-nav");
+      var target = document.getElementById("frame-" + id);
+      if (!target) { return; }
+
+      var srcFrame = btn.closest(".frame");
+      if (srcFrame === target) { return; }          // self-link, skip
+      var key = (srcFrame ? srcFrame.id : "x") + "->" + id;
+      if (seen[key]) { return; }                     // one arrow per pair
+      seen[key] = 1;
+
+      var b = btn.getBoundingClientRect();
+      var t = target.getBoundingClientRect();
+
+      // anchor: leave from the button, arrive at the nearest edge of the target
+      var x1 = b.left + b.width / 2 - base.left;
+      var y1 = b.top + b.height / 2 - base.top;
+      var goingRight = (t.left + t.width / 2) >= (b.left + b.width / 2);
+      var x2 = (goingRight ? t.left : t.right) - base.left;
+      var y2 = t.top + Math.min(160, t.height * 0.18) - base.top;
+
+      // leave from the side of the source frame so the line clears the phone
+      if (srcFrame) {
+        var s = srcFrame.getBoundingClientRect();
+        x1 = (goingRight ? s.right : s.left) - base.left;
+      }
+
+      var dx = x2 - x1, dy = y2 - y1;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var bow = Math.min(230, Math.max(70, dist * 0.28));
+      var dir = goingRight ? 1 : -1;
+
+      // cubic bezier that bulges outward, so arrows travel the gutters
+      var c1x = x1 + dir * bow, c1y = y1 + dy * 0.08;
+      var c2x = x2 - dir * bow * 0.85, c2y = y2 - Math.min(120, Math.abs(dy) * 0.3);
+      var d = "M " + x1 + " " + y1 + " C " + c1x + " " + c1y + ", " + c2x + " " + c2y + ", " + x2 + " " + y2;
+
+      var g = el("g", { "class": "fl-group" });
+      g.setAttribute("data-from", srcFrame ? srcFrame.id : "");
+      g.setAttribute("data-to", "frame-" + id);
+
+      g.appendChild(el("path", { "class": "fl-halo", d: d }));
+      g.appendChild(el("path", { "class": "fl-path", d: d, "marker-end": "url(#flowHead)" }));
+
+      // origin pip
+      g.appendChild(el("circle", { "class": "fl-dot", cx: x1, cy: y1, r: 3.6 }));
+      g.appendChild(el("circle", { "class": "fl-dot-ring", cx: x1, cy: y1, r: 7 }));
+
+      // travelling spark along the path
+      var spark = el("circle", { "class": "fl-spark", r: 2.6 });
+      var motion = el("animateMotion", { dur: "2.6s", repeatCount: "indefinite", path: d, calcMode: "linear" });
+      spark.appendChild(motion);
+      g.appendChild(spark);
+
+      // label chip at the curve's midpoint
+      var mx = 0.125 * x1 + 0.375 * c1x + 0.375 * c2x + 0.125 * x2;
+      var my = 0.125 * y1 + 0.375 * c1y + 0.375 * c2y + 0.125 * y2;
+      var text = labelFor(btn, id);
+      var w = text.length * 6.6 + 20;
+
+      g.appendChild(el("rect", {
+        "class": "fl-label-bg", x: mx - w / 2, y: my - 12,
+        width: w, height: 24, rx: 12
+      }));
+      var tx = el("text", { "class": "fl-label", x: mx, y: my + 4, "text-anchor": "middle" });
+      tx.textContent = text;
+      g.appendChild(tx);
+
+      layer.appendChild(g);
+    });
+  }
+
+  // hovering a screen lights only the arrows touching it
+  function wireFocus() {
+    gallery.querySelectorAll(".frame").forEach(function (f) {
+      f.addEventListener("mouseenter", function () {
+        if (!enabled) { return; }
+        layer.classList.add("focusing");
+        layer.querySelectorAll(".fl-group").forEach(function (g) {
+          var hit = g.getAttribute("data-from") === f.id || g.getAttribute("data-to") === f.id;
+          g.classList.toggle("lit", hit);
+          if (hit) {
+            var from = document.getElementById(g.getAttribute("data-from"));
+            var to = document.getElementById(g.getAttribute("data-to"));
+            if (from) { from.classList.add("lit-src"); }
+            if (to) { to.classList.add("lit-dst"); }
+          }
+        });
+      });
+      f.addEventListener("mouseleave", function () {
+        layer.classList.remove("focusing");
+        layer.querySelectorAll(".fl-group").forEach(function (g) { g.classList.remove("lit"); });
+        gallery.querySelectorAll(".lit-src, .lit-dst").forEach(function (n) {
+          n.classList.remove("lit-src"); n.classList.remove("lit-dst");
+        });
+      });
+    });
+  }
+
+  function bar() {
+    var b = document.createElement("div");
+    b.id = "flowbar";
+    b.innerHTML =
+      '<span class="legend"><span class="dash"></span> arrow = this button opens that screen</span>' +
+      '<button type="button" id="flowtoggle">Hide arrows</button>';
+    document.body.appendChild(b);
+    b.querySelector("#flowtoggle").addEventListener("click", function () {
+      enabled = !enabled;
+      layer.classList.toggle("hidden", !enabled);
+      this.textContent = enabled ? "Hide arrows" : "Show arrows";
+      this.classList.toggle("off", !enabled);
+    });
+  }
+
+  function boot() {
+    gallery = document.getElementById("gallery");
+    layer = document.getElementById("flowlayer");
+    if (!gallery || !layer) { return; }
+    draw();
+    wireFocus();
+    bar();
+
+    var t;
+    window.addEventListener("resize", function () {
+      clearTimeout(t); t = setTimeout(draw, 150);
+    });
+    // redraw once more after fonts/animations settle
+    setTimeout(draw, 400);
+    window.addEventListener("load", function () { setTimeout(draw, 200); });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else { boot(); }
+})();
+</script>
+</body>
+</html>
