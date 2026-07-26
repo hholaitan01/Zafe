@@ -83,10 +83,12 @@ app/
     ├── trust-score/  # AI Trust Score (H2O)
     ├── scam-check/   # AI scam detector (H2O)
     ├── dispute/      # AI dispute judge (H2O)
+    ├── deals/        # create / list / advance escrow deals (H2O)
     ├── ai-health/    # AI layer status
     └── auth/callback/# OAuth return (H2O)
 lib/ai/               # the AI backend — prompts, Claude client, demo mode (H2O)
 lib/auth/             # email/Google sign-in — Supabase + demo mode (H2O)
+lib/deals/            # escrow deal model + store (Supabase + seeded demo) (H2O)
 middleware.ts         # refreshes the auth session cookie
 docs/                 # the design prototype + master plan
 ```
