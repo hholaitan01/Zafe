@@ -12,6 +12,7 @@ import type { Deal } from "./types";
 const now = Date.now();
 const daysAgo = (d: number) => new Date(now - d * 86_400_000).toISOString();
 const hoursAgo = (h: number) => new Date(now - h * 3_600_000).toISOString();
+const daysAhead = (d: number) => new Date(now + d * 86_400_000).toISOString();
 
 export function seedDeals(): Deal[] {
   return [
@@ -48,6 +49,24 @@ export function seedDeals(): Deal[] {
       updatedAt: hoursAgo(18),
     },
     {
+      id: "seed-shipped-airpods",
+      reference: "TF-6VT1",
+      item: { title: "AirPods Pro (2nd gen)", amount: 145000, currency: "NGN" },
+      seller: { id: "seller-soundhub", name: "SoundHub", verified: true, completedDeals: 23, disputes: 0, accountAgeDays: 300, rating: 4.7 },
+      buyerEmail: "demo@trustflow.app",
+      status: "shipped",
+      trust: { score: 82, verdict: "safe", headline: "Safe — trusted seller, item on the way." },
+      handoverCode: "729145",
+      autoReleaseAt: daysAhead(2),
+      timeline: [
+        { at: daysAgo(1), status: "created", label: "Deal created" },
+        { at: daysAgo(1), status: "funded", label: "Money held in escrow" },
+        { at: hoursAgo(6), status: "shipped", label: "Item shipped", note: "Handover code sent to the buyer; auto-release in ~2 days." },
+      ],
+      createdAt: daysAgo(1),
+      updatedAt: hoursAgo(6),
+    },
+    {
       id: "seed-disputed-sneakers",
       reference: "TF-9KD5",
       item: { title: "Air Jordan 1 (UK 9)", amount: 95000, currency: "NGN" },
@@ -56,6 +75,12 @@ export function seedDeals(): Deal[] {
       chat: "Buyer: are these the original pair? Seller: 100% original, I'll send an unboxing. Buyer: ok proceeding.",
       status: "disputed",
       trust: { score: 54, verdict: "caution", headline: "Be careful — mixed history and a couple of past disputes." },
+      handoverCode: "418302",
+      dispute: {
+        openedAt: daysAgo(1),
+        buyer: { claim: "The pair looks fake — the stitching is off and there was no box.", evidence: ["Close-up photos of the stitching"] },
+        seller: { claim: "They're 100% original, I recorded an unboxing before sending.", evidence: ["Unboxing video"] },
+      },
       timeline: [
         { at: daysAgo(3), status: "created", label: "Deal created" },
         { at: daysAgo(3), status: "funded", label: "Money held in escrow" },

@@ -13,11 +13,14 @@ create table if not exists public.deals (
   seller      jsonb       not null,          -- SellerProfile + optional id
   buyer_email text,
   chat        text,
-  status      text        not null default 'created',
-  trust       jsonb,                         -- { score, verdict, headline }
-  timeline    jsonb       not null default '[]'::jsonb,
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  status        text        not null default 'created',
+  trust         jsonb,                       -- { score, verdict, headline }
+  handover_code text,                        -- buyer's secret code to release funds
+  auto_release_at timestamptz,               -- when funds auto-release if buyer goes silent
+  dispute       jsonb,                       -- { openedAt, buyer, seller, resolution }
+  timeline      jsonb       not null default '[]'::jsonb,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
 );
 
 create index if not exists deals_created_at_idx on public.deals (created_at desc);

@@ -8,7 +8,7 @@
    can read it straight off the deal.
    ========================================================================== */
 
-import type { SellerProfile, TrustVerdict } from "@/lib/ai/types";
+import type { DisputeResult, SellerProfile, TrustVerdict } from "@/lib/ai/types";
 
 export type DealStatus =
   | "created" // deal made, money not yet paid in
@@ -16,7 +16,8 @@ export type DealStatus =
   | "shipped" // seller dispatched the item
   | "completed" // buyer confirmed, seller paid out
   | "disputed" // the two disagree
-  | "refunded"; // money returned to the buyer
+  | "refunded" // money returned to the buyer
+  | "resolved"; // dispute settled (e.g. a split)
 
 export interface TimelineEvent {
   at: string; // ISO timestamp
@@ -32,6 +33,14 @@ export interface DealTrust {
   headline: string;
 }
 
+/** A dispute raised on a deal, and (once judged) its AI resolution. */
+export interface DealDispute {
+  openedAt: string;
+  buyer: { claim: string; evidence?: string[] };
+  seller: { claim: string; evidence?: string[] };
+  resolution?: DisputeResult;
+}
+
 export interface Deal {
   id: string;
   /** Human-friendly reference shown in the UI, e.g. "TF-8A3K". */
@@ -43,6 +52,11 @@ export interface Deal {
   chat?: string;
   status: DealStatus;
   trust?: DealTrust;
+  /** The buyer's secret handover code — the seller is only paid once it's used. */
+  handoverCode?: string;
+  /** After delivery, money auto-releases at this time if the buyer goes silent. */
+  autoReleaseAt?: string;
+  dispute?: DealDispute;
   timeline: TimelineEvent[];
   createdAt: string;
   updatedAt: string;

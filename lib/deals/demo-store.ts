@@ -9,7 +9,7 @@
 
 import { newId, newReference, statusLabel } from "./helpers";
 import { seedDeals } from "./seed";
-import type { CreateDealInput, Deal, DealStatus, DealTrust } from "./types";
+import type { CreateDealInput, Deal, DealTrust } from "./types";
 
 interface DemoDb {
   deals: Deal[];
@@ -55,13 +55,11 @@ export const demoStore = {
     return deal;
   },
 
-  async setStatus(id: string, status: DealStatus, note?: string): Promise<Deal | null> {
-    const deal = db().deals.find((d) => d.id === id);
-    if (!deal) return null;
-    const at = new Date().toISOString();
-    deal.status = status;
-    deal.updatedAt = at;
-    deal.timeline.push({ at, status, label: statusLabel(status), note });
-    return deal;
+  /** Merge fields onto a deal. The caller builds the new timeline/updatedAt. */
+  async patch(id: string, fields: Partial<Deal>): Promise<Deal | null> {
+    const idx = db().deals.findIndex((d) => d.id === id);
+    if (idx === -1) return null;
+    db().deals[idx] = { ...db().deals[idx], ...fields };
+    return db().deals[idx];
   },
 };

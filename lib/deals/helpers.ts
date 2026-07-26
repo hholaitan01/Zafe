@@ -23,6 +23,7 @@ const STATUS_LABEL: Record<DealStatus, string> = {
   completed: "Completed — seller paid",
   disputed: "Dispute opened",
   refunded: "Refunded to buyer",
+  resolved: "Dispute resolved",
 };
 
 export function statusLabel(status: DealStatus): string {
@@ -31,3 +32,15 @@ export function statusLabel(status: DealStatus): string {
 
 /** The order a normal deal moves through, for validating transitions. */
 export const HAPPY_PATH: DealStatus[] = ["created", "funded", "shipped", "completed"];
+
+/** A 6-digit handover code the buyer keeps secret until they've got the item. */
+export function newHandoverCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+/** How long after shipment the money auto-releases if the buyer never confirms. */
+export const AUTO_RELEASE_DAYS = 3;
+
+export function autoReleaseTime(fromISO = new Date().toISOString()): string {
+  return new Date(new Date(fromISO).getTime() + AUTO_RELEASE_DAYS * 86_400_000).toISOString();
+}
