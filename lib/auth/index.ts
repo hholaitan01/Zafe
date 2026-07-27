@@ -58,23 +58,35 @@ export async function signInOrUp(email: string, password: string): Promise<AuthR
   return { ok: true, mode: "live", needsEmailConfirmation: true, user: signUp.data.user ? toUser(signUp.data.user) : undefined };
 }
 
-/** Start Google OAuth. Returns a redirectUrl the caller should navigate to. */
-export async function signInWithGoogle(): Promise<AuthResult> {
+type OAuthProvider = "google" | "apple";
+
+/** Start an OAuth flow. Returns a redirectUrl the caller should navigate to. */
+async function signInWithProvider(provider: OAuthProvider, demoEmail: string): Promise<AuthResult> {
   const supabase = getBrowserClient();
 
   if (!supabase) {
-    const user: TrustUser = { id: "demo-google", email: "demo@trustflow.app", name: "Demo User" };
+    const user: TrustUser = { id: `demo-${provider}`, email: demoEmail, name: "Demo User" };
     setDemoSession(user);
     return { ok: true, mode: "demo", user };
   }
 
   const redirectTo = `${window.location.origin}/auth/callback`;
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
+    provider,
     options: { redirectTo, skipBrowserRedirect: true },
   });
   if (error || !data.url) return { ok: false, mode: "live", error: friendly(error?.message) };
   return { ok: true, mode: "live", redirectUrl: data.url };
+}
+
+/** Primary sign-in: Continue with Google. */
+export function signInWithGoogle(): Promise<AuthResult> {
+  return signInWithProvider("google", "demo@trustflow.app");
+}
+
+/** Primary sign-in: Continue with Apple. */
+export function signInWithApple(): Promise<AuthResult> {
+  return signInWithProvider("apple", "demo@icloud.com");
 }
 
 /** Read the current user, or null if signed out. */
