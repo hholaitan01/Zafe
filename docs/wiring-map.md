@@ -14,9 +14,9 @@ All the client calls are typed and ready in **`@/lib/client`** (deals + AI) and
 |---|--------|-------|------|----------|
 | 1 | Landing / Get Started | — | (navigation only) | — |
 | 2 | **Login / Sign up** | H2O ✅ | `signInWithGoogle()`, `signInWithApple()` (primary), `signInOrUp()` (email) | Supabase auth |
-| 3 | **Dashboard / Home** | H2O | `listDeals()` | `GET /api/deals` |
-| 4 | **New Escrow** | H2O | `createDeal({item, seller, chat})` → `deal.trust` | `POST /api/deals` |
-| 5 | **Trust Score** (safe + risky) | H2O | `deal.trust`, or `getTrustScore()` for a standalone check | `POST /api/trust-score` |
+| 3 | **Dashboard / Home** | H2O ✅ | `listDeals()` | `GET /api/deals` |
+| 4 | **New Escrow** | H2O ✅ | `createDeal({item, seller, chat})` → `deal.trust` | `POST /api/deals` |
+| 5 | **Trust Score** (safe + risky) | H2O ✅ (inline in New Escrow) | `deal.trust`, or `getTrustScore()` standalone | `POST /api/trust-score` |
 | 6 | Fund Escrow / expiring account | **Jerry** (ALATPay) · H2O marks funded | `setDealStatus(id,"funded")` | `PATCH /api/deals/:id` |
 | 7 | **Timeline** | H2O | `getDeal(id)` → `deal.timeline` | `GET /api/deals/:id` |
 | 8 | **Code / handover** | H2O | `shipDeal(id)` → `deal.handoverCode`; `releaseDeal(id, code)` | `POST …/ship`, `POST …/release` |
