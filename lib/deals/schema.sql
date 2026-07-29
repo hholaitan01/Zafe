@@ -25,7 +25,9 @@ create table if not exists public.deals (
 
 create index if not exists deals_created_at_idx on public.deals (created_at desc);
 
--- The server routes talk to this table with the service-role key, which
--- bypasses RLS. If you later expose the table to the browser client, enable
--- RLS and add per-user policies (e.g. buyer_email = auth.email()).
--- alter table public.deals enable row level security;
+-- Deny all access by default. The server routes talk to this table with the
+-- service-role key (which bypasses RLS); the public anon key — which ships in
+-- the browser bundle — cannot read or write it. No policies added = no anon
+-- access. If you later let the browser client read deals directly, add
+-- per-user policies here (e.g. buyer_email = auth.email()).
+alter table public.deals enable row level security;
