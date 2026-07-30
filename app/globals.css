@@ -116,3 +116,12 @@ body {
 }
 .field::placeholder { color: #6d6d74; }
 .field:focus { border-color: #E4144F; }
+
+/* Design-screen inputs (New Escrow etc.) use inline styles, not .field — give
+   their placeholders the same muted hint colour so prefilled examples read as
+   hints that clear the moment you type. */
+.screenhost input::placeholder,
+.screenhost textarea::placeholder {
+  color: #6d6d74;
+  opacity: 1;
+}
