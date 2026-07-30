@@ -2,55 +2,129 @@
 
 /* ==========================================================================
    ScreenHtml — renders one finished design screen (from the TrustFlow design)
-   as a real app page, and makes it interactive:
-     • any element with data-nav="x" becomes a tappable link to NAV[x]
-     • the Trust Score dial fills and counts up on load
-   The visuals are the exact design markup, so screens stay pixel-identical.
+   as a real, interactive app page. The visuals are the exact design markup, so
+   screens stay pixel-identical; this component makes them *work*:
+
+     • [data-nav="x"]      → tappable link to NAV[x]
+     • [data-action="fn"]  → tappable button that calls actions.fn(fieldValues),
+                             with a busy state (used to hit the backend)
+     • [data-field="name"] → a real <input>/<textarea>; its value is collected
+                             and passed to the action handler
+     • [data-bind="key"]   → element's text is replaced with data[key]
+     • .score-num + .ring  → the Trust Score number and dial animate to
+                             data.score (any value), else the design default
+
+   Pass `data` / `actions` from a screen's page.tsx to wire it to the backend;
+   omit them and the screen behaves exactly like the static design.
    ========================================================================== */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { NAV } from "./nav";
 
-export default function ScreenHtml({ html }: { html: string }) {
+type ScreenData = Record<string, string | number | null | undefined>;
+type ScreenActions = Record<string, (fields: Record<string, string>) => void | Promise<void>>;
+
+export default function ScreenHtml({
+  html,
+  data,
+  actions,
+}: {
+  html: string;
+  data?: ScreenData;
+  actions?: ScreenActions;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Read latest data/actions at event time without re-running the effect.
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const actionsRef = useRef(actions);
+  actionsRef.current = actions;
+
+  // Re-bind + re-animate only when the screen or its data actually changes.
+  const dataKey = useMemo(() => JSON.stringify(data ?? {}), [data]);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
+    const d = dataRef.current;
 
-    // 1) make every data-nav element navigate
+    const readFields = () => {
+      const f: Record<string, string> = {};
+      host.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-field]").forEach((el) => {
+        f[el.getAttribute("data-field") || ""] = el.value;
+      });
+      return f;
+    };
+
+    // Clicks: actions take priority over nav.
     const onClick = (e: MouseEvent) => {
-      const el = (e.target as HTMLElement)?.closest<HTMLElement>("[data-nav]");
-      if (!el) return;
-      const key = el.getAttribute("data-nav") || "";
-      const to = NAV[key];
-      if (to) {
-        e.preventDefault();
-        router.push(to);
+      const t = e.target as HTMLElement;
+      const actionEl = t?.closest<HTMLElement>("[data-action]");
+      if (actionEl) {
+        const fn = actionsRef.current?.[actionEl.getAttribute("data-action") || ""];
+        if (fn) {
+          e.preventDefault();
+          if (actionEl.getAttribute("aria-busy") === "true") return;
+          actionEl.setAttribute("aria-busy", "true");
+          actionEl.style.opacity = "0.6";
+          Promise.resolve(fn(readFields())).finally(() => {
+            actionEl.removeAttribute("aria-busy");
+            actionEl.style.opacity = "1";
+          });
+          return;
+        }
+      }
+      const navEl = t?.closest<HTMLElement>("[data-nav]");
+      if (navEl) {
+        const to = NAV[navEl.getAttribute("data-nav") || ""];
+        if (to) {
+          e.preventDefault();
+          router.push(to);
+        }
       }
     };
     host.addEventListener("click", onClick);
+    host.querySelectorAll<HTMLElement>("[data-nav],[data-action]").forEach((el) => (el.style.cursor = "pointer"));
 
-    // show a pointer cursor on the tappable bits
-    host.querySelectorAll<HTMLElement>("[data-nav]").forEach((el) => {
-      el.style.cursor = "pointer";
-    });
+    // Text bindings.
+    if (d) {
+      host.querySelectorAll<HTMLElement>("[data-bind]").forEach((el) => {
+        const k = el.getAttribute("data-bind") || "";
+        if (d[k] != null) el.textContent = String(d[k]);
+      });
+    }
 
-    // 2) fire the Trust Score dial + flag reveal
-    host.querySelectorAll<HTMLElement>(".ring").forEach((r) => r.classList.add("in-view"));
+    // Reveal the flag rows.
     host.querySelectorAll<HTMLElement>(".flag").forEach((f) => f.classList.add("in-view"));
 
-    // 3) count the score number up (or jump straight to it if motion is reduced)
     const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
+    // Trust Score: drive the number + dial from real data when provided.
+    const score = d && typeof d.score === "number" ? d.score : null;
+    const scoreEl = host.querySelector<HTMLElement>(".score-num");
+    const ring = host.querySelector<HTMLElement>(".ring");
+    if (score != null) {
+      if (scoreEl) scoreEl.setAttribute("data-countup", String(score));
+      if (ring) {
+        ring.classList.remove("in-view");
+        ring.style.animation = "none";
+        ring.style.setProperty("--p", reduced ? String(score) : "0");
+      }
+    } else {
+      host.querySelectorAll<HTMLElement>(".ring").forEach((r) => r.classList.add("in-view"));
+    }
+
+    // Count numbers up (and the linked dial, when the score is dynamic).
     host.querySelectorAll<HTMLElement>("[data-countup]").forEach((el) => {
       const end = parseInt(el.getAttribute("data-countup") || "0", 10);
+      const drivesRing = el === scoreEl && score != null && !!ring;
       if (reduced) {
         el.textContent = String(end);
+        if (drivesRing) ring!.style.setProperty("--p", String(end));
         return;
       }
       const dur = 1500;
@@ -58,22 +132,20 @@ export default function ScreenHtml({ html }: { html: string }) {
       const tick = (now: number) => {
         const p = Math.min(1, (now - t0) / dur);
         const eased = 1 - Math.pow(1 - p, 3);
-        el.textContent = String(Math.round(end * eased));
+        const cur = Math.round(end * eased);
+        el.textContent = String(cur);
+        if (drivesRing) ring!.style.setProperty("--p", String(cur));
         if (p < 1) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     });
 
     return () => host.removeEventListener("click", onClick);
-  }, [router, html]);
+  }, [router, html, dataKey]);
 
   return (
     <main className="device">
-      <div
-        className="screenhost"
-        ref={hostRef}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      <div className="screenhost" ref={hostRef} dangerouslySetInnerHTML={{ __html: html }} />
     </main>
   );
 }
