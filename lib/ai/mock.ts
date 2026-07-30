@@ -33,10 +33,14 @@ const SCAM_SIGNALS: { pattern: RegExp; tactic: string; weight: number }[] = [
   { pattern: /\b(western union|moneygram)\b/i, tactic: "Untraceable money transfer", weight: 24 },
   { pattern: /\b(pay|send).{0,20}(fee|charge|tax|clearance).{0,20}(release|unlock|before)\b/i, tactic: "Advance-fee / pay-to-release trick", weight: 26 },
   { pattern: /\b(release|unlock).{0,20}(fee|charge|payment)\b/i, tactic: "Advance-fee / pay-to-release trick", weight: 26 },
-  { pattern: /\b(urgent|now now|right now|immediately|last one|someone else (is|will) buy|before (it|someone))\b/i, tactic: "Urgency and pressure", weight: 14 },
+  { pattern: /\b(pay|send)\b.{0,15}\b(me\s+)?direct(ly)?\b/i, tactic: "Pushing you to pay the seller directly", weight: 20 },
+  { pattern: /\bescrow\b.{0,20}\b(too long|slow|stress|wahala|delay|delays)\b/i, tactic: "Talking you out of escrow", weight: 22 },
+  { pattern: /\b(skip|forget|no need for|without|don'?t need)\b.{0,12}\bescrow\b/i, tactic: "Talking you out of escrow", weight: 22 },
+  { pattern: /\b(urgent|now now|right now|immediately|last one|someone else (is|will|are)|before (it|someone))\b/i, tactic: "Urgency and pressure", weight: 14 },
+  { pattern: /\b(send|pay)\b.{0,15}\b(within|in)\s*\d+\s*(min|mins|minutes|hrs|hours)\b/i, tactic: "Countdown pressure to pay fast", weight: 14 },
   { pattern: /\b(trust me|i swear|i promise|i'?m not a scammer|do you not trust)\b/i, tactic: "Pressuring you to trust them", weight: 12 },
   { pattern: /\b(pay first|pay before|send first|transfer first|deposit first)\b/i, tactic: "Demanding payment before any protection", weight: 20 },
-  { pattern: /\b(i (have |already )?sent|check again|it'?s pending|reversed|bank delay)\b/i, tactic: "Fake or excused payment proof", weight: 16 },
+  { pattern: /\b(i (have |already )?sent|check again|it'?s pending|reversed|bank delay)\b/i, tactic: "Fake or excused payment proof", weight: 20 },
   { pattern: /\b(bit\.ly|tinyurl|http:\/\/|click (this|the) link|verify your account)\b/i, tactic: "Suspicious link / phishing", weight: 20 },
 ];
 
