@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import ScreenHtml from "@/app/_lib/screen-html";
 import { html } from "@/app/_screens/timeline";
+import { getCurrentUser } from "@/lib/auth";
 import { getCurrentDealId, getDeal, naira } from "@/lib/client";
 
 const RISK: Record<string, string> = { safe: "Low risk", caution: "Caution", risky: "High risk" };
@@ -17,12 +18,14 @@ export default function Page() {
     const id = getCurrentDealId();
     if (!id) return;
     let alive = true;
-    getDeal(id)
-      .then((d) => {
+    Promise.all([getDeal(id), getCurrentUser()])
+      .then(([d, user]) => {
         if (!alive) return;
+        const me = user?.name || (user?.email ? user.email.split("@")[0] : "You");
         setData({
           title: d.item.title,
           amount: naira(d.item.amount),
+          buyer: `You (${me})`,
           seller: d.seller.name || "Seller",
           trustLine: d.trust ? `Score ${d.trust.score} · ${RISK[d.trust.verdict] ?? ""}` : "Not scored",
         });
