@@ -51,6 +51,12 @@ export default function ScreenHtml({
     if (!host) return;
     const d = dataRef.current;
 
+    // Hide the mock "9:41" status bar baked into each design screen — on a real
+    // phone it sits under the actual status bar and makes the app look like a
+    // screenshot.
+    const firstChild = host.firstElementChild?.firstElementChild as HTMLElement | null;
+    if (firstChild && (firstChild.textContent || "").includes("9:41")) firstChild.style.display = "none";
+
     const readFields = () => {
       const f: Record<string, string> = {};
       host.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-field]").forEach((el) => {
