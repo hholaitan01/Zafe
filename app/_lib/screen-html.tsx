@@ -23,7 +23,7 @@ import { useRouter } from "next/navigation";
 import { NAV } from "./nav";
 
 type ScreenData = Record<string, string | number | null | undefined>;
-type ScreenActions = Record<string, (fields: Record<string, string>) => void | Promise<void>>;
+type ScreenActions = Record<string, (fields: Record<string, string>, el: HTMLElement) => void | Promise<void>>;
 
 export default function ScreenHtml({
   html,
@@ -59,9 +59,23 @@ export default function ScreenHtml({
       return f;
     };
 
-    // Clicks: actions take priority over nav.
+    // Clicks: tabs → actions → nav.
     const onClick = (e: MouseEvent) => {
       const t = e.target as HTMLElement;
+
+      // Segmented tabs: show the matching [data-pane], highlight the active tab.
+      const tabEl = t?.closest<HTMLElement>("[data-tab]");
+      if (tabEl) {
+        const paneId = tabEl.getAttribute("data-tab") || "";
+        host.querySelectorAll<HTMLElement>("[data-pane]").forEach((p) => (p.style.display = p.id === paneId ? "" : "none"));
+        host.querySelectorAll<HTMLElement>("[data-tab]").forEach((tb) => {
+          const on = tb === tabEl;
+          tb.style.background = on ? "#E4144F" : "transparent";
+          tb.style.color = on ? "#fff" : "#9A9AA0";
+        });
+        return;
+      }
+
       const actionEl = t?.closest<HTMLElement>("[data-action]");
       if (actionEl) {
         const fn = actionsRef.current?.[actionEl.getAttribute("data-action") || ""];
@@ -70,7 +84,7 @@ export default function ScreenHtml({
           if (actionEl.getAttribute("aria-busy") === "true") return;
           actionEl.setAttribute("aria-busy", "true");
           actionEl.style.opacity = "0.6";
-          Promise.resolve(fn(readFields())).finally(() => {
+          Promise.resolve(fn(readFields(), actionEl)).finally(() => {
             actionEl.removeAttribute("aria-busy");
             actionEl.style.opacity = "1";
           });
@@ -89,11 +103,15 @@ export default function ScreenHtml({
     host.addEventListener("click", onClick);
     host.querySelectorAll<HTMLElement>("[data-nav],[data-action]").forEach((el) => (el.style.cursor = "pointer"));
 
-    // Text bindings.
+    // Text bindings, and HTML (list) injections.
     if (d) {
       host.querySelectorAll<HTMLElement>("[data-bind]").forEach((el) => {
         const k = el.getAttribute("data-bind") || "";
         if (d[k] != null) el.textContent = String(d[k]);
+      });
+      host.querySelectorAll<HTMLElement>("[data-html]").forEach((el) => {
+        const k = el.getAttribute("data-html") || "";
+        if (d[k] != null) el.innerHTML = String(d[k]);
       });
     }
 
