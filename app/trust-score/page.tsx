@@ -1,6 +1,6 @@
-import ScreenHtml from "@/app/_lib/screen-html";
+import TrustScreen from "@/app/_lib/trust-screen";
 import { html } from "@/app/_screens/trust-score";
 
 export default function Page() {
-  return <ScreenHtml html={html} />;
+  return <TrustScreen html={html} />;
 }

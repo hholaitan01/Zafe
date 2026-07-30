@@ -79,9 +79,27 @@ app/
 ├── page.tsx          # Landing / Get Started
 ├── login/page.tsx    # Sign up / Log in
 ├── dashboard/page.tsx# Dashboard (placeholder — built next)
-└── api/              # backend routes — Jerry & H2O (coming)
+└── api/              # backend routes
+    ├── trust-score/  # AI Trust Score (H2O)
+    ├── scam-check/   # AI scam detector (H2O)
+    ├── dispute/      # AI dispute judge (H2O)
+    ├── deals/        # create / list / advance escrow deals (H2O)
+    ├── ai-health/    # AI layer status
+    └── auth/callback/# OAuth return (H2O)
+lib/ai/               # the AI backend — prompts, Claude client, demo mode (H2O)
+lib/auth/             # email/Google sign-in — Supabase + demo mode (H2O)
+lib/deals/            # escrow deal model + store (Supabase + seeded demo) (H2O)
+middleware.ts         # refreshes the auth session cookie
 docs/                 # the design prototype + master plan
 ```
+
+The three AI features are live as API routes — see [`lib/ai/README.md`](lib/ai/README.md).
+They call **Claude** when an `ANTHROPIC_API_KEY` is set, and fall back to a
+deterministic offline "demo mode" so the app still works on stage with no key.
+
+The Login screen is wired to real **Supabase** email/Google sign-in — see
+[`lib/auth/README.md`](lib/auth/README.md). Same idea: it runs in demo mode
+until the Supabase keys are set, so the flow is never blocked on the backend.
 
 ## Where the backend plugs in
 
