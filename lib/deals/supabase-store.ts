@@ -57,6 +57,16 @@ export const supabaseStore = {
     return (data ?? []).map(fromRow);
   },
 
+  async listByBuyer(email: string): Promise<Deal[]> {
+    const { data, error } = await db()
+      .from("deals")
+      .select("*")
+      .eq("buyer_email", email)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(fromRow);
+  },
+
   async get(id: string): Promise<Deal | null> {
     const { data, error } = await db().from("deals").select("*").eq("id", id).maybeSingle();
     if (error) throw new Error(error.message);

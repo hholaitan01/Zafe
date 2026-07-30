@@ -17,6 +17,13 @@ export function listDeals(): Promise<Deal[]> {
   return apiFetch<{ deals: Deal[] }>("/api/deals").then((r) => r.deals);
 }
 
+/** Dashboard — list the signed-in trader's own deals (per-user scoping). In
+    demo mode the server has no session, so we pass the local user's email. */
+export function listMyDeals(email?: string): Promise<Deal[]> {
+  const qs = email ? `?buyer=${encodeURIComponent(email)}` : "";
+  return apiFetch<{ deals: Deal[] }>(`/api/deals${qs}`).then((r) => r.deals);
+}
+
 /** Timeline / deal detail — one deal by id. */
 export function getDeal(id: string): Promise<Deal> {
   return apiFetch<{ deal: Deal }>(`/api/deals/${id}`).then((r) => r.deal);

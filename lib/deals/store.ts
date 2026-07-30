@@ -34,6 +34,12 @@ export async function listDeals(): Promise<Deal[]> {
   return backend().list();
 }
 
+/** List one buyer's own deals (per-user scoping for the dashboard + reputation). */
+export async function listDealsForUser(email: string): Promise<Deal[]> {
+  await runAutoReleases();
+  return backend().listByBuyer(email);
+}
+
 /**
  * Create a deal and store it. If the buyer pasted a chat, run the Trust Score
  * first (live or mock, per the AI layer) and save a snapshot on the deal.
