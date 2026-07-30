@@ -1,11 +1,15 @@
 /* ==========================================================================
    The auth API the Login screen calls.
 
-   One combined entry point for the "Welcome back — create an account or sign
-   in" screen: signInOrUp() tries to sign the user in, and if they don't have
-   an account yet, creates one. Plus Google OAuth, sign-out, and a session
-   read. Every function works in LIVE mode (Supabase) and DEMO mode (local
-   stand-in) so the flow is never blocked on backend keys.
+   TrustFlow is passwordless — there are no passwords to phish, leak, or brute
+   force. Two ways in:
+     • Continue with Google (OAuth), and
+     • a one-time email login link (Supabase magic link): type your email,
+       we send a link, tapping it signs you in.
+
+   Plus sign-out and a session read. Every function works in LIVE mode
+   (Supabase) and DEMO mode (local stand-in) so the flow is never blocked on
+   backend keys.
 
    Client-side only — these touch the browser Supabase client and localStorage.
    ========================================================================== */
@@ -22,71 +26,49 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-/** Sign in with email + password; if there's no account yet, create one. */
-export async function signInOrUp(email: string, password: string): Promise<AuthResult> {
+/**
+ * Passwordless sign-in: email the user a one-time login link. Tapping it lands
+ * on /auth/callback, which exchanges the code for a session — the same callback
+ * OAuth uses. No account? The link creates one on first use.
+ */
+export async function sendMagicLink(email: string): Promise<AuthResult> {
   email = email.trim();
   if (!isValidEmail(email)) return { ok: false, mode: authConfigured() ? "live" : "demo", error: "Enter a valid email address." };
-  if (password.length < 6) return { ok: false, mode: authConfigured() ? "live" : "demo", error: "Password must be at least 6 characters." };
 
   const supabase = getBrowserClient();
 
-  // ---- DEMO mode: accept and remember locally. ----
+  // ---- DEMO mode: there's no mail server, so sign in directly so the stage
+  //      demo still works end to end with no backend. ----
   if (!supabase) {
     const user: TrustUser = { id: `demo-${email}`, email, name: nameFromEmail(email) };
     setDemoSession(user);
     return { ok: true, mode: "demo", user };
   }
 
-  // ---- LIVE mode: try sign-in, fall back to sign-up for new users. ----
-  const signIn = await supabase.auth.signInWithPassword({ email, password });
-  if (!signIn.error && signIn.data.user) {
-    return { ok: true, mode: "live", user: toUser(signIn.data.user) };
-  }
-
-  const looksLikeNewUser = /invalid login credentials/i.test(signIn.error?.message ?? "");
-  if (!looksLikeNewUser) {
-    return { ok: false, mode: "live", error: friendly(signIn.error?.message) };
-  }
-
-  const signUp = await supabase.auth.signUp({ email, password });
-  if (signUp.error) return { ok: false, mode: "live", error: friendly(signUp.error.message) };
-
-  // Session present → signed in. No session → project requires email confirmation.
-  if (signUp.data.session && signUp.data.user) {
-    return { ok: true, mode: "live", user: toUser(signUp.data.user) };
-  }
-  return { ok: true, mode: "live", needsEmailConfirmation: true, user: signUp.data.user ? toUser(signUp.data.user) : undefined };
+  // ---- LIVE mode: send the magic link. ----
+  const emailRedirectTo = `${window.location.origin}/auth/callback`;
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo } });
+  if (error) return { ok: false, mode: "live", error: friendly(error.message) };
+  return { ok: true, mode: "live", magicLinkSent: true };
 }
 
-type OAuthProvider = "google" | "apple";
-
-/** Start an OAuth flow. Returns a redirectUrl the caller should navigate to. */
-async function signInWithProvider(provider: OAuthProvider, demoEmail: string): Promise<AuthResult> {
+/** Primary sign-in: Continue with Google (OAuth). Returns a redirectUrl to navigate to. */
+export async function signInWithGoogle(): Promise<AuthResult> {
   const supabase = getBrowserClient();
 
   if (!supabase) {
-    const user: TrustUser = { id: `demo-${provider}`, email: demoEmail, name: "Demo User" };
+    const user: TrustUser = { id: "demo-google", email: "demo@trustflow.app", name: "Demo User" };
     setDemoSession(user);
     return { ok: true, mode: "demo", user };
   }
 
   const redirectTo = `${window.location.origin}/auth/callback`;
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
+    provider: "google",
     options: { redirectTo, skipBrowserRedirect: true },
   });
   if (error || !data.url) return { ok: false, mode: "live", error: friendly(error?.message) };
   return { ok: true, mode: "live", redirectUrl: data.url };
-}
-
-/** Primary sign-in: Continue with Google. */
-export function signInWithGoogle(): Promise<AuthResult> {
-  return signInWithProvider("google", "demo@trustflow.app");
-}
-
-/** Primary sign-in: Continue with Apple. */
-export function signInWithApple(): Promise<AuthResult> {
-  return signInWithProvider("apple", "demo@icloud.com");
 }
 
 /** Read the current user, or null if signed out. */

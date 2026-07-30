@@ -13,7 +13,7 @@ All the client calls are typed and ready in **`@/lib/client`** (deals + AI) and
 | # | Screen | Wires | Call | Endpoint |
 |---|--------|-------|------|----------|
 | 1 | Landing / Get Started | — | (navigation only) | — |
-| 2 | **Login / Sign up** | H2O ✅ | `signInWithGoogle()`, `signInWithApple()` (primary), `signInOrUp()` (email) | Supabase auth |
+| 2 | **Login / Sign up** | H2O ✅ | `signInWithGoogle()` (OAuth), `sendMagicLink()` (passwordless email link) | Supabase auth |
 | 3 | **Dashboard / Home** | H2O | `listDeals()` | `GET /api/deals` |
 | 4 | **New Escrow** | H2O | `createDeal({item, seller, chat})` → `deal.trust` | `POST /api/deals` |
 | 5 | **Trust Score** (safe + risky) | H2O | `deal.trust`, or `getTrustScore()` for a standalone check | `POST /api/trust-score` |
