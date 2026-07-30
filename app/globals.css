@@ -27,17 +27,14 @@ body {
   display: flex;
   flex-direction: column;
   background: #0b0b0d;
+  padding-top: max(env(safe-area-inset-top), 12px);
 }
 
+/* The mock "9:41" phone status bar from the design is hidden on the real app —
+   on a real phone it sat under the actual status bar and made the app look like
+   a screenshot. (The design screens' own status bar is hidden in ScreenHtml.) */
 .statusbar {
-  height: 44px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 26px;
-  font-size: 13px;
-  font-weight: 600;
+  display: none;
 }
 
 /* buttons behave like buttons */
@@ -73,6 +70,7 @@ body {
   min-height: 100dvh;
   border-radius: 0 !important;
   overflow: visible !important;
+  padding-top: max(env(safe-area-inset-top), 12px);
 }
 
 /* animated Trust Score dial */
