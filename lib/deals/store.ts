@@ -12,7 +12,7 @@ import { getTrustScore } from "@/lib/ai/trust-score";
 import type { DisputeDecision } from "@/lib/ai/types";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
-import { autoReleaseTime, newHandoverCode, statusLabel } from "./helpers";
+import { autoReleaseTime, newHandoverCode, normalizeContact, statusLabel } from "./helpers";
 import { supabaseStore } from "./supabase-store";
 import type { CreateDealInput, Deal, DealDispute, DealStatus, DealTrust, TimelineEvent } from "./types";
 
@@ -38,6 +38,14 @@ export async function listDeals(): Promise<Deal[]> {
 export async function listDealsForUser(email: string): Promise<Deal[]> {
   await runAutoReleases();
   return backend().listByBuyer(email);
+}
+
+/** Every deal (across all buyers) that names this seller — for seller standing. */
+export async function listDealsBySeller(contact: string): Promise<Deal[]> {
+  const norm = normalizeContact(contact);
+  if (!norm) return [];
+  const all = await backend().list();
+  return all.filter((d) => d.seller?.contact && normalizeContact(d.seller.contact) === norm);
 }
 
 /**

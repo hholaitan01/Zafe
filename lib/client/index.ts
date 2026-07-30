@@ -12,4 +12,5 @@ export { getTrustScore, checkScam, judgeDispute } from "./ai";
 export { listDeals, listMyDeals, getDeal, createDeal, setDealStatus, shipDeal, releaseDeal, disputeDeal, runAutoRelease } from "./deals";
 export type { DisputeInput } from "./deals";
 export { getMyReputation } from "./reputation";
+export { getSellerStanding } from "./seller";
 export { setCurrentDealId, getCurrentDealId, naira } from "./session";
