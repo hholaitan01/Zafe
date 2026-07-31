@@ -97,6 +97,9 @@ the real **ALAT** calls at those exact points (`lib/deals/store.ts`, `app/fund/p
 - **Payout (release / refund)** → **Merchant Payout API** (`wema-alatdev-apimgt.developer.azure-api.net`)
 - **Verify seller before payout** → **Account / Identity** name enquiry
 
+Full scoping note (which API for each step, what to pull, where it plugs in, env vars):
+[`docs/payments-alat.md`](docs/payments-alat.md).
+
 ## Run it locally
 
 ```bash
