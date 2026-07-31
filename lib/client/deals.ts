@@ -49,6 +49,11 @@ export function releaseDeal(id: string, code: string): Promise<Deal> {
   return apiFetch<{ deal: Deal }>(`/api/deals/${id}/release`, { method: "POST", body: JSON.stringify({ code }) }).then((r) => r.deal);
 }
 
+/** Timeline "Confirm Received" — release the money to the seller (buyer confirms). */
+export function confirmReceipt(dealId: string): Promise<{ ok: boolean; deal?: Deal }> {
+  return apiFetch<{ ok: boolean; deal?: Deal }>(`/api/payout`, { method: "POST", body: JSON.stringify({ dealId, via: "buyer_confirm" }) });
+}
+
 /** Dispute screen — open a dispute; the AI judge rules and the money moves. */
 export function disputeDeal(id: string, input: DisputeInput): Promise<{ deal: Deal; resolution?: DisputeResult }> {
   return apiFetch<{ deal: Deal; resolution?: DisputeResult }>(`/api/deals/${id}/dispute`, { method: "POST", body: JSON.stringify(input) });

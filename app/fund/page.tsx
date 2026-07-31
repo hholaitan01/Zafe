@@ -133,6 +133,21 @@ export default function Page() {
   }, []);
 
   const actions = {
+    // Pick a payment method (highlight the row + fill its radio).
+    selectPay: (_fields: Record<string, string>, el: HTMLElement) => {
+      const row = el.closest<HTMLElement>("[data-pay]");
+      const list = row?.parentElement;
+      if (!row || !list) return;
+      list.querySelectorAll<HTMLElement>("[data-pay]").forEach((r) => {
+        const on = r === row;
+        r.style.border = on ? "1.5px solid #E4144F" : "1px solid #26262b";
+        const radio = r.querySelector<HTMLElement>("[data-radio]");
+        if (radio) {
+          radio.style.border = on ? "6px solid #E4144F" : "2px solid #33333a";
+          radio.style.boxShadow = on ? "inset 0 0 0 2px #141416" : "none";
+        }
+      });
+    },
     // Toggle the risk acknowledgement.
     ackRisk: () => {
       ackRef.current = !ackRef.current;
