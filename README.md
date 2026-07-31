@@ -61,7 +61,9 @@ Live as API routes, powered by **Claude**. Each one calls the model when `ANTHRO
 set and falls back to a deterministic offline heuristic (`mock` / `mock-fallback`) so the app
 **always works on stage with no key**.
 
-- **Trust Score** — a 0–100 pre-deal risk score from the chat + seller history.
+- **Trust Score** — a 0–100 pre-deal risk score blending the chat, the seller's
+  TrustFlow history, and a **fraud watchlist** (`lib/fraud/`) that hard-overrides
+  a watchlisted seller to "risky" — even with no chat pasted.
 - **Scam detector** — flags specific scam tactics in a message/chat.
 - **Dispute judge** — weighs both sides and decides: release, refund, or split.
 

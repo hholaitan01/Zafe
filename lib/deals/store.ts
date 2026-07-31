@@ -10,6 +10,7 @@
 import { getDisputeDecision } from "@/lib/ai/dispute";
 import { getTrustScore } from "@/lib/ai/trust-score";
 import type { DisputeDecision } from "@/lib/ai/types";
+import { isSeedFlagged, type FraudFlag } from "@/lib/fraud";
 import { payoutSeller, refundBuyer } from "@/lib/payments";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
@@ -71,20 +72,76 @@ export async function listDealsBySeller(contact: string): Promise<Deal[]> {
 }
 
 /**
- * Create a deal and store it. If the buyer pasted a chat, run the Trust Score
- * first (live or mock, per the AI layer) and save a snapshot on the deal.
+ * Create a deal and store it, snapshotting a Trust Score verdict when we can.
+ * The assessment blends three things: the AI read of the pasted chat (if any),
+ * the seller's own TrustFlow history, and a hard fraud-watchlist override.
  */
 export async function createDeal(input: CreateDealInput): Promise<Deal> {
-  let trust: DealTrust | undefined;
+  const trust = await assessDeal(input);
+  return backend().create(input, trust);
+}
+
+/** A seller's fraud signal + history, derived from past TrustFlow deals. */
+async function sellerSignals(contact: string): Promise<{ completed: number; disputed: number; fraud: FraudFlag }> {
+  const deals = await listDealsBySeller(contact);
+  const completed = deals.filter((d) => d.status === "completed" || d.status === "resolved").length;
+  const disputed = deals.filter((d) => d.status === "disputed" || d.dispute).length;
+  const lost = deals.filter((d) => {
+    const dec = d.dispute?.resolution?.decision;
+    return dec === "refund_buyer" || dec === "split"; // resolved against the seller
+  }).length;
+
+  const seed = isSeedFlagged(contact);
+  let fraud: FraudFlag = seed;
+  if (!fraud.flagged && lost >= 1) fraud = { flagged: true, reason: `${lost} dispute${lost === 1 ? "" : "s"} resolved against them` };
+  else if (!fraud.flagged && disputed >= 2) fraud = { flagged: true, reason: `${disputed} disputes on record` };
+
+  return { completed, disputed, fraud };
+}
+
+/** Produce the deal's Trust Score snapshot (or none). */
+async function assessDeal(input: CreateDealInput): Promise<DealTrust | undefined> {
+  const contact = input.seller?.contact?.trim();
+  const signals = contact ? await sellerSignals(contact) : null;
+
+  // Feed the seller's real history into the AI's view of them.
+  const seller = { ...input.seller };
+  if (signals) {
+    seller.completedDeals = signals.completed;
+    seller.disputes = signals.disputed;
+  }
+
+  // AI read of the pasted chat, when there is one.
+  let base: DealTrust | undefined;
   if (input.chat && input.chat.trim()) {
     try {
-      const result = await getTrustScore({ chat: input.chat, seller: input.seller, item: input.item });
-      trust = { score: result.score, verdict: result.verdict, headline: result.headline };
+      const r = await getTrustScore({ chat: input.chat, seller, item: input.item });
+      base = { score: r.score, verdict: r.verdict, headline: r.headline };
     } catch {
-      trust = undefined; // never block deal creation on the score
+      base = undefined; // never block deal creation on the score
     }
   }
-  return backend().create(input, trust);
+
+  // Hard override: a watchlisted seller is risky no matter how clean the chat.
+  if (signals?.fraud.flagged) {
+    return {
+      score: Math.min(base?.score ?? 100, 12),
+      verdict: "risky",
+      headline: `⚠ This seller is on TrustFlow's fraud watchlist (${signals.fraud.reason}). We strongly advise against paying.`,
+    };
+  }
+
+  // No chat, but the seller has a rocky history → a deterministic caution so
+  // the payment screen still warns (rather than showing "no chat scanned").
+  if (!base && signals && signals.disputed > 0) {
+    return {
+      score: 45,
+      verdict: "caution",
+      headline: `Heads up — this seller has ${signals.disputed} past dispute${signals.disputed === 1 ? "" : "s"} on TrustFlow.`,
+    };
+  }
+
+  return base;
 }
 
 /** Simple status move (e.g. fund, refund) with a timeline entry. */
