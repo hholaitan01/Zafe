@@ -6,7 +6,7 @@
    across past TrustFlow deals. Then "Pay" locks the money into escrow.
    (Live ALAT payment is Jerry's; this owns the deal status.) */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ScreenHtml from "@/app/_lib/screen-html";
 import { html } from "@/app/_screens/fund";
@@ -79,9 +79,31 @@ function sellerStandingHtml(s: SellerStanding): string {
     </div>`;
 }
 
+/** For risky deals only: the "I understand the risk, pay anyway" gate the buyer
+    must tick before the money can move. Empty for non-risky deals. */
+function riskAckHtml(risky: boolean, acked: boolean, nudge: boolean): string {
+  if (!risky) return "";
+  const box = acked
+    ? `<div style="width:22px; height:22px; border-radius:7px; background:#FF4D4D; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#fff" stroke-width="3.2" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
+    : `<div style="width:22px; height:22px; border-radius:7px; border:2px solid #FF4D4D; flex-shrink:0;"></div>`;
+  const hint = nudge && !acked ? `<div style="font-size:11.5px; color:#FF4D4D; font-weight:700; margin-top:8px;">Tick the box to confirm before paying.</div>` : "";
+  return `<div data-action="ackRisk" class="navbtn" style="border-radius:14px; background:rgba(255,77,77,.08); border:1px solid rgba(255,77,77,.35); padding:13px 14px; display:flex; align-items:center; gap:11px;">${box}<div style="font-size:13px; font-weight:700; color:#ffd0d0; line-height:1.35;">I understand the risk, pay anyway</div></div>${hint}`;
+}
+
 export default function Page() {
   const router = useRouter();
   const [data, setData] = useState<Record<string, string | number>>();
+
+  // Non-ack fields (amount, banners) live in a ref so re-rendering the ack gate
+  // doesn't lose them. Refs hold the latest gate state for the action handlers.
+  const baseRef = useRef<Record<string, string | number>>({});
+  const riskyRef = useRef(false);
+  const ackRef = useRef(false);
+  const nudgeRef = useRef(false);
+
+  function paint() {
+    setData({ ...baseRef.current, riskAck: riskAckHtml(riskyRef.current, ackRef.current, nudgeRef.current) });
+  }
 
   useEffect(() => {
     const id = getCurrentDealId();
@@ -91,18 +113,18 @@ export default function Page() {
       const deal = await getDeal(id).catch(() => null);
       if (!deal || !alive) return;
       const amount = naira(deal.item.amount);
-      const next: Record<string, string | number> = {
-        amount,
-        payAmount: amount,
-        trustBanner: trustBannerHtml(deal),
-      };
-      if (alive) setData(next);
+      riskyRef.current = deal.trust?.verdict === "risky";
+      baseRef.current = { amount, payAmount: amount, trustBanner: trustBannerHtml(deal) };
+      if (alive) paint();
 
       // Seller standing loads after the deal (a second round-trip).
       const contact = deal.seller?.contact;
       if (contact) {
         const standing = await getSellerStanding(contact).catch(() => null);
-        if (standing && alive) setData({ ...next, sellerStanding: sellerStandingHtml(standing) });
+        if (standing && alive) {
+          baseRef.current = { ...baseRef.current, sellerStanding: sellerStandingHtml(standing) };
+          paint();
+        }
       }
     })();
     return () => {
@@ -111,7 +133,19 @@ export default function Page() {
   }, []);
 
   const actions = {
+    // Toggle the risk acknowledgement.
+    ackRisk: () => {
+      ackRef.current = !ackRef.current;
+      nudgeRef.current = false;
+      paint();
+    },
     fund: async () => {
+      // A red (risky) deal can't be funded until the buyer ticks the box.
+      if (riskyRef.current && !ackRef.current) {
+        nudgeRef.current = true;
+        paint();
+        return;
+      }
       const id = getCurrentDealId();
       if (id) {
         try {
