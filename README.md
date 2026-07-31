@@ -82,23 +82,24 @@ This is **one Next.js app** the whole team shares:
 
 | Person | Role | Owns | Status |
 | ------ | ---- | ---- | ------ |
-| **Jerry** | Back end (lead) | ALAT escrow & payments, database, KYC/anti-fraud | Payments **mocked** — see below |
+| **Jerry** | Back end (lead) | ALAT escrow & payments, database, KYC/anti-fraud | Rails written; **integrated** with a live/mock seam |
 | **H2O** | Back end | AI (Trust Score, scam, dispute), deals, auth, reputation | ✅ built |
 | **Deji** | Front end | Every screen people see (`app/`) | ✅ designs in |
 
-### ALAT payments — Jerry's lane (currently mocked)
+### ALAT payments (Jerry's rails, integrated)
 
-The money-moves (`fund` → held, `release` → seller paid, refund) are **wired through the deal
-lifecycle but mocked** — they change the deal status without moving real money yet. Jerry swaps in
-the real **ALAT** calls at those exact points (`lib/deals/store.ts`, `app/fund/page.tsx`,
-`app/api/deals/*`):
+The money-moves — **collect → hold → payout / refund** — are wired through the deal lifecycle
+(`lib/payments/`, `lib/deals/store.ts`) with the **same live/mock seam** as everything else: real
+ALAT calls when the keys are set, simulated otherwise, so the full escrow flow demos with no bank
+access. ALATPay (collection) and the ALAT Wallet (payout) go live independently.
 
-- **Collect (fund escrow)** → ALATPay **Pay With Bank Transfer** (`alatpay.developer.azure-api.net`)
-- **Payout (release / refund)** → **Merchant Payout API** (`wema-alatdev-apimgt.developer.azure-api.net`)
-- **Verify seller before payout** → **Account / Identity** name enquiry
+- **Collect (fund escrow)** → **ALATPay** — `POST /api/escrow` + `POST /api/webhooks/alatpay` (verify + re-query)
+- **Payout (release / refund)** → **ALAT Wallet** — `releaseWithCode` / auto-release / dispute rulings, and `POST /api/payout`, `POST /api/refund`
+- **Receipt** → `GET /api/receipt/:id`
 
-Full scoping note (which API for each step, what to pull, where it plugs in, env vars):
-[`docs/payments-alat.md`](docs/payments-alat.md).
+See [`lib/payments/README.md`](lib/payments/README.md) for the wiring, and
+[`docs/payments-alat.md`](docs/payments-alat.md) / [`docs/integration-plan.md`](docs/integration-plan.md)
+for going fully live.
 
 ## Run it locally
 
@@ -142,6 +143,7 @@ app/
 └── api/
     ├── trust-score/  scam-check/  dispute/   # the 3 AI features (H2O)
     ├── deals/  deals/[id]/(ship|release|dispute)/  auto-release/
+    ├── escrow/  webhooks/alatpay/  payout/  refund/  receipt/[id]/  # ALAT rails (Jerry)
     ├── reputation/       # per-user trader reputation (H2O)
     ├── seller-standing/  # seller lookup for the payment screen (H2O)
     ├── ai-health/        # AI layer status
@@ -150,6 +152,7 @@ lib/
 ├── ai/          # Claude client, prompts, mock, 3 features, eval  (H2O)
 ├── auth/         # passwordless Supabase auth + demo mode          (H2O)
 ├── deals/        # escrow model + store (Supabase + seeded demo)   (H2O)
+├── payments/     # ALAT collect/payout/refund + live/mock seam     (Jerry)
 ├── reputation/   # the trader reputation model                     (H2O)
 ├── seller/       # seller-standing model                           (H2O)
 └── client/       # typed browser API for the screens

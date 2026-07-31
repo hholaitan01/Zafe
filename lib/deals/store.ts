@@ -10,6 +10,7 @@
 import { getDisputeDecision } from "@/lib/ai/dispute";
 import { getTrustScore } from "@/lib/ai/trust-score";
 import type { DisputeDecision } from "@/lib/ai/types";
+import { payoutSeller, refundBuyer } from "@/lib/payments";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
 import { autoReleaseTime, newHandoverCode, normalizeContact, statusLabel } from "./helpers";
@@ -28,6 +29,12 @@ export function getDeal(id: string): Promise<Deal | null> {
   return backend().get(id);
 }
 
+/** Look a deal up by its human reference (the ALATPay orderId) — for the webhook. */
+export async function getDealByReference(reference: string): Promise<Deal | null> {
+  const all = await backend().list();
+  return all.find((d) => d.reference === reference) ?? null;
+}
+
 /** List deals — but first release any that quietly ran past their timer. */
 export async function listDeals(): Promise<Deal[]> {
   await runAutoReleases();
@@ -38,6 +45,21 @@ export async function listDeals(): Promise<Deal[]> {
 export async function listDealsForUser(email: string): Promise<Deal[]> {
   await runAutoReleases();
   return backend().listByBuyer(email);
+}
+
+/** Store the buyer's ALATPay collection account on the deal (funding, live mode). */
+export async function attachCollectionAccount(
+  id: string,
+  acct: { accountNumber: string; expiresAt: string; alatTransactionId?: string },
+): Promise<Deal | null> {
+  const deal = await backend().get(id);
+  if (!deal) return null;
+  return backend().patch(id, {
+    alatVirtualAccount: acct.accountNumber,
+    alatAccountExpiresAt: acct.expiresAt,
+    alatTransactionId: acct.alatTransactionId,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 /** Every deal (across all buyers) that names this seller — for seller standing. */
@@ -108,8 +130,62 @@ export async function releaseWithCode(id: string, code: string): Promise<Release
   if (!deal.handoverCode || code.trim() !== deal.handoverCode) {
     return { ok: false, error: "That handover code doesn't match." };
   }
-  const ev = event("completed", "Buyer confirmed with the handover code — seller paid.");
-  const updated = await backend().patch(id, { status: "completed", timeline: [...deal.timeline, ev], updatedAt: ev.at });
+  // Money moves before we mark it done: pay the seller (ALAT in live mode,
+  // simulated in demo). Don't complete the deal if the payout fails.
+  const payout = await payoutSeller(deal);
+  if (!payout.ok) return { ok: false, error: payout.error ?? "Payout to the seller failed." };
+  const ev = event("completed", `Buyer confirmed with the handover code — seller paid${payout.mode === "mock" ? " (demo)" : ""}.`);
+  const updated = await backend().patch(id, { status: "completed", payoutRef: payout.ref, timeline: [...deal.timeline, ev], updatedAt: ev.at });
+  return { ok: true, deal: updated ?? undefined };
+}
+
+/**
+ * Direct release to the seller (no handover code) — the REST payout entry and
+ * any "confirm received" action. Pays out via the seam, then completes the deal.
+ * Idempotent: a deal already paid out isn't paid twice.
+ */
+export async function releaseToSeller(id: string, via?: string): Promise<ReleaseResult> {
+  const deal = await backend().get(id);
+  if (!deal) return { ok: false, error: "not_found" };
+  if (deal.payoutRef) return { ok: true, deal };
+  if (deal.status !== "funded" && deal.status !== "shipped") {
+    return { ok: false, error: "The deal isn't eligible for payout." };
+  }
+  const payout = await payoutSeller(deal);
+  if (!payout.ok) return { ok: false, error: payout.error ?? "Payout to the seller failed." };
+  const ev = event("completed", `Seller paid${payout.mode === "mock" ? " (demo)" : ""}${via ? ` · ${via}` : ""}.`);
+  const updated = await backend().patch(id, { status: "completed", payoutRef: payout.ref, timeline: [...deal.timeline, ev], updatedAt: ev.at });
+  return { ok: true, deal: updated ?? undefined };
+}
+
+/**
+ * Refund the buyer (full or partial) and settle the deal. On a partial refund
+ * the remainder goes to the seller and the deal is "resolved"; a full refund is
+ * "refunded". Used by the REST refund entry and accepted dispute outcomes.
+ */
+export async function refundDeal(id: string, amount?: number): Promise<ReleaseResult> {
+  const deal = await backend().get(id);
+  if (!deal) return { ok: false, error: "not_found" };
+  if (!["funded", "shipped", "disputed"].includes(deal.status)) {
+    return { ok: false, error: "The deal isn't eligible for a refund." };
+  }
+  const refundAmt = amount ?? deal.item.amount;
+  if (refundAmt > deal.item.amount) return { ok: false, error: "Refund exceeds the escrowed amount." };
+
+  const refund = await refundBuyer(deal, refundAmt);
+  if (!refund.ok) return { ok: false, error: refund.error ?? "Refund to the buyer failed." };
+
+  const isPartial = refundAmt < deal.item.amount;
+  if (isPartial && deal.item.amount - refundAmt > 0) await payoutSeller(deal, deal.item.amount - refundAmt);
+  const status: DealStatus = isPartial ? "resolved" : "refunded";
+  const ev = event(status, isPartial ? `Partial refund — the buyer got back part of the amount.` : "Refunded to the buyer.");
+  const updated = await backend().patch(id, {
+    status,
+    payoutRef: refund.ref,
+    partialRefundAmount: isPartial ? refundAmt : undefined,
+    timeline: [...deal.timeline, ev],
+    updatedAt: ev.at,
+  });
   return { ok: true, deal: updated ?? undefined };
 }
 
@@ -124,8 +200,10 @@ export async function runAutoReleases(): Promise<number> {
   let released = 0;
   for (const deal of deals) {
     if (deal.status === "shipped" && deal.autoReleaseAt && new Date(deal.autoReleaseAt).getTime() <= now) {
-      const ev = event("completed", "Auto-released — the buyer didn't confirm or dispute in time.");
-      await backend().patch(deal.id, { status: "completed", timeline: [...deal.timeline, ev], updatedAt: ev.at });
+      const payout = await payoutSeller(deal);
+      if (!payout.ok) continue; // leave it shipped; the next sweep retries
+      const ev = event("completed", `Auto-released — the buyer didn't confirm or dispute in time; seller paid${payout.mode === "mock" ? " (demo)" : ""}.`);
+      await backend().patch(deal.id, { status: "completed", payoutRef: payout.ref, timeline: [...deal.timeline, ev], updatedAt: ev.at });
       released += 1;
     }
   }
@@ -169,6 +247,20 @@ export async function openAndJudgeDispute(id: string, input: DisputeInput): Prom
   const dispute: DealDispute = { openedAt, buyer: input.buyer, seller: input.seller, resolution };
   const status = statusForDecision(resolution.decision);
 
+  // Apply the ruling to the money (ALAT in live mode, simulated in demo).
+  let payoutRef: string | undefined;
+  let partialRefundAmount: number | undefined;
+  if (resolution.decision === "refund_buyer") {
+    payoutRef = (await refundBuyer(deal)).ref;
+  } else if (resolution.decision === "split") {
+    const buyerShare = Math.round((deal.item.amount * resolution.splitBuyerPercent) / 100);
+    partialRefundAmount = buyerShare;
+    payoutRef = (await refundBuyer(deal, buyerShare)).ref;
+    if (deal.item.amount - buyerShare > 0) await payoutSeller(deal, deal.item.amount - buyerShare); // remainder to seller
+  } else {
+    payoutRef = (await payoutSeller(deal)).ref;
+  }
+
   const openEv = event("disputed", "Dispute opened — both sides submitted evidence.");
   const rulingNote =
     resolution.decision === "split"
@@ -181,6 +273,8 @@ export async function openAndJudgeDispute(id: string, input: DisputeInput): Prom
   return backend().patch(id, {
     status,
     dispute,
+    payoutRef,
+    partialRefundAmount,
     timeline: [...deal.timeline, openEv, rulingEv],
     updatedAt: rulingEv.at,
   });

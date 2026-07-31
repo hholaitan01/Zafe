@@ -1,5 +1,13 @@
 # Integration plan — merging Jerry's ALAT payment rails into the app
 
+> **Status:** ✅ **Done on `claude/h2o-o24xwd`.** Jerry's ALAT rails are ported to
+> `lib/payments/` (with a live/mock seam) and wired into the `deals` lifecycle;
+> the routes (`/api/escrow`, `/api/webhooks/alatpay`, `/api/payout`,
+> `/api/refund`, `/api/receipt/:id`) build and pass an end-to-end mock test.
+> His OpenAI AI / Tailwind scaffold were **not** adopted (see below). What
+> remains is the **`main` cleanup** — this branch is the clean tree to merge
+> *from*; `main` still carries Jerry's duplicate scaffold to resolve at PR time.
+
 **Goal:** get Jerry's ALAT payment/payout work and the existing app (AI, deals,
 auth, reputation, wired screens) into **one clean, building tree** — without
 losing anyone's work.

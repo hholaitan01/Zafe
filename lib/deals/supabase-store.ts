@@ -32,6 +32,13 @@ function fromRow(row: Record<string, unknown>): Deal {
     autoReleaseAt: (row.auto_release_at as string) ?? undefined,
     dispute: (row.dispute as DealDispute) ?? undefined,
     timeline: (row.timeline as TimelineEvent[]) ?? [],
+    alatVirtualAccount: (row.alat_virtual_account as string) ?? undefined,
+    alatAccountExpiresAt: (row.alat_account_expires_at as string) ?? undefined,
+    alatTransactionId: (row.alat_transaction_id as string) ?? undefined,
+    payoutRef: (row.payout_ref as string) ?? undefined,
+    partialRefundAmount: (row.partial_refund_amount as number) ?? undefined,
+    sellerPayout: (row.seller_payout as Deal["sellerPayout"]) ?? undefined,
+    buyerPayout: (row.buyer_payout as Deal["buyerPayout"]) ?? undefined,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
@@ -46,6 +53,13 @@ function toRow(fields: Partial<Deal>): Record<string, unknown> {
   if (fields.autoReleaseAt !== undefined) row.auto_release_at = fields.autoReleaseAt;
   if (fields.dispute !== undefined) row.dispute = fields.dispute;
   if (fields.timeline !== undefined) row.timeline = fields.timeline;
+  if (fields.alatVirtualAccount !== undefined) row.alat_virtual_account = fields.alatVirtualAccount;
+  if (fields.alatAccountExpiresAt !== undefined) row.alat_account_expires_at = fields.alatAccountExpiresAt;
+  if (fields.alatTransactionId !== undefined) row.alat_transaction_id = fields.alatTransactionId;
+  if (fields.payoutRef !== undefined) row.payout_ref = fields.payoutRef;
+  if (fields.partialRefundAmount !== undefined) row.partial_refund_amount = fields.partialRefundAmount;
+  if (fields.sellerPayout !== undefined) row.seller_payout = fields.sellerPayout;
+  if (fields.buyerPayout !== undefined) row.buyer_payout = fields.buyerPayout;
   if (fields.updatedAt !== undefined) row.updated_at = fields.updatedAt;
   return row;
 }
