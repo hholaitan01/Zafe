@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ScreenHtml from "@/app/_lib/screen-html";
 import { html } from "@/app/_screens/fund";
-import { createEscrowAccount, getCurrentDealId, getDeal, getSellerStanding, naira, setDealStatus } from "@/lib/client";
+import { createEscrowAccount, getCurrentDealId, getDeal, getSellerStanding, naira } from "@/lib/client";
 import type { CollectionAccount } from "@/lib/payments";
 import type { Deal } from "@/lib/deals/types";
 import type { SellerStanding, StandingTone } from "@/lib/seller/standing";
@@ -202,23 +202,18 @@ export default function Page() {
         return;
       }
 
-      // Mint the collection account. `mode` tells us live vs demo.
-      const account = await createEscrowAccount(id).catch(() => null);
+      // Mint the collection account. The SERVER funds the deal in mock mode
+      // (funded:true); it never lets the client mark a deal funded itself.
+      const res = await createEscrowAccount(id).catch(() => null);
 
-      if (account?.mode === "mock") {
-        // Demo only: no real payment rail, so simulate the deposit landing
-        // instantly and continue. Safe — no real money moves in mock mode.
-        try {
-          await setDealStatus(id, "funded", "Buyer paid into escrow (demo)");
-        } catch {
-          /* keep the flow moving even if the status write fails */
-        }
+      if (res?.funded) {
+        // Demo: the server already funded it — no real money moved.
         router.push("/locked");
         return;
       }
 
-      if (!account) {
-        // Live call failed — do NOT self-fund; surface it and let them retry.
+      if (!res) {
+        // Live call failed — do NOT proceed; surface it and let them retry.
         baseRef.current = {
           ...baseRef.current,
           payPanel: `<div style="border-radius:14px; background:rgba(255,77,77,.1); border:1px solid rgba(255,77,77,.35); padding:13px 14px; font-size:13px; color:#ffb3b3; line-height:1.5;">Couldn't start the payment just now. Please try again.</div>`,
@@ -230,11 +225,11 @@ export default function Page() {
       // LIVE: show the account to transfer into and wait. The deal stays
       // "created" until the verified webhook marks it "funded".
       awaitingRef.current = true;
-      acctRef.current = account;
+      acctRef.current = res.account;
       baseRef.current = {
         ...baseRef.current,
         payLabel: "I've transferred — check status",
-        payPanel: payPanelHtml(account, String(baseRef.current.amount), false),
+        payPanel: payPanelHtml(res.account, String(baseRef.current.amount), false),
       };
       paint();
     },

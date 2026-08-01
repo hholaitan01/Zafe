@@ -233,15 +233,22 @@ export async function refundDeal(id: string, amount?: number): Promise<ReleaseRe
   if (!refund.ok) return { ok: false, error: refund.error ?? "Refund to the buyer failed." };
 
   const isPartial = refundAmt < deal.item.amount;
-  if (isPartial && deal.item.amount - refundAmt > 0) await payoutSeller(deal, deal.item.amount - refundAmt);
   const status: DealStatus = isPartial ? "resolved" : "refunded";
-  const ev = event(status, isPartial ? `Partial refund — the buyer got back part of the amount.` : "Refunded to the buyer.");
+  const timeline = [...deal.timeline, event(status, isPartial ? "Partial refund — the buyer got back part of the amount." : "Refunded to the buyer.")];
+
+  // Buyer is protected; pay the seller their remainder. If that fails, still
+  // settle (buyer already refunded) but flag the remainder as pending.
+  if (isPartial && deal.item.amount - refundAmt > 0) {
+    const p = await payoutSeller(deal, deal.item.amount - refundAmt);
+    if (!p.ok) timeline.push(event(status, "The seller's remainder payout is pending and will retry."));
+  }
+
   const updated = await backend().patch(id, {
     status,
     payoutRef: refund.ref,
     partialRefundAmount: isPartial ? refundAmt : undefined,
-    timeline: [...deal.timeline, ev],
-    updatedAt: ev.at,
+    timeline,
+    updatedAt: timeline[timeline.length - 1].at,
   });
   return { ok: true, deal: updated ?? undefined };
 }

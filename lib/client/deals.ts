@@ -35,10 +35,11 @@ export function createDeal(input: CreateDealInput): Promise<Deal> {
   return apiFetch<{ deal: Deal }>("/api/deals", { method: "POST", body: JSON.stringify(input) }).then((r) => r.deal);
 }
 
-/** Payment — mint the buyer's collection account. `account.mode` is "mock"
-    (simulated, fund immediately) or "live" (real account; the webhook funds it). */
-export function createEscrowAccount(dealId: string): Promise<CollectionAccount> {
-  return apiFetch<{ account: CollectionAccount }>("/api/escrow", { method: "POST", body: JSON.stringify({ dealId }) }).then((r) => r.account);
+/** Payment — mint the buyer's collection account. In mock mode the server funds
+    the deal immediately (`funded: true`); in live mode it returns the account to
+    transfer into and the verified webhook funds it later (`funded: false`). */
+export function createEscrowAccount(dealId: string): Promise<{ account: CollectionAccount; funded: boolean }> {
+  return apiFetch<{ account: CollectionAccount; funded: boolean }>("/api/escrow", { method: "POST", body: JSON.stringify({ dealId }) });
 }
 
 /** Simple status move (e.g. fund from the Fund Escrow screen). */

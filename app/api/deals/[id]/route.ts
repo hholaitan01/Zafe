@@ -1,14 +1,24 @@
 /* ==========================================================================
    /api/deals/[id]
    GET   → one deal
-   PATCH → advance the deal { status, note? } — fund, ship, complete, dispute, refund
+   PATCH → advance the deal { status, note? } for the NON-money transitions only.
+
+   Money/settlement statuses are deliberately NOT settable here — they can only
+   be reached through the flows that actually move (and verify) the money:
+     • funded    → the verified ALATPay webhook (/api/webhooks/alatpay)
+     • completed → release-with-code / auto-release / payout (all check the transfer)
+     • refunded/resolved → the refund + dispute flows (all check the transfer)
+   Allowing them here would let a client mark a deal paid without any money moving.
    ========================================================================== */
 
 import { jsonError, readJson } from "@/lib/ai/http";
 import { getDeal, setDealStatus } from "@/lib/deals/store";
 import type { DealStatus } from "@/lib/deals/types";
 
-const VALID_STATUS: DealStatus[] = ["created", "funded", "shipped", "completed", "disputed", "refunded"];
+// Non-money transitions a client may set directly.
+const PATCHABLE_STATUS: DealStatus[] = ["created", "shipped", "disputed"];
+// Money/settlement statuses that must come from a verified money-move flow.
+const PROTECTED_STATUS: DealStatus[] = ["funded", "completed", "refunded", "resolved"];
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
@@ -21,8 +31,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const body = await readJson<{ status?: string; note?: string }>(req);
   if (!body) return jsonError("Invalid JSON body");
-  if (!body.status || !VALID_STATUS.includes(body.status as DealStatus)) {
-    return jsonError(`status must be one of: ${VALID_STATUS.join(", ")}`);
+  if (body.status && PROTECTED_STATUS.includes(body.status as DealStatus)) {
+    return jsonError(`'${body.status}' is set by the payment/dispute flow, not directly.`, 409);
+  }
+  if (!body.status || !PATCHABLE_STATUS.includes(body.status as DealStatus)) {
+    return jsonError(`status must be one of: ${PATCHABLE_STATUS.join(", ")}`);
   }
 
   const deal = await setDealStatus(id, body.status as DealStatus, body.note);
