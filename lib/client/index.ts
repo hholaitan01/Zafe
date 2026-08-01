@@ -9,7 +9,9 @@
 
 export { ApiError, apiFetch } from "./api";
 export { getTrustScore, checkScam, judgeDispute } from "./ai";
-export { listDeals, listMyDeals, getDeal, createDeal, createEscrowAccount, setDealStatus, shipDeal, releaseDeal, confirmReceipt, disputeDeal, runAutoRelease } from "./deals";
+export { listDeals, listMyDeals, listMySales, requestPayment, getDeal, createDeal, createEscrowAccount, setDealStatus, shipDeal, releaseDeal, confirmReceipt, disputeDeal, runAutoRelease } from "./deals";
+export { getSellerProfile, saveSellerProfile, isSellerVerified } from "./seller-profile";
+export type { SellerProfileData, SellerPayout } from "./seller-profile";
 export type { DisputeInput } from "./deals";
 export { getMyReputation } from "./reputation";
 export { getSellerStanding } from "./seller";

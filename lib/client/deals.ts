@@ -3,7 +3,7 @@
    ========================================================================== */
 
 import type { DisputeResult } from "@/lib/ai/types";
-import type { CreateDealInput, Deal, DealStatus } from "@/lib/deals/types";
+import type { CreateDealInput, Deal, DealStatus, PayoutAccount } from "@/lib/deals/types";
 import type { CollectionAccount } from "@/lib/payments";
 import { apiFetch } from "./api";
 
@@ -23,6 +23,17 @@ export function listDeals(): Promise<Deal[]> {
 export function listMyDeals(email?: string): Promise<Deal[]> {
   const qs = email ? `?buyer=${encodeURIComponent(email)}` : "";
   return apiFetch<{ deals: Deal[] }>(`/api/deals${qs}`).then((r) => r.deals);
+}
+
+/** My sales — deals where the user is the seller (their email + saved contacts). */
+export function listMySales(contacts: string[]): Promise<Deal[]> {
+  const q = contacts.filter(Boolean).map((c) => `c=${encodeURIComponent(c)}`).join("&");
+  return apiFetch<{ deals: Deal[] }>(`/api/deals/selling${q ? `?${q}` : ""}`).then((r) => r.deals);
+}
+
+/** Seller-initiated "request payment": the seller creates the escrow for a buyer. */
+export function requestPayment(input: CreateDealInput): Promise<Deal> {
+  return apiFetch<{ deal: Deal }>("/api/deals", { method: "POST", body: JSON.stringify({ ...input, initiatedBy: "seller" }) }).then((r) => r.deal);
 }
 
 /** Timeline / deal detail — one deal by id. */
@@ -47,9 +58,10 @@ export function setDealStatus(id: string, status: DealStatus, note?: string): Pr
   return apiFetch<{ deal: Deal }>(`/api/deals/${id}`, { method: "PATCH", body: JSON.stringify({ status, note }) }).then((r) => r.deal);
 }
 
-/** Seller ships → mints the buyer's handover code + starts the auto-release timer. */
-export function shipDeal(id: string): Promise<Deal> {
-  return apiFetch<{ deal: Deal }>(`/api/deals/${id}/ship`, { method: "POST" }).then((r) => r.deal);
+/** Seller ships → mints the buyer's handover code + starts the auto-release
+    timer. Optionally attaches the seller's payout account for the release. */
+export function shipDeal(id: string, sellerPayout?: PayoutAccount): Promise<Deal> {
+  return apiFetch<{ deal: Deal }>(`/api/deals/${id}/ship`, { method: "POST", body: JSON.stringify(sellerPayout ? { sellerPayout } : {}) }).then((r) => r.deal);
 }
 
 /** Code screen — buyer confirms with the handover code to pay the seller. */

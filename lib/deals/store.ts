@@ -16,7 +16,7 @@ import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
 import { autoReleaseTime, newHandoverCode, normalizeContact, statusLabel } from "./helpers";
 import { supabaseStore } from "./supabase-store";
-import type { CreateDealInput, Deal, DealDispute, DealStatus, DealTrust, TimelineEvent } from "./types";
+import type { CreateDealInput, Deal, DealDispute, DealStatus, DealTrust, PayoutAccount, TimelineEvent } from "./types";
 
 function backend() {
   return dealBackend() === "supabase" ? supabaseStore : demoStore;
@@ -69,6 +69,17 @@ export async function listDealsBySeller(contact: string): Promise<Deal[]> {
   if (!norm) return [];
   const all = await backend().list();
   return all.filter((d) => d.seller?.contact && normalizeContact(d.seller.contact) === norm);
+}
+
+/** A seller's own sales — deals where they are the seller (any of their contacts). */
+export async function listDealsBySellerContacts(contacts: string[]): Promise<Deal[]> {
+  const set = new Set(contacts.map(normalizeContact).filter(Boolean));
+  if (!set.size) return [];
+  await runAutoReleases();
+  const all = await backend().list();
+  return all
+    .filter((d) => d.seller?.contact && set.has(normalizeContact(d.seller.contact)))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 /**
@@ -156,7 +167,7 @@ export async function setDealStatus(id: string, status: DealStatus, note?: strin
  * Seller ships. We mint the buyer's secret handover code and start the
  * auto-release timer — the two anti-cheat mechanisms from the plan.
  */
-export async function shipDeal(id: string): Promise<Deal | null> {
+export async function shipDeal(id: string, sellerPayout?: PayoutAccount): Promise<Deal | null> {
   const deal = await backend().get(id);
   if (!deal) return null;
   const ev = event("shipped", "Handover code sent to the buyer; auto-release timer started.");
@@ -164,6 +175,8 @@ export async function shipDeal(id: string): Promise<Deal | null> {
     status: "shipped",
     handoverCode: newHandoverCode(),
     autoReleaseAt: autoReleaseTime(ev.at),
+    // Capture the seller's payout account on the deal so the release can pay them.
+    ...(sellerPayout ? { sellerPayout } : {}),
     timeline: [...deal.timeline, ev],
     updatedAt: ev.at,
   });
