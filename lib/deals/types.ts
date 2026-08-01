@@ -41,9 +41,18 @@ export interface DealDispute {
   resolution?: DisputeResult;
 }
 
+/** A bank account for a payout or refund (ALAT Wallet). */
+export interface PayoutAccount {
+  bankCode?: string;
+  accountNumber?: string;
+  accountName?: string;
+  /** BVN/NIN verified — required before a seller can be paid. */
+  verified?: boolean;
+}
+
 export interface Deal {
   id: string;
-  /** Human-friendly reference shown in the UI, e.g. "TF-8A3K". */
+  /** Human-friendly reference shown in the UI, e.g. "TF-8A3K". Also the ALATPay orderId. */
   reference: string;
   item: { title: string; amount: number; currency: string };
   seller: SellerProfile & { id?: string };
@@ -58,6 +67,21 @@ export interface Deal {
   autoReleaseAt?: string;
   dispute?: DealDispute;
   timeline: TimelineEvent[];
+
+  /* ---- ALAT payments (Jerry's rails) --------------------------------- */
+  /** The buyer's one-time ALATPay collection account. */
+  alatVirtualAccount?: string;
+  alatAccountExpiresAt?: string;
+  /** ALATPay's own transaction id, for status re-queries. */
+  alatTransactionId?: string;
+  /** ALAT Wallet reference for the payout/refund that moved the money. */
+  payoutRef?: string;
+  /** Buyer's share paid back on a split ruling. */
+  partialRefundAmount?: number;
+  /** Where the seller is paid; where the buyer is refunded. */
+  sellerPayout?: PayoutAccount;
+  buyerPayout?: PayoutAccount;
+
   createdAt: string;
   updatedAt: string;
 }

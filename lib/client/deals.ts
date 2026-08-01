@@ -4,6 +4,7 @@
 
 import type { DisputeResult } from "@/lib/ai/types";
 import type { CreateDealInput, Deal, DealStatus } from "@/lib/deals/types";
+import type { CollectionAccount } from "@/lib/payments";
 import { apiFetch } from "./api";
 
 /** Both sides of a dispute, as the Dispute screen collects them. */
@@ -17,6 +18,13 @@ export function listDeals(): Promise<Deal[]> {
   return apiFetch<{ deals: Deal[] }>("/api/deals").then((r) => r.deals);
 }
 
+/** Dashboard — list the signed-in trader's own deals (per-user scoping). In
+    demo mode the server has no session, so we pass the local user's email. */
+export function listMyDeals(email?: string): Promise<Deal[]> {
+  const qs = email ? `?buyer=${encodeURIComponent(email)}` : "";
+  return apiFetch<{ deals: Deal[] }>(`/api/deals${qs}`).then((r) => r.deals);
+}
+
 /** Timeline / deal detail — one deal by id. */
 export function getDeal(id: string): Promise<Deal> {
   return apiFetch<{ deal: Deal }>(`/api/deals/${id}`).then((r) => r.deal);
@@ -25,6 +33,13 @@ export function getDeal(id: string): Promise<Deal> {
 /** New Escrow — create a deal. The response's deal.trust is the Trust Score. */
 export function createDeal(input: CreateDealInput): Promise<Deal> {
   return apiFetch<{ deal: Deal }>("/api/deals", { method: "POST", body: JSON.stringify(input) }).then((r) => r.deal);
+}
+
+/** Payment — mint the buyer's collection account. In mock mode the server funds
+    the deal immediately (`funded: true`); in live mode it returns the account to
+    transfer into and the verified webhook funds it later (`funded: false`). */
+export function createEscrowAccount(dealId: string): Promise<{ account: CollectionAccount; funded: boolean }> {
+  return apiFetch<{ account: CollectionAccount; funded: boolean }>("/api/escrow", { method: "POST", body: JSON.stringify({ dealId }) });
 }
 
 /** Simple status move (e.g. fund from the Fund Escrow screen). */
@@ -40,6 +55,11 @@ export function shipDeal(id: string): Promise<Deal> {
 /** Code screen — buyer confirms with the handover code to pay the seller. */
 export function releaseDeal(id: string, code: string): Promise<Deal> {
   return apiFetch<{ deal: Deal }>(`/api/deals/${id}/release`, { method: "POST", body: JSON.stringify({ code }) }).then((r) => r.deal);
+}
+
+/** Timeline "Confirm Received" — release the money to the seller (buyer confirms). */
+export function confirmReceipt(dealId: string): Promise<{ ok: boolean; deal?: Deal }> {
+  return apiFetch<{ ok: boolean; deal?: Deal }>(`/api/payout`, { method: "POST", body: JSON.stringify({ dealId, via: "buyer_confirm" }) });
 }
 
 /** Dispute screen — open a dispute; the AI judge rules and the money moves. */

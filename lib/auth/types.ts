@@ -19,6 +19,6 @@ export interface AuthResult {
   error?: string;
   /** Set when the action needs the browser to navigate (e.g. OAuth redirect). */
   redirectUrl?: string;
-  /** Set when sign-up succeeded but the account needs email confirmation. */
-  needsEmailConfirmation?: boolean;
+  /** Set when a passwordless login link has been emailed — tell the user to check their inbox. */
+  magicLinkSent?: boolean;
 }

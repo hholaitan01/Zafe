@@ -16,7 +16,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!body.buyer || !isNonEmptyString(body.buyer.claim)) return jsonError("buyer.claim is required.");
   if (!body.seller || !isNonEmptyString(body.seller.claim)) return jsonError("seller.claim is required.");
 
-  const deal = await openAndJudgeDispute(id, { buyer: body.buyer, seller: body.seller });
-  if (!deal) return jsonError("Deal not found", 404);
-  return Response.json({ deal, resolution: deal.dispute?.resolution });
+  const outcome = await openAndJudgeDispute(id, { buyer: body.buyer, seller: body.seller });
+  if (!outcome.ok) {
+    if (outcome.error === "not_found") return jsonError("Deal not found", 404);
+    // Ruling was made but the money didn't move — the deal is left "disputed"
+    // (settlement pending), not closed. Surface it so the client can retry.
+    return Response.json({ deal: outcome.deal, resolution: outcome.resolution, error: outcome.error }, { status: 502 });
+  }
+  return Response.json({ deal: outcome.deal, resolution: outcome.resolution });
 }

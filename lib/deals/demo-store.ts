@@ -28,6 +28,10 @@ export const demoStore = {
     return [...db().deals].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
 
+  async listByBuyer(email: string): Promise<Deal[]> {
+    return (await this.list()).filter((d) => d.buyerEmail === email);
+  },
+
   async get(id: string): Promise<Deal | null> {
     return db().deals.find((d) => d.id === id) ?? null;
   },

@@ -44,3 +44,9 @@ export const AUTO_RELEASE_DAYS = 3;
 export function autoReleaseTime(fromISO = new Date().toISOString()): string {
   return new Date(new Date(fromISO).getTime() + AUTO_RELEASE_DAYS * 86_400_000).toISOString();
 }
+
+/** Normalise a phone/email so the same seller matches regardless of formatting
+    ("+234 803 555 0142" == "+2348035550142", "A@X.com" == "a@x.com"). */
+export function normalizeContact(contact: string): string {
+  return contact.trim().toLowerCase().replace(/[\s\-()]/g, "");
+}

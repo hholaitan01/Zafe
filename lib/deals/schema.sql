@@ -25,6 +25,17 @@ create table if not exists public.deals (
 
 create index if not exists deals_created_at_idx on public.deals (created_at desc);
 
+-- ALAT payments (Jerry's rails). The money-move columns live on the deal so the
+-- lifecycle stays one row. Safe to run on an existing table.
+alter table public.deals
+  add column if not exists alat_virtual_account    text,        -- buyer's one-time ALATPay collection account
+  add column if not exists alat_account_expires_at timestamptz, -- our tighter ~10-min window
+  add column if not exists alat_transaction_id      text,        -- ALATPay id, for status re-query
+  add column if not exists payout_ref               text,        -- ALAT Wallet reference for the release/refund
+  add column if not exists partial_refund_amount    numeric,     -- buyer's share on a split ruling
+  add column if not exists seller_payout            jsonb,       -- { bankCode, accountNumber, accountName, verified }
+  add column if not exists buyer_payout             jsonb;       -- refund destination
+
 -- Deny all access by default. The server routes talk to this table with the
 -- service-role key (which bypasses RLS); the public anon key — which ships in
 -- the browser bundle — cannot read or write it. No policies added = no anon

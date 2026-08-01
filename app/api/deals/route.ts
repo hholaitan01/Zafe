@@ -6,11 +6,17 @@
    ========================================================================== */
 
 import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
-import { createDeal, listDeals } from "@/lib/deals/store";
+import { getServerUser } from "@/lib/auth/server";
+import { createDeal, listDeals, listDealsForUser } from "@/lib/deals/store";
 import type { CreateDealInput } from "@/lib/deals/types";
 
-export async function GET(): Promise<Response> {
-  const deals = await listDeals();
+export async function GET(req: Request): Promise<Response> {
+  // Scope to the signed-in trader: the session cookie (live) wins, else the
+  // client-supplied ?buyer= (demo). With no identity at all, list everything.
+  const buyer = new URL(req.url).searchParams.get("buyer")?.trim() || "";
+  const user = await getServerUser();
+  const email = user?.email || buyer;
+  const deals = email ? await listDealsForUser(email) : await listDeals();
   return Response.json({ deals });
 }
 
@@ -27,11 +33,14 @@ export async function POST(req: Request): Promise<Response> {
     return jsonError("A 'seller' object is required.");
   }
 
+  // Attribute the deal to the signed-in trader (server session is trusted over
+  // any client-supplied email) so it counts toward their reputation.
+  const user = await getServerUser();
   const deal = await createDeal({
     item: body.item,
     seller: body.seller,
     chat: body.chat,
-    buyerEmail: body.buyerEmail,
+    buyerEmail: user?.email || body.buyerEmail,
   });
   return Response.json({ deal }, { status: 201 });
 }

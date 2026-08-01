@@ -1,8 +1,127 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ---- TrustFlow AI · global styles ---------------------------------------- */
+/* Shared reset, fonts and animations. Each screen sets its own background.    */
 
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+html,
 body {
-  background: #0e2a1f;
-  color: #f2efe6;
+  min-height: 100%;
+  background: #050506;
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* the app is a phone screen; on desktop we centre it, on mobile it fills */
+.device {
+  width: 366px;
+  max-width: 100%;
+  min-height: 100dvh;
+  margin: 0 auto;
+  position: relative;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #0b0b0d;
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+
+/* The mock "9:41" phone status bar from the design is hidden on the real app —
+   on a real phone it sat under the actual status bar and made the app look like
+   a screenshot. (The design screens' own status bar is hidden in ScreenHtml.) */
+.statusbar {
+  display: none;
+}
+
+/* buttons behave like buttons */
+.tap {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+.tap:hover { filter: brightness(1.06); }
+.tap:active { transform: scale(0.985); }
+
+:focus-visible { outline: 2px solid #ff7aa0; outline-offset: 2px; }
+
+/* the floating shield on the splash screen */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+/* ---- imported design screens ------------------------------------------- */
+/* Screens 3+ are rendered from the finished design markup. This normalises  */
+/* each screen to fill the phone viewport instead of the fixed 366×820 card. */
+.screenhost {
+  flex: 1;
+  width: 366px;
+  display: flex;
+  flex-direction: column;
+}
+.screenhost > div {
+  width: 366px !important;
+  height: auto !important;
+  min-height: 100dvh;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+
+/* animated Trust Score dial */
+@property --p {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@keyframes fillLow { from { --p: 0; } to { --p: 88; } }
+@keyframes fillHigh { from { --p: 0; } to { --p: 21; } }
+@keyframes flagIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.ring { --p: 0; }
+.ring.in-view.low { animation: fillLow 1.5s cubic-bezier(.22, 1, .36, 1) forwards; }
+.ring.in-view.high { animation: fillHigh 1.5s cubic-bezier(.22, 1, .36, 1) forwards; }
+.flag.in-view { animation: flagIn .5s ease both; }
+.flag:nth-child(2) { animation-delay: .12s; }
+.flag:nth-child(3) { animation-delay: .24s; }
+.flag:nth-child(4) { animation-delay: .36s; }
+
+/* if the viewer prefers no motion, skip animation and show the final state */
+@media (prefers-reduced-motion: reduce) {
+  .ring, .flag { animation: none !important; }
+  .ring.low { --p: 88; }
+  .ring.high { --p: 21; }
+  .flag { opacity: 1; }
+}
+
+/* real form fields, styled to match the design */
+.field {
+  width: 100%;
+  height: 56px;
+  border-radius: 14px;
+  background: #1a1a1d;
+  border: 1px solid #26262b;
+  padding: 0 16px;
+  font-size: 15px;
+  color: #fff;
+  font-family: inherit;
+  outline: none;
+}
+.field::placeholder { color: #6d6d74; }
+.field:focus { border-color: #E4144F; }
+
+/* Design-screen inputs (New Escrow etc.) use inline styles, not .field — give
+   their placeholders the same muted hint colour so prefilled examples read as
+   hints that clear the moment you type. */
+.screenhost input::placeholder,
+.screenhost textarea::placeholder {
+  color: #6d6d74;
+  opacity: 1;
 }

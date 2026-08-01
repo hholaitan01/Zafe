@@ -17,6 +17,9 @@ export type AiMode = "live" | "mock" | "mock-fallback";
     new seller with no history is exactly the risky case we care about. */
 export interface SellerProfile {
   name?: string;
+  /** The seller's phone or email, as the buyer entered it — used to look up
+      the seller's standing across past TrustFlow deals. */
+  contact?: string;
   /** BVN/NIN verified — every seller must verify before they can be paid. */
   verified?: boolean;
   completedDeals?: number;
