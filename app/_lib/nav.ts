@@ -18,5 +18,6 @@ export const NAV: Record<string, string> = {
   inspection: "/inspection",
   receipt: "/receipt",
   kyc: "/seller",
+  seller: "/seller",
   profile: "/profile",
 };
