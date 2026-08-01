@@ -124,6 +124,16 @@ export default function ScreenHtml({
         const k = el.getAttribute("data-field") || "";
         if (d[k] != null && el.value === "") el.value = String(d[k]);
       });
+      // Photo fills: a data: URL becomes the element's background (e.g. an avatar).
+      host.querySelectorAll<HTMLElement>("[data-photo]").forEach((el) => {
+        const url = d[el.getAttribute("data-photo") || ""];
+        if (typeof url === "string" && url) {
+          el.style.backgroundImage = `url("${url}")`;
+          el.style.backgroundSize = "cover";
+          el.style.backgroundPosition = "center";
+          el.textContent = "";
+        }
+      });
     }
 
     // Reveal the flag rows.

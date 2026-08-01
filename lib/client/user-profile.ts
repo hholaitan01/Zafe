@@ -1,94 +1,98 @@
 /* ==========================================================================
-   The user's editable name parts (First / Other / Last).
+   The user's profile on the client: name parts (First / Other / Last), an
+   optional @username, and a photo. Source of truth is the server
+   (`/api/profile`, the `profiles` store); we keep a localStorage cache for
+   instant prefill and offline fallback.
 
-   Source of truth is the server (`/api/profile`, the `profiles` store), so edits
-   follow the user across devices. We keep a localStorage cache for instant
-   prefill and offline fallback. The signed-in identity still comes from auth
-   (Google's full name); this stores the user's own split/corrected version.
+   `hasRecord` tells the UI whether the one-time name edit has been used: once a
+   record exists, first/last names are locked and only a not-yet-set other name
+   can still be added.
    ========================================================================== */
 
 import { apiFetch } from "./api";
 
-export interface UserNames {
+export interface UserProfile {
   firstName: string;
   otherNames: string;
   lastName: string;
+  username: string;
+  photo: string;
 }
 
-interface ProfileRecord {
-  email: string;
+export interface LoadedProfile extends UserProfile {
+  hasRecord: boolean; // a saved profile exists → names are locked
+  otherLocked: boolean; // other-names already set
+}
+
+interface ProfileRow {
+  email?: string;
   firstName?: string;
   otherNames?: string;
   lastName?: string;
+  username?: string;
+  photo?: string;
 }
 
-const KEY = "trustflow.user-names";
+const KEY = "trustflow.user-profile";
+const EMPTY: UserProfile = { firstName: "", otherNames: "", lastName: "", username: "", photo: "" };
 
 /** Split a full name into first / other / last as a sensible default. */
-export function splitName(full: string): UserNames {
+export function splitName(full: string): { firstName: string; otherNames: string; lastName: string } {
   const parts = (full || "").trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { firstName: "", otherNames: "", lastName: "" };
   if (parts.length === 1) return { firstName: parts[0], otherNames: "", lastName: "" };
   return { firstName: parts[0], lastName: parts[parts.length - 1], otherNames: parts.slice(1, -1).join(" ") };
 }
 
-function cache(n: UserNames | null): void {
+function fromRow(r: ProfileRow): UserProfile {
+  return { firstName: r.firstName ?? "", otherNames: r.otherNames ?? "", lastName: r.lastName ?? "", username: r.username ?? "", photo: r.photo ?? "" };
+}
+
+function cache(p: UserProfile | null): void {
   if (typeof window === "undefined") return;
   try {
-    if (n) window.localStorage.setItem(KEY, JSON.stringify(n));
+    if (p) window.localStorage.setItem(KEY, JSON.stringify(p));
     else window.localStorage.removeItem(KEY);
   } catch {
-    /* storage disabled — nothing to do */
+    /* storage disabled */
   }
 }
 
-/** Fast, synchronous read of the cached name parts (for prefill). */
-export function getUserNames(): UserNames | null {
+export function getCachedProfile(): UserProfile | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as UserNames) : null;
+    return raw ? { ...EMPTY, ...(JSON.parse(raw) as UserProfile) } : null;
   } catch {
     return null;
   }
 }
 
-function toNames(r: ProfileRecord | null): UserNames | null {
-  if (!r) return null;
-  return { firstName: r.firstName ?? "", otherNames: r.otherNames ?? "", lastName: r.lastName ?? "" };
+/** Save the profile server-side. Throws on a real error (e.g. username taken,
+    no session email) so the caller can show it; caches the result on success. */
+export async function saveUserProfile(input: Partial<UserProfile>, email?: string): Promise<UserProfile> {
+  const r = await apiFetch<{ profile: ProfileRow | null }>("/api/profile", {
+    method: "POST",
+    body: JSON.stringify({ email, ...input }),
+  });
+  const p = r.profile ? fromRow(r.profile) : ({ ...(getCachedProfile() ?? EMPTY), ...input } as UserProfile);
+  cache(p);
+  return p;
 }
 
-/** Save the name parts server-side when we can, and always keep a local cache. */
-export async function saveUserNames(names: UserNames, email?: string): Promise<UserNames> {
-  try {
-    const r = await apiFetch<{ profile: ProfileRecord }>("/api/profile", {
-      method: "POST",
-      body: JSON.stringify({ email, ...names }),
-    });
-    const server = toNames(r.profile);
-    if (server) {
-      cache(server);
-      return server;
-    }
-  } catch {
-    /* server rejected (e.g. no email) or offline — keep the local cache */
-  }
-  cache(names);
-  return names;
-}
-
-/** Load the name parts from the server; keep the local cache if the server has none. */
-export async function loadUserNames(email?: string): Promise<UserNames | null> {
+/** Load the profile from the server; keep the local cache if the server has none. */
+export async function loadUserProfile(email?: string): Promise<LoadedProfile> {
   try {
     const q = email ? `?email=${encodeURIComponent(email)}` : "";
-    const r = await apiFetch<{ profile: ProfileRecord | null }>(`/api/profile${q}`);
+    const r = await apiFetch<{ profile: ProfileRow | null }>(`/api/profile${q}`);
     if (r.profile) {
-      const n = toNames(r.profile);
-      cache(n);
-      return n;
+      const p = fromRow(r.profile);
+      cache(p);
+      return { ...p, hasRecord: true, otherLocked: !!p.otherNames };
     }
-    return getUserNames();
   } catch {
-    return getUserNames();
+    /* offline — fall back to cache */
   }
+  const cached = getCachedProfile();
+  return { ...(cached ?? EMPTY), hasRecord: false, otherLocked: false };
 }

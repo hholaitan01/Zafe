@@ -16,7 +16,7 @@ export const html = `<div class="fscroll" style="width:366px; height:820px; bord
             </div>
             <div style="margin-top:16px;">
               <label style="font-size:12px; font-weight:600; color:#9A9AA0;">Seller's phone or email</label>
-              <input data-field="seller" placeholder="+234 803 555 0142 or seller@email.com" style="margin-top:8px; width:100%; box-sizing:border-box; height:56px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; padding:0 16px; font-size:15px; color:#fff; outline:none;"/>
+              <input data-field="seller" placeholder="@username, phone or seller@email.com" style="margin-top:8px; width:100%; box-sizing:border-box; height:56px; border-radius:14px; background:#1A1A1D; border:1px solid #26262b; padding:0 16px; font-size:15px; color:#fff; outline:none;"/>
             </div>
             <!-- PASTE CHAT box, hero of this screen -->
             <div style="margin-top:22px;">
