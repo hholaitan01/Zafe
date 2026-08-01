@@ -119,6 +119,11 @@ export default function ScreenHtml({
         const k = el.getAttribute("data-html") || "";
         if (d[k] != null) el.innerHTML = String(d[k]);
       });
+      // Prefill form fields from data (only when empty, so we never clobber typing).
+      host.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-field]").forEach((el) => {
+        const k = el.getAttribute("data-field") || "";
+        if (d[k] != null && el.value === "") el.value = String(d[k]);
+      });
     }
 
     // Reveal the flag rows.

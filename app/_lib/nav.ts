@@ -22,4 +22,7 @@ export const NAV: Record<string, string> = {
   selling: "/selling",
   request: "/request",
   profile: "/profile",
+  history: "/history",
+  settings: "/settings",
+  notifications: "/notifications",
 };
