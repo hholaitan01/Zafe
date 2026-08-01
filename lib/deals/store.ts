@@ -12,6 +12,7 @@ import { getTrustScore } from "@/lib/ai/trust-score";
 import type { DisputeDecision, DisputeResult } from "@/lib/ai/types";
 import { isSeedFlagged, type FraudFlag } from "@/lib/fraud";
 import { payoutSeller, refundBuyer } from "@/lib/payments";
+import { getSeller } from "@/lib/sellers/store";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
 import { autoReleaseTime, newHandoverCode, normalizeContact, statusLabel } from "./helpers";
@@ -170,13 +171,23 @@ export async function setDealStatus(id: string, status: DealStatus, note?: strin
 export async function shipDeal(id: string, sellerPayout?: PayoutAccount): Promise<Deal | null> {
   const deal = await backend().get(id);
   if (!deal) return null;
+
+  // Resolve the seller's payout account: an explicit one wins, else look it up
+  // server-side from the seller's saved account (so we don't trust the client).
+  let payout = sellerPayout;
+  if (!payout && deal.seller?.contact) {
+    const seller = await getSeller(deal.seller.contact);
+    if (seller?.payout?.accountNumber) {
+      payout = { accountNumber: seller.payout.accountNumber, accountName: seller.payout.accountName, verified: seller.idVerified };
+    }
+  }
+
   const ev = event("shipped", "Handover code sent to the buyer; auto-release timer started.");
   return backend().patch(id, {
     status: "shipped",
     handoverCode: newHandoverCode(),
     autoReleaseAt: autoReleaseTime(ev.at),
-    // Capture the seller's payout account on the deal so the release can pay them.
-    ...(sellerPayout ? { sellerPayout } : {}),
+    ...(payout ? { sellerPayout: payout } : {}),
     timeline: [...deal.timeline, ev],
     updatedAt: ev.at,
   });

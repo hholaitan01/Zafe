@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import ScreenHtml from "@/app/_lib/screen-html";
 import { html } from "@/app/_screens/seller";
+import { getCurrentUser } from "@/lib/auth";
 import { saveSellerProfile } from "@/lib/client";
 
 export default function Page() {
@@ -14,7 +15,7 @@ export default function Page() {
   const [err, setErr] = useState<string>();
 
   const actions = {
-    verify: (fields: Record<string, string>) => {
+    verify: async (fields: Record<string, string>) => {
       const fullName = fields.fullName?.trim() || "";
       const idNumber = fields.idNumber?.trim() || "";
       const accountNumber = fields.accountNumber?.trim() || "";
@@ -26,7 +27,8 @@ export default function Page() {
         return;
       }
       setErr(undefined);
-      saveSellerProfile({ verified: true, fullName, payout: { bankName, accountNumber, accountName } });
+      const me = await getCurrentUser().catch(() => null);
+      await saveSellerProfile({ verified: true, fullName, payout: { bankName, accountNumber, accountName } }, me?.email);
       router.push("/selling");
     },
   };

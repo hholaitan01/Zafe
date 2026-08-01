@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import ScreenHtml from "@/app/_lib/screen-html";
 import { html } from "@/app/_screens/selling";
 import { getCurrentUser } from "@/lib/auth";
-import { getSellerProfile, listMySales, naira, shipDeal } from "@/lib/client";
+import { getSellerProfile, listMySales, loadSellerProfile, naira, shipDeal } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
 function esc(s: string): string {
@@ -79,7 +79,8 @@ export default function Page() {
     let alive = true;
     (async () => {
       const user = await getCurrentUser().catch(() => null);
-      const profile = getSellerProfile();
+      // Refresh the seller profile from the server (source of truth) into the cache.
+      const profile = await loadSellerProfile(user?.email);
       contactsRef.current = [user?.email, profile?.phone].filter(Boolean) as string[];
       if (alive) await load();
     })();
