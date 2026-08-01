@@ -4,6 +4,7 @@
 
 import type { DisputeResult } from "@/lib/ai/types";
 import type { CreateDealInput, Deal, DealStatus } from "@/lib/deals/types";
+import type { CollectionAccount } from "@/lib/payments";
 import { apiFetch } from "./api";
 
 /** Both sides of a dispute, as the Dispute screen collects them. */
@@ -32,6 +33,12 @@ export function getDeal(id: string): Promise<Deal> {
 /** New Escrow — create a deal. The response's deal.trust is the Trust Score. */
 export function createDeal(input: CreateDealInput): Promise<Deal> {
   return apiFetch<{ deal: Deal }>("/api/deals", { method: "POST", body: JSON.stringify(input) }).then((r) => r.deal);
+}
+
+/** Payment — mint the buyer's collection account. `account.mode` is "mock"
+    (simulated, fund immediately) or "live" (real account; the webhook funds it). */
+export function createEscrowAccount(dealId: string): Promise<CollectionAccount> {
+  return apiFetch<{ account: CollectionAccount }>("/api/escrow", { method: "POST", body: JSON.stringify({ dealId }) }).then((r) => r.account);
 }
 
 /** Simple status move (e.g. fund from the Fund Escrow screen). */

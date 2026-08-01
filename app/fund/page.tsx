@@ -10,7 +10,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ScreenHtml from "@/app/_lib/screen-html";
 import { html } from "@/app/_screens/fund";
-import { getCurrentDealId, getDeal, getSellerStanding, naira, setDealStatus } from "@/lib/client";
+import { createEscrowAccount, getCurrentDealId, getDeal, getSellerStanding, naira, setDealStatus } from "@/lib/client";
+import type { CollectionAccount } from "@/lib/payments";
 import type { Deal } from "@/lib/deals/types";
 import type { SellerStanding, StandingTone } from "@/lib/seller/standing";
 
@@ -79,6 +80,20 @@ function sellerStandingHtml(s: SellerStanding): string {
     </div>`;
 }
 
+/** Live mode only: the one-time account the buyer transfers into. We do NOT mark
+    the deal funded here — the verified ALATPay webhook does that once the money
+    actually lands. Empty in demo mode (funding is simulated instantly). */
+function payPanelHtml(acct: CollectionAccount, amount: string, waiting: boolean): string {
+  return `<div style="border-radius:14px; background:#141416; border:1px solid #202024; padding:14px;">
+      <div style="font-size:12px; color:#9A9AA0;">Transfer exactly</div>
+      <div style="font-size:22px; font-weight:800; letter-spacing:-.02em;">${esc(amount)}</div>
+      <div style="margin-top:10px; display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9A9AA0;">Bank</span><span style="font-weight:700;">${esc(acct.bankName)}</span></div>
+      <div style="margin-top:6px; display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9A9AA0;">Account number</span><span style="font-weight:700; letter-spacing:.06em;">${esc(acct.accountNumber)}</span></div>
+      <div style="margin-top:10px; font-size:12px; color:#9A9AA0; line-height:1.5;">This one-time account expires shortly. We confirm your payment automatically once it lands — no screenshot needed.</div>
+      ${waiting ? `<div style="margin-top:8px; font-size:12px; color:#E0A23C; font-weight:700;">Payment not received yet — give it a moment after transferring.</div>` : ""}
+    </div>`;
+}
+
 /** For risky deals only: the "I understand the risk, pay anyway" gate the buyer
     must tick before the money can move. Empty for non-risky deals. */
 function riskAckHtml(risky: boolean, acked: boolean, nudge: boolean): string {
@@ -100,6 +115,11 @@ export default function Page() {
   const riskyRef = useRef(false);
   const ackRef = useRef(false);
   const nudgeRef = useRef(false);
+  // Live-mode payment state: once we've shown a real collection account we're
+  // "awaiting" the buyer's bank transfer, and never self-fund the deal.
+  const awaitingRef = useRef(false);
+  const acctRef = useRef<CollectionAccount | null>(null);
+  const waitNoteRef = useRef(false);
 
   function paint() {
     setData({ ...baseRef.current, riskAck: riskAckHtml(riskyRef.current, ackRef.current, nudgeRef.current) });
@@ -114,7 +134,7 @@ export default function Page() {
       if (!deal || !alive) return;
       const amount = naira(deal.item.amount);
       riskyRef.current = deal.trust?.verdict === "risky";
-      baseRef.current = { amount, payAmount: amount, trustBanner: trustBannerHtml(deal) };
+      baseRef.current = { amount, payLabel: `Pay ${amount} into escrow`, trustBanner: trustBannerHtml(deal) };
       if (alive) paint();
 
       // Seller standing loads after the deal (a second round-trip).
@@ -162,14 +182,61 @@ export default function Page() {
         return;
       }
       const id = getCurrentDealId();
-      if (id) {
+      if (!id) {
+        router.push("/locked");
+        return;
+      }
+
+      // Live mode, after we've shown the account: the button re-checks whether
+      // the ALATPay webhook has confirmed the transfer. We never mark it funded
+      // ourselves — only a verified payment does.
+      if (awaitingRef.current) {
+        const d = await getDeal(id).catch(() => null);
+        if (d && d.status !== "created") {
+          router.push("/locked"); // webhook confirmed → funds are held
+          return;
+        }
+        waitNoteRef.current = true;
+        baseRef.current = { ...baseRef.current, payPanel: payPanelHtml(acctRef.current!, String(baseRef.current.amount), true) };
+        paint();
+        return;
+      }
+
+      // Mint the collection account. `mode` tells us live vs demo.
+      const account = await createEscrowAccount(id).catch(() => null);
+
+      if (account?.mode === "mock") {
+        // Demo only: no real payment rail, so simulate the deposit landing
+        // instantly and continue. Safe — no real money moves in mock mode.
         try {
-          await setDealStatus(id, "funded", "Buyer paid into escrow");
+          await setDealStatus(id, "funded", "Buyer paid into escrow (demo)");
         } catch {
           /* keep the flow moving even if the status write fails */
         }
+        router.push("/locked");
+        return;
       }
-      router.push("/locked");
+
+      if (!account) {
+        // Live call failed — do NOT self-fund; surface it and let them retry.
+        baseRef.current = {
+          ...baseRef.current,
+          payPanel: `<div style="border-radius:14px; background:rgba(255,77,77,.1); border:1px solid rgba(255,77,77,.35); padding:13px 14px; font-size:13px; color:#ffb3b3; line-height:1.5;">Couldn't start the payment just now. Please try again.</div>`,
+        };
+        paint();
+        return;
+      }
+
+      // LIVE: show the account to transfer into and wait. The deal stays
+      // "created" until the verified webhook marks it "funded".
+      awaitingRef.current = true;
+      acctRef.current = account;
+      baseRef.current = {
+        ...baseRef.current,
+        payLabel: "I've transferred — check status",
+        payPanel: payPanelHtml(account, String(baseRef.current.amount), false),
+      };
+      paint();
     },
   };
 
