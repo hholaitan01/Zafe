@@ -78,13 +78,22 @@ export default function Page() {
         loadUserProfile(email).catch(() => null),
       ]);
       if (!alive) return;
+      // Money genuinely held right now = deals whose funds are in escrow
+      // (funded or shipped: paid in, not yet released/refunded).
+      const held = deals.filter((d) => d.status === "funded" || d.status === "shipped");
+      const heldTotal = held.reduce((sum, d) => sum + (d.item.amount || 0), 0);
       setData((prev) => ({
         ...prev,
         name,
         initials: initialsOf(name),
         greeting: greetingFor(new Date()),
         ...(profile?.photo ? { photo: profile.photo } : {}),
-        ...(rep ? { score: rep.score, repLabel: rep.tierLabel, ...(rep.summary ? { repSummary: rep.summary } : {}) } : {}),
+        ...(rep ? { score: rep.score, repLabel: rep.tierLabel } : {}),
+        heldAmount: heldTotal > 0 ? naira(heldTotal) : "₦0",
+        heldSub:
+          heldTotal > 0
+            ? `Across ${held.length} active deal${held.length === 1 ? "" : "s"}. Released only when you confirm.`
+            : "Nothing in escrow yet. Start a protected deal and your money stays locked until you confirm.",
         deals: deals.length
           ? deals.map(card).join("")
           : `<div style="padding:22px 18px; text-align:center; color:#94A3B8; font-size:13.5px; line-height:1.5; background:#fff; border:1px solid #E6EAF0; border-radius:16px;">No escrows yet.<br>Tap New Escrow to protect your first deal.</div>`,
