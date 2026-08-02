@@ -1,16 +1,27 @@
 "use client";
 
 /* ==========================================================================
-   Screen 2 — Sign up / Log in  (passwordless)
-   Two ways in, no passwords to phish or leak:
+   Sign in — passwordless. Two ways in, no password to phish or leak:
      • Continue with Google (OAuth), and
      • a one-time email login link (type your email → we send a link → tap it).
    No bank details here — those come later, only when a payout/refund is due.
+
+   Rebuilt in the v2 "trust fintech" language: light canvas, navy ink, emerald
+   for the safe/verified story, IBM Plex Sans, soft depth. Auth logic unchanged.
    ========================================================================== */
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { sendMagicLink, signInWithGoogle, type AuthResult } from "@/lib/auth";
+
+function Mark() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#0F172A" />
+      <path d="M11 16.2 14.6 20 21.5 12.5" stroke="#10B981" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -19,8 +30,6 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
-  // Move to the dashboard, follow an OAuth redirect, show the "check your inbox"
-  // state, or surface an error.
   function applyResult(result: AuthResult, failMessage: string): boolean {
     if (result.redirectUrl) {
       window.location.href = result.redirectUrl;
@@ -37,7 +46,6 @@ export default function LoginScreen() {
     return false;
   }
 
-  // Continue with Google (OAuth in live mode; instant in demo).
   async function handleGoogle() {
     if (loading) return;
     setError(null);
@@ -51,7 +59,6 @@ export default function LoginScreen() {
     }
   }
 
-  // Email me a login link.
   async function handleLink() {
     if (loading) return;
     setError(null);
@@ -66,161 +73,133 @@ export default function LoginScreen() {
   }
 
   return (
-    <main className="device" style={{ background: "#0B0B0D" }}>
-      {/* status bar */}
-      <div className="statusbar">
-        <span>9:41</span>
-        <span style={{ opacity: 0.7 }}>▂▃▄ ᯤ ▮</span>
-      </div>
-
-      <div style={{ padding: "20px 28px 40px" }}>
-        {/* small shield logo */}
-        <div style={{ width: 52, height: 60, position: "relative" }}>
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              clipPath: "path('M26 2 L50 11 L50 32 C50 50 39 58 26 60 C13 58 2 50 2 32 L2 11 Z')",
-              background: "radial-gradient(circle at 36% 28%, #ffd0dd, #E4144F 45%, #7C3AED 100%)",
-            }}
-          />
-          <svg width="20" height="20" viewBox="0 0 24 24" style={{ position: "absolute", top: 21, left: 16 }}>
-            <path d="M20 6 L9 17 L4 12" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          </svg>
+    <main className="device lg">
+      <style>{css}</style>
+      <div className="lg-inner">
+        <div className="lg-brand">
+          <Mark />
+          <span>TrustFlow</span>
         </div>
 
-        {sentTo ? (
-          /* ---- Check-your-inbox confirmation ---- */
-          <>
-            <h1 style={{ marginTop: 26, fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em" }}>Check your inbox</h1>
-            <p style={{ marginTop: 10, fontSize: 15, color: "#c9c9cf", lineHeight: 1.6 }}>
-              We sent a login link to <b style={{ color: "#fff" }}>{sentTo}</b>. Tap it on this device to sign in. It expires shortly and can only be used once.
-            </p>
-            <p style={{ marginTop: 16, fontSize: 13, color: "#9A9AA0", lineHeight: 1.6 }}>
-              No email after a minute? Check spam, or send a new link.
-            </p>
-            <div
-              className="tap"
-              role="button"
-              tabIndex={0}
-              aria-disabled={loading}
-              onClick={handleLink}
-              onKeyDown={(e) => e.key === "Enter" && handleLink()}
-              style={{ ...socialBtn, marginTop: 20, background: "#E4144F", color: "#fff", opacity: loading ? 0.6 : 1, pointerEvents: loading ? "none" : "auto" }}
-            >
-              {loading ? "Sending…" : "Send another link"}
-            </div>
-            <div
-              className="tap"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                setSentTo(null);
-                setError(null);
-              }}
-              onKeyDown={(e) => e.key === "Enter" && setSentTo(null)}
-              style={{ ...socialBtn, marginTop: 12, background: "transparent", color: "#fff", border: "1px solid #2a2a2e" }}
-            >
-              Use a different email
-            </div>
-            {error && (
-              <p role="alert" style={{ marginTop: 14, fontSize: 13, color: "#ff6b81", lineHeight: 1.5 }}>
-                {error}
+        <div className="lg-card lg-enter">
+          {sentTo ? (
+            /* ---- Check-your-inbox ---- */
+            <>
+              <div className="lg-mailicon" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="5" width="18" height="14" rx="2.5" />
+                  <path d="m3 7 9 6 9-6" />
+                </svg>
+              </div>
+              <h1>Check your inbox</h1>
+              <p className="lg-sub">
+                We sent a login link to <b>{sentTo}</b>. Tap it on this device to sign in. It expires shortly and works once.
               </p>
-            )}
-          </>
-        ) : (
-          /* ---- Sign-in options ---- */
-          <>
-            <h1 style={{ marginTop: 26, fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em" }}>Welcome back</h1>
-            <p style={{ marginTop: 8, fontSize: 15, color: "#9A9AA0" }}>Sign in to keep your trades protected. No passwords, ever.</p>
-
-            {/* Google — primary */}
-            <div style={{ marginTop: 32 }}>
-              <div
-                className="tap"
-                role="button"
-                tabIndex={0}
-                aria-disabled={loading}
-                onClick={handleGoogle}
-                onKeyDown={(e) => e.key === "Enter" && handleGoogle()}
-                style={{ ...socialBtn, background: "#fff", color: "#0B0B0D", opacity: loading ? 0.6 : 1, pointerEvents: loading ? "none" : "auto" }}
+              <button className="lg-btn lg-btn-primary" onClick={handleLink} disabled={loading}>
+                {loading ? "Sending…" : "Send another link"}
+              </button>
+              <button
+                className="lg-btn lg-btn-ghost"
+                onClick={() => {
+                  setSentTo(null);
+                  setError(null);
+                }}
               >
-                <svg width="20" height="20" viewBox="0 0 48 48">
+                Use a different email
+              </button>
+              {error && <p className="lg-error" role="alert">{error}</p>}
+              <p className="lg-hint">No email after a minute? Check spam, or send a new link.</p>
+            </>
+          ) : (
+            /* ---- Sign-in options ---- */
+            <>
+              <h1>Welcome back</h1>
+              <p className="lg-sub">Sign in to keep your trades protected. No passwords, ever.</p>
+
+              <button className="lg-btn lg-btn-google" onClick={handleGoogle} disabled={loading}>
+                <svg width="19" height="19" viewBox="0 0 48 48" aria-hidden="true">
                   <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.9 6.1C12.2 13.6 17.6 9.5 24 9.5z" />
                   <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.7-9.9 6.7-17.4z" />
                   <path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.9-6.1z" />
                   <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.3-5.7c-2 1.4-4.6 2.2-7.9 2.2-6.4 0-11.8-4.1-13.6-9.9l-7.9 6.1C6.4 42.6 14.6 48 24 48z" />
                 </svg>
-                Continue with Google
-              </div>
-            </div>
+                {loading ? "Please wait…" : "Continue with Google"}
+              </button>
 
-            {/* divider */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "22px 0" }}>
-              <div style={{ flex: 1, height: 1, background: "#1e1e22" }} />
-              <span style={{ fontSize: 12, color: "#6d6d74" }}>or with your email</span>
-              <div style={{ flex: 1, height: 1, background: "#1e1e22" }} />
-            </div>
+              <div className="lg-divider"><span>or with your email</span></div>
 
-            {/* email → login link */}
-            <label htmlFor="email" style={label}>
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              className="field"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLink()}
-              autoComplete="email"
-              enterKeyHint="go"
-              style={{ marginTop: 8 }}
-            />
-            <div
-              className="tap"
-              role="button"
-              tabIndex={0}
-              aria-disabled={loading}
-              onClick={handleLink}
-              onKeyDown={(e) => e.key === "Enter" && handleLink()}
-              style={{ ...socialBtn, marginTop: 14, background: "#E4144F", color: "#fff", fontSize: 16, opacity: loading ? 0.6 : 1, pointerEvents: loading ? "none" : "auto" }}
-            >
-              {loading ? "Please wait…" : "Email me a login link"}
-            </div>
+              <label htmlFor="email" className="lg-label">Email address</label>
+              <input
+                id="email"
+                type="email"
+                className="lg-input"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLink()}
+                autoComplete="email"
+                enterKeyHint="go"
+              />
+              <button className="lg-btn lg-btn-primary" onClick={handleLink} disabled={loading || !email.trim()}>
+                {loading ? "Sending…" : "Email me a login link"}
+              </button>
 
-            {error && (
-              <p role="alert" style={{ marginTop: 14, fontSize: 13, color: "#ff6b81", lineHeight: 1.5 }}>
-                {error}
-              </p>
-            )}
+              {error && <p className="lg-error" role="alert">{error}</p>}
+            </>
+          )}
+        </div>
 
-            <p style={{ marginTop: 22, textAlign: "center", fontSize: 12.5, color: "#6d6d74", lineHeight: 1.5 }}>
-              We never ask for your bank details here. You&apos;ll only add them later, right when a payout or refund is due.
-            </p>
-          </>
-        )}
+        <p className="lg-foot">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" aria-hidden="true"><path d="M12 3 20 6v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /></svg>
+          We never ask for your bank details here. Those come later, only when a payout is due.
+        </p>
       </div>
     </main>
   );
 }
 
-const label = {
-  fontSize: 12,
-  fontWeight: 600,
-  color: "#9A9AA0",
-} as const;
+const css = `
+.lg{ background:
+  radial-gradient(120% 60% at 50% -8%, #ECFDF5 0%, rgba(236,253,245,0) 46%),
+  var(--bg); }
+.lg-inner{ flex:1; display:flex; flex-direction:column; justify-content:center; padding:28px 24px 40px; gap:22px; max-width:440px; margin:0 auto; width:100% }
+.lg-brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px; letter-spacing:-.02em; color:var(--ink) }
 
-// Shared full-width tappable button.
-const socialBtn = {
-  height: 56,
-  borderRadius: 14,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 12,
-  fontWeight: 700,
-  fontSize: 15,
-} as const;
+.lg-card{ background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow); padding:26px 24px }
+.lg-enter{ animation:lgIn .5s var(--ease) both }
+@keyframes lgIn{ from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
+@media (prefers-reduced-motion:reduce){ .lg-enter{ animation:none } }
+
+.lg-card h1{ font-size:27px; font-weight:700; letter-spacing:-.03em; color:var(--ink) }
+.lg-sub{ margin-top:8px; font-size:15px; line-height:1.55; color:var(--muted) }
+.lg-sub b{ color:var(--ink); font-weight:600 }
+
+.lg-btn{ width:100%; height:52px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center; gap:10px; font-family:inherit; font-weight:600; font-size:15.5px; cursor:pointer; border:1px solid transparent; transition:transform .12s var(--ease), box-shadow .18s var(--ease), background .18s var(--ease), border-color .18s var(--ease) }
+.lg-btn:active{ transform:scale(.985) }
+.lg-btn:disabled{ opacity:.5; cursor:not-allowed; transform:none }
+.lg-btn:focus-visible{ outline:2px solid var(--safe); outline-offset:2px }
+.lg-btn-primary{ background:var(--ink); color:#fff; box-shadow:0 10px 22px -12px rgba(15,23,42,.55) }
+.lg-btn-primary:not(:disabled):hover{ transform:translateY(-1px); box-shadow:0 14px 26px -12px rgba(15,23,42,.6) }
+.lg-btn-google{ background:#fff; color:var(--ink); border-color:var(--line); box-shadow:var(--shadow-sm) }
+.lg-btn-google:not(:disabled):hover{ border-color:#cbd5e1; transform:translateY(-1px) }
+.lg-btn-ghost{ background:transparent; color:var(--ink-2); border-color:var(--line) }
+.lg-btn-ghost:hover{ border-color:#cbd5e1 }
+.lg-card .lg-btn + .lg-btn{ margin-top:11px }
+.lg-btn-primary{ margin-top:14px }
+.lg-btn-google{ margin-top:24px }
+
+.lg-divider{ display:flex; align-items:center; gap:14px; margin:20px 0 16px; color:#94a3b8; font-size:12.5px }
+.lg-divider::before,.lg-divider::after{ content:""; flex:1; height:1px; background:var(--line) }
+
+.lg-label{ display:block; font-size:13px; font-weight:600; color:var(--ink-2); margin-bottom:7px }
+.lg-input{ width:100%; height:52px; border-radius:13px; background:#fff; border:1px solid var(--line); padding:0 15px; font-family:inherit; font-size:16px; color:var(--ink); outline:none; transition:border-color .15s var(--ease), box-shadow .15s var(--ease) }
+.lg-input::placeholder{ color:#94a3b8 }
+.lg-input:focus{ border-color:var(--safe); box-shadow:0 0 0 3px rgba(5,150,105,.15) }
+
+.lg-error{ margin-top:13px; font-size:13.5px; line-height:1.5; color:var(--danger); font-weight:500 }
+.lg-hint{ margin-top:14px; font-size:13px; line-height:1.55; color:var(--muted) }
+.lg-mailicon{ width:52px; height:52px; border-radius:14px; background:var(--safe-tint); display:flex; align-items:center; justify-content:center; margin-bottom:16px }
+
+.lg-foot{ display:flex; align-items:flex-start; gap:8px; font-size:13px; line-height:1.5; color:var(--muted); padding:0 4px }
+.lg-foot svg{ flex-shrink:0; margin-top:1px }
+`;
