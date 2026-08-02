@@ -8,6 +8,13 @@
   -webkit-font-smoothing: antialiased;
 }
 
+:root {
+  /* The one motion easing for the whole app (docs/design-system.md). A strong
+     ease-out: fast start, gentle settle. Referenced everywhere instead of
+     re-typing the curve, so motion stays consistent. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 html,
 body {
   min-height: 100%;
@@ -39,15 +46,19 @@ body {
   display: none;
 }
 
-/* buttons behave like buttons */
+/* buttons behave like buttons. Same press feel as .navbtn (scale 0.98 / 90ms)
+   so taps feel identical across the app. */
 .tap {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.08s ease, filter 0.15s ease;
+  transition: transform 0.09s ease, filter 0.15s ease;
 }
-.tap:hover { filter: brightness(1.06); }
-.tap:active { transform: scale(0.985); }
+/* Hover only on real pointers — touch fires a false hover on tap. */
+@media (hover: hover) and (pointer: fine) {
+  .tap:hover { filter: brightness(1.06); }
+}
+.tap:active { transform: scale(0.98); }
 
 :focus-visible { outline: 2px solid #ff7aa0; outline-offset: 2px; }
 
@@ -73,7 +84,7 @@ body {
   border-radius: 0 !important;
   overflow: visible !important;
   padding-top: max(env(safe-area-inset-top), 12px);
-  animation: screenIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: screenIn 0.24s var(--ease) both;
 }
 
 /* Smooth page transition when a new screen mounts (route change). */
@@ -103,7 +114,10 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .screenhost > div { animation: none; }
-  .navbtn { transition: none; }
+  .navbtn, .tap { transition: none; }
+  /* Stop the continuous ambient loops (success orbs float, the waiting dot
+     pings, the danger ring breathes). These use inline `animation:` styles. */
+  [style*="floaty"], [style*="pulseGlow"], [style*="tfGlow"] { animation: none !important; }
 }
 
 /* animated Trust Score dial */
@@ -119,8 +133,8 @@ body {
   to { opacity: 1; transform: none; }
 }
 .ring { --p: 0; }
-.ring.in-view.low { animation: fillLow 1.5s cubic-bezier(.22, 1, .36, 1) forwards; }
-.ring.in-view.high { animation: fillHigh 1.5s cubic-bezier(.22, 1, .36, 1) forwards; }
+.ring.in-view.low { animation: fillLow 1.5s var(--ease) forwards; }
+.ring.in-view.high { animation: fillHigh 1.5s var(--ease) forwards; }
 .flag.in-view { animation: flagIn .5s ease both; }
 .flag:nth-child(2) { animation-delay: .12s; }
 .flag:nth-child(3) { animation-delay: .24s; }
@@ -142,7 +156,7 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
-.tf-faded { animation: tfListIn 0.24s cubic-bezier(.22, 1, .36, 1) both; }
+.tf-faded { animation: tfListIn 0.24s var(--ease) both; }
 
 /* The red "pay anyway" gate arriving on the payment screen. Motion here has a
    job: make sure a buyer paying a flagged seller notices the gate rather than
@@ -151,16 +165,31 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
-.tf-risk-enter { animation: tfRiskIn 0.22s cubic-bezier(.22, 1, .36, 1) both; }
+.tf-risk-enter { animation: tfRiskIn 0.22s var(--ease) both; }
 /* the checkbox confirming the risk — a quick pop when it's ticked */
 @keyframes tfPop {
   from { transform: scale(0.6); }
   to { transform: scale(1); }
 }
-.tf-pop { animation: tfPop 0.15s cubic-bezier(.22, 1, .36, 1) both; }
+.tf-pop { animation: tfPop 0.15s var(--ease) both; }
 
 @media (prefers-reduced-motion: reduce) {
   .tf-faded, .tf-risk-enter, .tf-pop { animation: none !important; }
+}
+
+/* Two ambient loops the design references by name but never defined, so they
+   silently did nothing. Both are transform/opacity only (GPU-friendly).
+   • pulseGlow — a radar "ping": a ring that expands out of the live-status dot
+     and fades, signalling "we're watching for your transfer" (expiry screen).
+   • tfGlow — a slow breathe for the scam-warning danger ring, so the alert
+     reads as urgent (trust-score-high screen). */
+@keyframes pulseGlow {
+  from { transform: scale(1); opacity: 0.5; }
+  to { transform: scale(2.6); opacity: 0; }
+}
+@keyframes tfGlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 /* real form fields, styled to match the design */
