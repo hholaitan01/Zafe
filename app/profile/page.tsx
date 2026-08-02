@@ -88,7 +88,7 @@ export default function Page() {
       note.textContent = prof.hasRecord
         ? prof.otherLocked
           ? "Names are locked. You can still change your username or photo."
-          : "Names are locked — you may add an other name once. Username & photo stay editable."
+          : "Names are locked. You can add one other name; username and photo stay editable."
         : "You can edit your names once. After you save, first & last names are locked.";
     }
     if (!wiredRef.current) {
@@ -154,8 +154,8 @@ export default function Page() {
         username: loaded.username || "",
         photo: loaded.photo || "",
         ...(rep ? { scoreLine: `Trust Score ${rep.score} · ${rep.tierLabel}` } : {}),
-        idStatus: seller?.verified ? "✓ Verified" : "Not verified — tap to verify",
-        payout: payout?.accountNumber ? `${payout.bankName ? payout.bankName + " · " : ""}${payout.accountNumber}` : "Not set — tap to add",
+        idStatus: seller?.verified ? "Verified" : "Not verified. Tap to verify.",
+        payout: payout?.accountNumber ? `${payout.bankName ? payout.bankName + " · " : ""}${payout.accountNumber}` : "Not set. Tap to add.",
       }));
       // Apply locks + wire inputs after the screen has bound the values.
       setTimeout(() => alive && profRef.current && applyLocks(profRef.current), 40);

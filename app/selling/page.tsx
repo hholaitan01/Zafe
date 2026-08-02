@@ -26,7 +26,7 @@ function emoji(t: string): string {
 
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string }> = {
   created: { label: "Awaiting payment", bg: "#1e1e22", fg: "#c9c9cf" },
-  funded: { label: "Paid — ship it", bg: "rgba(224,162,60,.16)", fg: "#E0A23C" },
+  funded: { label: "Ready to ship", bg: "rgba(224,162,60,.16)", fg: "#E0A23C" },
   shipped: { label: "Shipped", bg: "rgba(52,208,126,.15)", fg: "#34D07E" },
   completed: { label: "Paid out", bg: "rgba(52,208,126,.15)", fg: "#34D07E" },
   disputed: { label: "Disputed", bg: "rgba(255,77,77,.16)", fg: "#FF4D4D" },
@@ -41,7 +41,7 @@ function saleCard(d: Deal): string {
     d.status === "funded"
       ? `<div class="navbtn" data-action="ship" data-id="${d.id}" style="margin-top:12px; height:44px; border-radius:12px; background:#E4144F; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; font-size:14px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg>Mark as shipped</div>`
       : d.status === "shipped"
-        ? `<div style="margin-top:10px; font-size:12px; color:#9A9AA0;">Shipped — waiting for the buyer to confirm. You'll be paid on release.</div>`
+        ? `<div style="margin-top:10px; font-size:12px; color:#9A9AA0;">Shipped. Waiting for the buyer to confirm; you'll be paid on release.</div>`
         : d.status === "completed"
           ? `<div style="margin-top:10px; font-size:12px; color:#34D07E; font-weight:600;">Released to your account.</div>`
           : "";

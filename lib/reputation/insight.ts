@@ -50,8 +50,8 @@ export async function reputationSummary(rep: Reputation): Promise<string> {
 export function heuristicSummary(rep: Reputation): string {
   const { stats, tier } = rep;
   if (stats.total === 0) return "Run your first escrow deal to start building your reputation.";
-  if (tier === "highly_trusted") return `Excellent standing — ${stats.completed} clean deals and a spotless recent record.`;
-  if (tier === "trusted") return `Solid track record — ${stats.completed} deals settled cleanly. Keep it up to reach the top tier.`;
+  if (tier === "highly_trusted") return `Excellent standing. ${stats.completed} clean deals and a spotless recent record.`;
+  if (tier === "trusted") return `Solid track record: ${stats.completed} deals settled cleanly. Keep it up to reach the top tier.`;
   if (stats.disputed > 0) return `${stats.completed} clean deal${stats.completed === 1 ? "" : "s"} so far; resolving disputes fairly will lift your score.`;
-  return "You're building trust — every safe deal you complete raises your score.";
+  return "You're building trust. Every safe deal you complete raises your score.";
 }

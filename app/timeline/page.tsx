@@ -95,9 +95,9 @@ function actionsHtml(deal: Deal): string {
     `<div style="height:52px;border-radius:14px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:15px;">${text}</div>`;
 
   if (deal.status === "funded" || deal.status === "shipped") return primary("Confirm Received", "confirm") + outline("Open Dispute", "dispute");
-  if (deal.status === "completed") return pill("✓ Completed — seller paid", "#34D07E", "rgba(52,208,126,.14)") + outline("Back to home", "dashboard");
-  if (deal.status === "disputed") return pill("⚖ Dispute under AI review", "#E0A23C", "rgba(224,162,60,.14)") + outline("View the case", "dispute");
-  if (deal.status === "refunded" || deal.status === "resolved") return pill("✓ Resolved", "#34D07E", "rgba(52,208,126,.14)") + outline("Back to home", "dashboard");
+  if (deal.status === "completed") return pill("Completed. Seller paid.", "#34D07E", "rgba(52,208,126,.14)") + outline("Back to home", "dashboard");
+  if (deal.status === "disputed") return pill("Dispute under AI review", "#E0A23C", "rgba(224,162,60,.14)") + outline("View the case", "dispute");
+  if (deal.status === "refunded" || deal.status === "resolved") return pill("Resolved", "#34D07E", "rgba(52,208,126,.14)") + outline("Back to home", "dashboard");
   return outline("Open Dispute", "dispute");
 }
 
