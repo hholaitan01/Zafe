@@ -8,7 +8,7 @@ export const html = `<div class="fscroll" style="width:366px; height:820px; bord
             <p style="font-size:13.5px; color:#9A9AA0; line-height:1.5;">Set up a protected deal. Your money stays locked until you confirm you got what you paid for.</p>
             <div style="margin-top:22px;">
               <label style="font-size:12px; font-weight:600; color:#9A9AA0;">Amount</label>
-              <div style="margin-top:8px; height:70px; border-radius:16px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; padding:0 18px; gap:6px;"><span style="font-size:30px; font-weight:800; color:#6d6d74;">₦</span><input data-field="amount" inputmode="numeric" placeholder="450,000" style="flex:1; min-width:0; background:transparent; border:none; outline:none; color:#fff; font-size:30px; font-weight:800; letter-spacing:-.02em;"/></div>
+              <div style="margin-top:8px; height:70px; border-radius:16px; background:#1A1A1D; border:1px solid #26262b; display:flex; align-items:center; padding:0 18px; gap:6px;"><span style="font-size:30px; font-weight:800; color:#6d6d74;">₦</span><input data-field="amount" data-money inputmode="numeric" placeholder="450,000" style="flex:1; min-width:0; background:transparent; border:none; outline:none; color:#fff; font-size:30px; font-weight:800; letter-spacing:-.02em;"/></div>
             </div>
             <div style="margin-top:16px;">
               <label style="font-size:12px; font-weight:600; color:#9A9AA0;">Item description</label>
@@ -25,6 +25,6 @@ export const html = `<div class="fscroll" style="width:366px; height:820px; bord
               <p style="margin-top:10px; font-size:12px; color:#6d6d74; line-height:1.5;">Optional — but if you paste it, our AI scans it for scam warning signs before you pay.</p>
             </div>
             <p data-bind="err" style="margin-top:16px; font-size:13px; color:#ff6b81; line-height:1.4; min-height:0;"></p>
-            <div class="navbtn" data-action="createDeal" style="margin:12px 0 24px; height:56px; border-radius:14px; background:#E4144F; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:700; font-size:16px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Continue to Payment</div>
+            <div class="navbtn" data-action="createDeal" data-requires="amount,title,seller" style="margin:12px 0 24px; height:56px; border-radius:14px; background:#E4144F; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:700; font-size:16px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Continue to Payment</div>
           </div>
         </div>`;

@@ -73,8 +73,8 @@ export default function LandingScreen() {
           className="tap"
           role="button"
           tabIndex={0}
-          onClick={() => router.push("/dashboard")}
-          onKeyDown={(e) => e.key === "Enter" && router.push("/dashboard")}
+          onClick={() => router.push("/login")}
+          onKeyDown={(e) => e.key === "Enter" && router.push("/login")}
           style={{
             height: 56,
             borderRadius: 16,

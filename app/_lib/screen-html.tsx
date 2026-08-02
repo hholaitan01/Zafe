@@ -87,6 +87,8 @@ export default function ScreenHtml({
         const fn = actionsRef.current?.[actionEl.getAttribute("data-action") || ""];
         if (fn) {
           e.preventDefault();
+          // A button that requires form fields is inert until they're filled.
+          if (actionEl.hasAttribute("data-requires") && actionEl.getAttribute("data-ready") !== "1") return;
           if (actionEl.getAttribute("aria-busy") === "true") return;
           actionEl.setAttribute("aria-busy", "true");
           actionEl.style.opacity = "0.6";
@@ -108,6 +110,29 @@ export default function ScreenHtml({
     };
     host.addEventListener("click", onClick);
     host.querySelectorAll<HTMLElement>("[data-nav],[data-action]").forEach((el) => (el.style.cursor = "pointer"));
+
+    // Live amount formatting (₦450000 → 450,000) and "enable the button only
+    // when its required fields are filled" — both driven off input events.
+    const formatMoney = (el: HTMLInputElement) => {
+      const digits = el.value.replace(/[^0-9]/g, "");
+      el.value = digits ? Number(digits).toLocaleString("en-US") : "";
+    };
+    const evalRequires = () => {
+      host.querySelectorAll<HTMLElement>("[data-requires]").forEach((btn) => {
+        const need = (btn.getAttribute("data-requires") || "").split(",").map((s) => s.trim()).filter(Boolean);
+        const ready = need.every((n) => (host.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[data-field="${n}"]`)?.value.trim() || "") !== "");
+        btn.setAttribute("data-ready", ready ? "1" : "0");
+        btn.style.opacity = ready ? "1" : "0.45";
+        btn.style.pointerEvents = ready ? "auto" : "none";
+      });
+    };
+    const onInput = (e: Event) => {
+      const t = e.target as HTMLElement | null;
+      if (t && t.hasAttribute?.("data-money")) formatMoney(t as HTMLInputElement);
+      evalRequires();
+    };
+    host.addEventListener("input", onInput);
+    host.querySelectorAll<HTMLInputElement>("[data-money]").forEach(formatMoney);
 
     // Text bindings, and HTML (list) injections.
     if (d) {
@@ -135,6 +160,8 @@ export default function ScreenHtml({
         }
       });
     }
+    // Re-check required-field buttons after any prefill.
+    evalRequires();
 
     // Reveal the flag rows.
     host.querySelectorAll<HTMLElement>(".flag").forEach((f) => f.classList.add("in-view"));
@@ -179,7 +206,10 @@ export default function ScreenHtml({
       requestAnimationFrame(tick);
     });
 
-    return () => host.removeEventListener("click", onClick);
+    return () => {
+      host.removeEventListener("click", onClick);
+      host.removeEventListener("input", onInput);
+    };
   }, [router, html, dataKey]);
 
   return (
