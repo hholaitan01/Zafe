@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "TrustFlow AI",
   description:
-    "AI-powered escrow for peer-to-peer trades. Money held safe until you confirm — built for Wema Hackaholics 7.0.",
+    "AI-powered escrow for peer-to-peer trades. Money held safe until you confirm. Built for Wema Hackaholics 7.0.",
 };
 
 export const viewport: Viewport = {

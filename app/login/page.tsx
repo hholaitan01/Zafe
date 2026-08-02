@@ -94,7 +94,7 @@ export default function LoginScreen() {
           <>
             <h1 style={{ marginTop: 26, fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em" }}>Check your inbox</h1>
             <p style={{ marginTop: 10, fontSize: 15, color: "#c9c9cf", lineHeight: 1.6 }}>
-              We sent a login link to <b style={{ color: "#fff" }}>{sentTo}</b>. Tap it on this device to sign in — it expires shortly and can only be used once.
+              We sent a login link to <b style={{ color: "#fff" }}>{sentTo}</b>. Tap it on this device to sign in. It expires shortly and can only be used once.
             </p>
             <p style={{ marginTop: 16, fontSize: 13, color: "#9A9AA0", lineHeight: 1.6 }}>
               No email after a minute? Check spam, or send a new link.
@@ -133,7 +133,7 @@ export default function LoginScreen() {
           /* ---- Sign-in options ---- */
           <>
             <h1 style={{ marginTop: 26, fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em" }}>Welcome back</h1>
-            <p style={{ marginTop: 8, fontSize: 15, color: "#9A9AA0" }}>Sign in to keep your trades protected. No passwords — ever.</p>
+            <p style={{ marginTop: 8, fontSize: 15, color: "#9A9AA0" }}>Sign in to keep your trades protected. No passwords, ever.</p>
 
             {/* Google — primary */}
             <div style={{ marginTop: 32 }}>
@@ -198,7 +198,7 @@ export default function LoginScreen() {
             )}
 
             <p style={{ marginTop: 22, textAlign: "center", fontSize: 12.5, color: "#6d6d74", lineHeight: 1.5 }}>
-              We never ask for your bank details here. You&apos;ll only add them later — right when a payout or refund is due.
+              We never ask for your bank details here. You&apos;ll only add them later, right when a payout or refund is due.
             </p>
           </>
         )}

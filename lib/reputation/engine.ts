@@ -64,7 +64,7 @@ export function computeStats(deals: Deal[]): ReputationStats {
 }
 
 function tierFor(score: number, total: number): { tier: ReputationTier; label: string } {
-  if (total === 0) return { tier: "new", label: "New trader — build your history" };
+  if (total === 0) return { tier: "new", label: "New trader. Build your history" };
   if (score >= 85) return { tier: "highly_trusted", label: "Highly trusted trader" };
   if (score >= 70) return { tier: "trusted", label: "Trusted trader" };
   if (score >= 55) return { tier: "building", label: "Building trust" };

@@ -12,11 +12,12 @@ import { getTrustScore } from "@/lib/ai/trust-score";
 import type { DisputeDecision, DisputeResult } from "@/lib/ai/types";
 import { isSeedFlagged, type FraudFlag } from "@/lib/fraud";
 import { payoutSeller, refundBuyer } from "@/lib/payments";
+import { getSeller } from "@/lib/sellers/store";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
 import { autoReleaseTime, newHandoverCode, normalizeContact, statusLabel } from "./helpers";
 import { supabaseStore } from "./supabase-store";
-import type { CreateDealInput, Deal, DealDispute, DealStatus, DealTrust, TimelineEvent } from "./types";
+import type { CreateDealInput, Deal, DealDispute, DealStatus, DealTrust, PayoutAccount, TimelineEvent } from "./types";
 
 function backend() {
   return dealBackend() === "supabase" ? supabaseStore : demoStore;
@@ -69,6 +70,17 @@ export async function listDealsBySeller(contact: string): Promise<Deal[]> {
   if (!norm) return [];
   const all = await backend().list();
   return all.filter((d) => d.seller?.contact && normalizeContact(d.seller.contact) === norm);
+}
+
+/** A seller's own sales — deals where they are the seller (any of their contacts). */
+export async function listDealsBySellerContacts(contacts: string[]): Promise<Deal[]> {
+  const set = new Set(contacts.map(normalizeContact).filter(Boolean));
+  if (!set.size) return [];
+  await runAutoReleases();
+  const all = await backend().list();
+  return all
+    .filter((d) => d.seller?.contact && set.has(normalizeContact(d.seller.contact)))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 /**
@@ -156,14 +168,26 @@ export async function setDealStatus(id: string, status: DealStatus, note?: strin
  * Seller ships. We mint the buyer's secret handover code and start the
  * auto-release timer — the two anti-cheat mechanisms from the plan.
  */
-export async function shipDeal(id: string): Promise<Deal | null> {
+export async function shipDeal(id: string, sellerPayout?: PayoutAccount): Promise<Deal | null> {
   const deal = await backend().get(id);
   if (!deal) return null;
+
+  // Resolve the seller's payout account: an explicit one wins, else look it up
+  // server-side from the seller's saved account (so we don't trust the client).
+  let payout = sellerPayout;
+  if (!payout && deal.seller?.contact) {
+    const seller = await getSeller(deal.seller.contact);
+    if (seller?.payout?.accountNumber) {
+      payout = { accountNumber: seller.payout.accountNumber, accountName: seller.payout.accountName, verified: seller.idVerified };
+    }
+  }
+
   const ev = event("shipped", "Handover code sent to the buyer; auto-release timer started.");
   return backend().patch(id, {
     status: "shipped",
     handoverCode: newHandoverCode(),
     autoReleaseAt: autoReleaseTime(ev.at),
+    ...(payout ? { sellerPayout: payout } : {}),
     timeline: [...deal.timeline, ev],
     updatedAt: ev.at,
   });

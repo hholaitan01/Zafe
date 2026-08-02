@@ -40,7 +40,7 @@ export async function getSellerStanding(contact: string): Promise<SellerStanding
   if (priorDeals === 0) {
     tone = "neutral";
     label = "New seller";
-    detail = "No TrustFlow history yet — your escrow still protects you, but take extra care.";
+    detail = "No TrustFlow history yet. Your escrow still protects you, but take extra care.";
   } else if (disputed > 0) {
     tone = "warn";
     label = "Caution";

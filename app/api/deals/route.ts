@@ -9,6 +9,7 @@ import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
 import { getServerUser } from "@/lib/auth/server";
 import { createDeal, listDeals, listDealsForUser } from "@/lib/deals/store";
 import type { CreateDealInput } from "@/lib/deals/types";
+import { resolveContact } from "@/lib/profiles/store";
 
 export async function GET(req: Request): Promise<Response> {
   // Scope to the signed-in trader: the session cookie (live) wins, else the
@@ -21,7 +22,7 @@ export async function GET(req: Request): Promise<Response> {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const body = await readJson<CreateDealInput>(req);
+  const body = await readJson<CreateDealInput & { initiatedBy?: "buyer" | "seller" }>(req);
   if (!body) return jsonError("Invalid JSON body");
   if (!body.item || !isNonEmptyString(body.item.title)) {
     return jsonError("item.title is required.");
@@ -33,14 +34,22 @@ export async function POST(req: Request): Promise<Response> {
     return jsonError("A 'seller' object is required.");
   }
 
-  // Attribute the deal to the signed-in trader (server session is trusted over
-  // any client-supplied email) so it counts toward their reputation.
+  // Who created this? The session is trusted for the creator's side.
   const user = await getServerUser();
-  const deal = await createDeal({
-    item: body.item,
-    seller: body.seller,
-    chat: body.chat,
-    buyerEmail: user?.email || body.buyerEmail,
-  });
+  let seller = body.seller;
+  let buyerEmail: string | undefined;
+  if (body.initiatedBy === "seller") {
+    // Seller-initiated "request payment": the creator is the SELLER; the buyer
+    // is the counterparty they're requesting money from (resolve @username).
+    seller = { ...body.seller, contact: user?.email || body.seller.contact, name: body.seller.name || user?.name };
+    buyerEmail = body.buyerEmail ? await resolveContact(body.buyerEmail) : undefined;
+  } else {
+    // Buyer-initiated (default): the creator is the buyer; resolve the seller's
+    // contact (email / phone / @username) to a canonical identity.
+    if (body.seller.contact) seller = { ...body.seller, contact: await resolveContact(body.seller.contact) };
+    buyerEmail = user?.email || body.buyerEmail;
+  }
+
+  const deal = await createDeal({ item: body.item, seller, chat: body.chat, buyerEmail });
   return Response.json({ deal }, { status: 201 });
 }

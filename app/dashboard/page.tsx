@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import ScreenHtml from "@/app/_lib/screen-html";
 import { html } from "@/app/_screens/dashboard";
 import { getCurrentUser } from "@/lib/auth";
-import { getMyReputation, listMyDeals, naira, setCurrentDealId } from "@/lib/client";
+import { getMyReputation, listMyDeals, loadUserProfile, naira, setCurrentDealId } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string }> = {
@@ -70,9 +70,10 @@ export default function Page() {
       if (alive) {
         setData((prev) => ({ ...prev, name, initials: initialsOf(name), greeting: greetingFor(new Date()) }));
       }
-      const [deals, rep] = await Promise.all([
+      const [deals, rep, profile] = await Promise.all([
         listMyDeals(email).catch(() => [] as Deal[]),
         getMyReputation(email, user?.name).catch(() => null),
+        loadUserProfile(email).catch(() => null),
       ]);
       if (!alive) return;
       setData((prev) => ({
@@ -80,7 +81,8 @@ export default function Page() {
         name,
         initials: initialsOf(name),
         greeting: greetingFor(new Date()),
-        ...(rep ? { repScore: rep.score, repLabel: rep.tierLabel, ...(rep.summary ? { repSummary: rep.summary } : {}) } : {}),
+        ...(profile?.photo ? { photo: profile.photo } : {}),
+        ...(rep ? { score: rep.score, repLabel: rep.tierLabel, ...(rep.summary ? { repSummary: rep.summary } : {}) } : {}),
         deals: deals.length
           ? deals.map(card).join("")
           : `<div style="padding:18px; text-align:center; color:#6d6d74; font-size:13px;">No escrows yet. Tap New Escrow to start one.</div>`,

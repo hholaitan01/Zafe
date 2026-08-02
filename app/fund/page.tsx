@@ -48,7 +48,7 @@ function trustBannerHtml(deal: Deal): string {
     body = t.headline;
   } else {
     fg = "#FF4D4D"; bg = "rgba(255,77,77,.12)"; icon = WARN;
-    title = `⚠ Scam signs detected · Trust Score ${t.score}/100`;
+    title = `Scam signs detected · Trust Score ${t.score}/100`;
     body = t.headline;
   }
 
@@ -89,8 +89,8 @@ function payPanelHtml(acct: CollectionAccount, amount: string, waiting: boolean)
       <div style="font-size:22px; font-weight:800; letter-spacing:-.02em;">${esc(amount)}</div>
       <div style="margin-top:10px; display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9A9AA0;">Bank</span><span style="font-weight:700;">${esc(acct.bankName)}</span></div>
       <div style="margin-top:6px; display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9A9AA0;">Account number</span><span style="font-weight:700; letter-spacing:.06em;">${esc(acct.accountNumber)}</span></div>
-      <div style="margin-top:10px; font-size:12px; color:#9A9AA0; line-height:1.5;">This one-time account expires shortly. We confirm your payment automatically once it lands — no screenshot needed.</div>
-      ${waiting ? `<div style="margin-top:8px; font-size:12px; color:#E0A23C; font-weight:700;">Payment not received yet — give it a moment after transferring.</div>` : ""}
+      <div style="margin-top:10px; font-size:12px; color:#9A9AA0; line-height:1.5;">This one-time account expires shortly. We confirm your payment automatically once it lands. No screenshot needed.</div>
+      ${waiting ? `<div style="margin-top:8px; font-size:12px; color:#E0A23C; font-weight:700;">Payment not received yet. Give it a moment after transferring.</div>` : ""}
     </div>`;
 }
 
@@ -228,7 +228,7 @@ export default function Page() {
       acctRef.current = res.account;
       baseRef.current = {
         ...baseRef.current,
-        payLabel: "I've transferred — check status",
+        payLabel: "I've transferred, check status",
         payPanel: payPanelHtml(res.account, String(baseRef.current.amount), false),
       };
       paint();

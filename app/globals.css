@@ -16,10 +16,12 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
 
-/* the app is a phone screen; on desktop we centre it, on mobile it fills */
+/* the app is a phone screen: it fills the device width on mobile, and sits as a
+   centred phone-width column on desktop. (Was a fixed 366px, which looked
+   compressed/clipped on real phones.) */
 .device {
-  width: 366px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 440px;
   min-height: 100dvh;
   margin: 0 auto;
   position: relative;
@@ -60,17 +62,48 @@ body {
 /* each screen to fill the phone viewport instead of the fixed 366×820 card. */
 .screenhost {
   flex: 1;
-  width: 366px;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }
 .screenhost > div {
-  width: 366px !important;
+  width: 100% !important;
   height: auto !important;
   min-height: 100dvh;
   border-radius: 0 !important;
   overflow: visible !important;
   padding-top: max(env(safe-area-inset-top), 12px);
+  animation: screenIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Smooth page transition when a new screen mounts (route change). */
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Tactile feedback on every tappable, and a clear active state on inputs so it
+   feels like a real app, not a static screen. */
+.navbtn {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.09s ease, filter 0.15s ease;
+}
+.navbtn:active { transform: scale(0.98); filter: brightness(1.04); }
+
+.screenhost input,
+.screenhost textarea {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.screenhost input:focus,
+.screenhost textarea:focus {
+  border-color: #e4144f !important;
+  box-shadow: 0 0 0 3px rgba(228, 20, 79, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screenhost > div { animation: none; }
+  .navbtn { transition: none; }
 }
 
 /* animated Trust Score dial */

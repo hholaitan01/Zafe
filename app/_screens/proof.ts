@@ -22,7 +22,7 @@ export const html = `<div data-tabs style="width:366px; height:820px; border-rad
             <!-- shutter -->
             <div style="position:absolute; bottom:70px; left:0; right:0; display:flex; flex-direction:column; align-items:center; gap:14px;">
               <div style="width:74px; height:74px; border-radius:50%; border:4px solid rgba(255,255,255,.85); padding:5px;"><div style="width:100%; height:100%; border-radius:50%; background:#fff;"></div></div>
-              <div style="display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:#9A9AA0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8" stroke-linecap="round"/></svg>Gallery upload disabled — live camera only</div>
+              <div style="display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:#9A9AA0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8" stroke-linecap="round"/></svg>Gallery upload disabled. Live camera only.</div>
             </div>
           </div>
           <!-- BUYER video -->
@@ -35,7 +35,7 @@ export const html = `<div data-tabs style="width:366px; height:820px; border-rad
             <div style="position:absolute; bottom:170px; left:44px; padding:8px 12px; border-radius:10px; background:rgba(0,0,0,.55); font-size:11px; font-family:ui-monospace,monospace; color:#c9ffe4; line-height:1.6; backdrop-filter:blur(4px);">23 JUL 2026 · 16:03:41<br>Unboxing · geo-stamped</div>
             <div style="position:absolute; bottom:70px; left:0; right:0; display:flex; flex-direction:column; align-items:center; gap:14px;">
               <div style="width:74px; height:74px; border-radius:50%; border:4px solid rgba(255,255,255,.85); padding:6px;"><div style="width:100%; height:100%; border-radius:12px; background:#FF4D4D;"></div></div>
-              <div style="display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:#9A9AA0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8" stroke-linecap="round"/></svg>Captured live — cannot upload from gallery</div>
+              <div style="display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:#9A9AA0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8" stroke-linecap="round"/></svg>Captured live. Cannot upload from gallery.</div>
             </div>
           </div>
         </div>`;
