@@ -134,6 +134,35 @@ body {
   .flag { opacity: 1; }
 }
 
+/* A data list settling in after its async load — bridges the "Loading…" ->
+   list swap so it doesn't teleport. Applied by ScreenHtml to injected lists
+   marked .js-fade-in. `both` fill keeps the final state visible even if the
+   class is never added (no-JS / reduced-motion fall back to fully shown). */
+@keyframes tfListIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.tf-faded { animation: tfListIn 0.24s cubic-bezier(.22, 1, .36, 1) both; }
+
+/* The red "pay anyway" gate arriving on the payment screen. Motion here has a
+   job: make sure a buyer paying a flagged seller notices the gate rather than
+   finding it already sitting there. Plays once, on first reveal. */
+@keyframes tfRiskIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.tf-risk-enter { animation: tfRiskIn 0.22s cubic-bezier(.22, 1, .36, 1) both; }
+/* the checkbox confirming the risk — a quick pop when it's ticked */
+@keyframes tfPop {
+  from { transform: scale(0.6); }
+  to { transform: scale(1); }
+}
+.tf-pop { animation: tfPop 0.15s cubic-bezier(.22, 1, .36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-faded, .tf-risk-enter, .tf-pop { animation: none !important; }
+}
+
 /* real form fields, styled to match the design */
 .field {
   width: 100%;

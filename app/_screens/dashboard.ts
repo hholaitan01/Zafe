@@ -32,7 +32,7 @@ export const html = `<div class="fscroll" style="width:366px; height:820px; bord
           <div style="margin:16px 22px 0; border-radius:18px; padding:15px 16px; background:linear-gradient(100deg,#7C3AED22,#C026D322); border:1px solid rgba(124,58,237,.3); display:flex; align-items:center; gap:12px;"><div style="width:38px; height:38px; border-radius:11px; background:radial-gradient(circle at 35% 30%, #d9a6ff, #7C3AED); flex-shrink:0;"></div><div data-bind="repSummary" style="font-size:12.5px; color:#d9c9f7; line-height:1.4;"><b style="color:#fff;">Every safe deal raises your score.</b> Trusted traders get priority dispute reviews.</div></div>
           <!-- active transactions -->
           <div style="margin:22px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:16px; font-weight:700;">Active escrows</span><span class="navbtn" data-nav="history" style="font-size:13px; color:#E4144F; font-weight:600;">See all</span></div>
-          <div data-html="deals" style="margin:12px 22px 0; display:flex; flex-direction:column; gap:10px;">
+          <div data-html="deals" class="js-fade-in" style="margin:12px 22px 0; display:flex; flex-direction:column; gap:10px;">
             <div style="padding:18px; text-align:center; color:#6d6d74; font-size:13px;">Loading your escrows…</div>
           </div>
           <div style="height:100px;"></div>

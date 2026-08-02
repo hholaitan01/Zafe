@@ -96,13 +96,13 @@ function payPanelHtml(acct: CollectionAccount, amount: string, waiting: boolean)
 
 /** For risky deals only: the "I understand the risk, pay anyway" gate the buyer
     must tick before the money can move. Empty for non-risky deals. */
-function riskAckHtml(risky: boolean, acked: boolean, nudge: boolean): string {
+function riskAckHtml(risky: boolean, acked: boolean, nudge: boolean, enter: boolean): string {
   if (!risky) return "";
   const box = acked
-    ? `<div style="width:22px; height:22px; border-radius:7px; background:#FF4D4D; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#fff" stroke-width="3.2" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
+    ? `<div class="tf-pop" style="width:22px; height:22px; border-radius:7px; background:#FF4D4D; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#fff" stroke-width="3.2" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
     : `<div style="width:22px; height:22px; border-radius:7px; border:2px solid #FF4D4D; flex-shrink:0;"></div>`;
   const hint = nudge && !acked ? `<div style="font-size:11.5px; color:#FF4D4D; font-weight:700; margin-top:8px;">Tick the box to confirm before paying.</div>` : "";
-  return `<div data-action="ackRisk" class="navbtn" style="border-radius:14px; background:rgba(255,77,77,.08); border:1px solid rgba(255,77,77,.35); padding:13px 14px; display:flex; align-items:center; gap:11px;">${box}<div style="font-size:13px; font-weight:700; color:#ffd0d0; line-height:1.35;">I understand the risk, pay anyway</div></div>${hint}`;
+  return `<div data-action="ackRisk" class="navbtn${enter ? " tf-risk-enter" : ""}" style="border-radius:14px; background:rgba(255,77,77,.08); border:1px solid rgba(255,77,77,.35); padding:13px 14px; display:flex; align-items:center; gap:11px;">${box}<div style="font-size:13px; font-weight:700; color:#ffd0d0; line-height:1.35;">I understand the risk, pay anyway</div></div>${hint}`;
 }
 
 export default function Page() {
@@ -120,9 +120,14 @@ export default function Page() {
   const awaitingRef = useRef(false);
   const acctRef = useRef<CollectionAccount | null>(null);
   const waitNoteRef = useRef(false);
+  // Whether the risk gate has already animated in — so it plays its entrance
+  // once, not again every time the buyer ticks the box.
+  const gateShownRef = useRef(false);
 
   function paint() {
-    setData({ ...baseRef.current, riskAck: riskAckHtml(riskyRef.current, ackRef.current, nudgeRef.current) });
+    const enter = riskyRef.current && !gateShownRef.current;
+    if (riskyRef.current) gateShownRef.current = true;
+    setData({ ...baseRef.current, riskAck: riskAckHtml(riskyRef.current, ackRef.current, nudgeRef.current, enter) });
   }
 
   useEffect(() => {
