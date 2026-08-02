@@ -1,27 +1,16 @@
 "use client";
 
 /* ==========================================================================
-   Sign in — passwordless. Two ways in, no password to phish or leak:
-     • Continue with Google (OAuth), and
-     • a one-time email login link (type your email → we send a link → tap it).
+   Sign in — passwordless. Continue with Google, or get a one-time email link.
    No bank details here — those come later, only when a payout/refund is due.
 
-   Rebuilt in the v2 "trust fintech" language: light canvas, navy ink, emerald
-   for the safe/verified story, IBM Plex Sans, soft depth. Auth logic unchanged.
+   Redesigned in the v2 language: a navy "vault" header carrying the brand and
+   promise, with the auth card lifted over it. Auth logic unchanged.
    ========================================================================== */
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { sendMagicLink, signInWithGoogle, type AuthResult } from "@/lib/auth";
-
-function Mark() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#0F172A" />
-      <path d="M11 16.2 14.6 20 21.5 12.5" stroke="#10B981" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -75,15 +64,22 @@ export default function LoginScreen() {
   return (
     <main className="device lg">
       <style>{css}</style>
-      <div className="lg-inner">
-        <div className="lg-brand">
-          <Mark />
+
+      {/* navy vault header: brand + promise */}
+      <div className="lg-hero">
+        <div className="lg-mark">
+          <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#fff" fillOpacity="0.1" stroke="#fff" strokeOpacity="0.25" />
+            <path d="M11 16.2 14.6 20 21.5 12.5" stroke="#10B981" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
           <span>TrustFlow</span>
         </div>
+        <h1>{sentTo ? "Check your inbox" : "Sign in. Your money stays protected."}</h1>
+      </div>
 
+      <div className="lg-body">
         <div className="lg-card lg-enter">
           {sentTo ? (
-            /* ---- Check-your-inbox ---- */
             <>
               <div className="lg-mailicon" aria-hidden="true">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -91,7 +87,6 @@ export default function LoginScreen() {
                   <path d="m3 7 9 6 9-6" />
                 </svg>
               </div>
-              <h1>Check your inbox</h1>
               <p className="lg-sub">
                 We sent a login link to <b>{sentTo}</b>. Tap it on this device to sign in. It expires shortly and works once.
               </p>
@@ -111,11 +106,7 @@ export default function LoginScreen() {
               <p className="lg-hint">No email after a minute? Check spam, or send a new link.</p>
             </>
           ) : (
-            /* ---- Sign-in options ---- */
             <>
-              <h1>Welcome back</h1>
-              <p className="lg-sub">Sign in to keep your trades protected. No passwords, ever.</p>
-
               <button className="lg-btn lg-btn-google" onClick={handleGoogle} disabled={loading}>
                 <svg width="19" height="19" viewBox="0 0 48 48" aria-hidden="true">
                   <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.9 6.1C12.2 13.6 17.6 9.5 24 9.5z" />
@@ -151,7 +142,7 @@ export default function LoginScreen() {
 
         <p className="lg-foot">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" aria-hidden="true"><path d="M12 3 20 6v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /></svg>
-          We never ask for your bank details here. Those come later, only when a payout is due.
+          No passwords, ever. We never ask for bank details here.
         </p>
       </div>
     </main>
@@ -159,19 +150,21 @@ export default function LoginScreen() {
 }
 
 const css = `
-.lg{ background:
-  radial-gradient(120% 60% at 50% -8%, #ECFDF5 0%, rgba(236,253,245,0) 46%),
-  var(--bg); }
-.lg-inner{ flex:1; display:flex; flex-direction:column; justify-content:center; padding:28px 24px 40px; gap:22px; max-width:440px; margin:0 auto; width:100% }
-.lg-brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px; letter-spacing:-.02em; color:var(--ink) }
+.lg{ background:var(--bg) }
+.lg-hero{ position:relative; overflow:hidden; padding:26px 26px 64px;
+  background:radial-gradient(120% 130% at 88% 0%, #14304A 0%, #0F172A 58%); }
+.lg-hero::after{ content:""; position:absolute; top:-50px; right:-30px; width:170px; height:170px; border-radius:50%;
+  background:radial-gradient(circle at 40% 40%, rgba(16,185,129,.30), transparent 70%) }
+.lg-mark{ position:relative; display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:17px; letter-spacing:-.02em; color:#fff }
+.lg-hero h1{ position:relative; margin-top:26px; font-size:26px; font-weight:700; letter-spacing:-.03em; line-height:1.18; color:#fff; max-width:15ch }
 
-.lg-card{ background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow); padding:26px 24px }
+.lg-body{ flex:1; padding:0 22px 34px; margin-top:-40px; display:flex; flex-direction:column; gap:16px }
+.lg-card{ background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow-lg); padding:22px 20px }
 .lg-enter{ animation:lgIn .5s var(--ease) both }
 @keyframes lgIn{ from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
 @media (prefers-reduced-motion:reduce){ .lg-enter{ animation:none } }
 
-.lg-card h1{ font-size:27px; font-weight:700; letter-spacing:-.03em; color:var(--ink) }
-.lg-sub{ margin-top:8px; font-size:15px; line-height:1.55; color:var(--muted) }
+.lg-sub{ font-size:15px; line-height:1.55; color:var(--muted) }
 .lg-sub b{ color:var(--ink); font-weight:600 }
 
 .lg-btn{ width:100%; height:52px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center; gap:10px; font-family:inherit; font-weight:600; font-size:15.5px; cursor:pointer; border:1px solid transparent; transition:transform .12s var(--ease), box-shadow .18s var(--ease), background .18s var(--ease), border-color .18s var(--ease) }
@@ -186,7 +179,6 @@ const css = `
 .lg-btn-ghost:hover{ border-color:#cbd5e1 }
 .lg-card .lg-btn + .lg-btn{ margin-top:11px }
 .lg-btn-primary{ margin-top:14px }
-.lg-btn-google{ margin-top:24px }
 
 .lg-divider{ display:flex; align-items:center; gap:14px; margin:20px 0 16px; color:#94a3b8; font-size:12.5px }
 .lg-divider::before,.lg-divider::after{ content:""; flex:1; height:1px; background:var(--line) }
