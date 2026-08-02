@@ -33,3 +33,8 @@ next-env.d.ts
 
 # dev server log
 dev.log
+
+# Local AI tooling (skills, harness settings) — kept per-developer, not in the repo
+.claude/
+.agents/
+skills-lock.json
