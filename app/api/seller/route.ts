@@ -8,16 +8,23 @@
    ========================================================================== */
 
 import { jsonError, readJson } from "@/lib/ai/http";
+import { authConfigured } from "@/lib/auth/config";
 import { getServerUser } from "@/lib/auth/server";
 import { getSeller, upsertSeller, type SellerPayout } from "@/lib/sellers/store";
 
+// A seller profile carries the payout account (sensitive), so GET only ever
+// returns the CALLER's own profile. In live mode that's the session email and
+// the ?email= param is ignored; in demo mode (no session) the local session's
+// email is used. Never look up another person's payout by arbitrary email.
 export async function GET(req: Request): Promise<Response> {
+  if (authConfigured()) {
+    const user = await getServerUser();
+    if (!user?.email) return Response.json({ seller: null });
+    return Response.json({ seller: await getSeller(user.email) });
+  }
   const qEmail = new URL(req.url).searchParams.get("email")?.trim() || "";
-  const user = await getServerUser();
-  const email = user?.email || qEmail;
-  if (!email) return Response.json({ seller: null });
-  const seller = await getSeller(email);
-  return Response.json({ seller });
+  if (!qEmail) return Response.json({ seller: null });
+  return Response.json({ seller: await getSeller(qEmail) });
 }
 
 export async function POST(req: Request): Promise<Response> {

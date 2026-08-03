@@ -4,13 +4,15 @@
    (Ported from Jerry's receipt route; now on the `deals` model.)
    ========================================================================== */
 
-import { getDeal } from "@/lib/deals/store";
+import { authorizeDeal } from "@/lib/deals/access";
 import { buildReceipt, receiptToText } from "@/lib/payments/receipt";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const deal = await getDeal(id);
-  if (!deal) return Response.json({ error: "not found" }, { status: 404 });
+  // A receipt exposes the deal's money details — parties only (guards IDOR).
+  const access = await authorizeDeal(id);
+  if (!access.ok) return Response.json({ error: access.status === 401 ? "sign in" : "not found" }, { status: access.status });
+  const deal = access.deal;
 
   const receipt = buildReceipt(deal);
   if (new URL(req.url).searchParams.get("format") === "text") {

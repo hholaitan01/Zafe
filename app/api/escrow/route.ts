@@ -9,15 +9,18 @@
    ========================================================================== */
 
 import { jsonError, readJson } from "@/lib/ai/http";
-import { attachCollectionAccount, getDeal, setDealStatus } from "@/lib/deals/store";
+import { authorizeDeal } from "@/lib/deals/access";
+import { attachCollectionAccount, setDealStatus } from "@/lib/deals/store";
 import { createCollectionAccount } from "@/lib/payments";
 
 export async function POST(req: Request): Promise<Response> {
   const body = await readJson<{ dealId?: string }>(req);
   if (!body?.dealId) return jsonError("dealId is required.");
 
-  const deal = await getDeal(body.dealId);
-  if (!deal) return jsonError("Deal not found.", 404);
+  // Only a party to the deal may start funding it (guards against IDOR).
+  const access = await authorizeDeal(body.dealId);
+  if (!access.ok) return jsonError(access.status === 401 ? "Sign in to pay for this deal." : "Deal not found.", access.status);
+  const deal = access.deal;
 
   let account;
   try {

@@ -81,9 +81,49 @@ export async function getCurrentUser(): Promise<TrustUser | null> {
 
 /** Sign out of both modes. */
 export async function signOut(): Promise<void> {
+  // 1. Revoke the Supabase session first (server round-trip + clears its
+  //    sb-* auth cookies and token storage). Needs the token, so do it before
+  //    we wipe local storage.
   const supabase = getBrowserClient();
-  if (supabase) await supabase.auth.signOut();
+  try {
+    if (supabase) await supabase.auth.signOut();
+  } catch {
+    /* proceed with the local wipe regardless */
+  }
   clearDemoSession();
+
+  // 2. Leave no trace of the previous user on this device (it may be shared):
+  //    every cached deal, profile, and session flag goes.
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.clear();
+    } catch {
+      /* storage may be unavailable (private mode) */
+    }
+    try {
+      window.sessionStorage.clear();
+    } catch {
+      /* ignore */
+    }
+    clearClientCookies();
+  }
+}
+
+/** Expire every JS-readable cookie (auth/session cookies included). HttpOnly
+    cookies can't be touched from JS — those are cleared by the Supabase
+    signOut() call above and the middleware. */
+function clearClientCookies(): void {
+  if (typeof document === "undefined") return;
+  const host = location.hostname;
+  const baseDomain = host.split(".").slice(-2).join(".");
+  for (const pair of document.cookie.split(";")) {
+    const name = pair.split("=")[0].trim();
+    if (!name) continue;
+    const expire = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    document.cookie = expire;
+    document.cookie = `${expire}; domain=${host}`;
+    document.cookie = `${expire}; domain=.${baseDomain}`;
+  }
 }
 
 /* ------------------------------- helpers -------------------------------- */
