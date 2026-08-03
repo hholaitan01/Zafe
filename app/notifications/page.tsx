@@ -22,13 +22,13 @@ function ago(iso: string): string {
   return `${Math.floor(s / 86400)}d ago`;
 }
 const DOT: Record<DealStatus, string> = {
-  created: "#9A9AA0",
-  funded: "#E0A23C",
-  shipped: "#34D07E",
-  completed: "#34D07E",
-  disputed: "#FF4D4D",
-  refunded: "#c9c9cf",
-  resolved: "#c093f5",
+  created: "#94A3B8",
+  funded: "#A16207",
+  shipped: "#059669",
+  completed: "#059669",
+  disputed: "#DC2626",
+  refunded: "#64748B",
+  resolved: "#4338CA",
 };
 
 interface Note {
@@ -40,7 +40,7 @@ interface Note {
 }
 
 function noteItem(n: Note): string {
-  return `<div data-action="open" data-id="${n.dealId}" class="navbtn" style="border-radius:16px; background:#141416; border:1px solid #202024; padding:14px 15px; display:flex; gap:12px; align-items:flex-start;"><span style="width:9px; height:9px; border-radius:50%; background:${n.color}; margin-top:5px; flex-shrink:0; box-shadow:0 0 8px ${n.color}66;"></span><div style="flex:1; min-width:0;"><div style="font-size:13.5px; font-weight:700;">${esc(n.title)}</div><div style="font-size:12.5px; color:#9A9AA0; line-height:1.45; margin-top:2px;">${esc(n.text)}</div></div><span style="font-size:11px; color:#6d6d74; white-space:nowrap;">${ago(n.at)}</span></div>`;
+  return `<div data-action="open" data-id="${n.dealId}" class="navbtn" style="border-radius:16px; background:#fff; border:1px solid #E6EAF0; box-shadow:0 1px 2px rgba(15,23,42,.05); padding:14px 15px; display:flex; gap:12px; align-items:flex-start;"><span style="width:9px; height:9px; border-radius:50%; background:${n.color}; margin-top:5px; flex-shrink:0;"></span><div style="flex:1; min-width:0;"><div style="font-size:13.5px; font-weight:600; color:#0F172A;">${esc(n.title)}</div><div style="font-size:12.5px; color:#64748B; line-height:1.45; margin-top:2px;">${esc(n.text)}</div></div><span style="font-size:11px; color:#94A3B8; white-space:nowrap;">${ago(n.at)}</span></div>`;
 }
 
 export default function Page() {
@@ -70,7 +70,7 @@ export default function Page() {
       setData({
         items: notes.length
           ? notes.slice(0, 40).map(noteItem).join("")
-          : `<div style="padding:18px; text-align:center; color:#6d6d74; font-size:13px;">No notifications yet. Activity on your deals shows up here.</div>`,
+          : `<div style="padding:22px 18px; text-align:center; color:#94A3B8; font-size:13.5px; line-height:1.5; background:#fff; border:1px solid #E6EAF0; border-radius:16px;">No notifications yet.<br>Activity on your deals shows up here.</div>`,
       });
     })();
     return () => {
