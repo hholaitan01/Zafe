@@ -1,26 +1,43 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import PwaRegister from "./_lib/PwaRegister";
 
 export const metadata: Metadata = {
-  title: "TrustFlow AI",
+  applicationName: "TrustFlow",
+  title: { default: "TrustFlow: AI Escrow", template: "%s · TrustFlow" },
   description:
     "AI-powered escrow for peer-to-peer trades. Money held safe until you confirm. Built for Wema Hackaholics 7.0.",
+  appleWebApp: {
+    capable: true,
+    title: "TrustFlow",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B0B0D",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F172A" },
+  ],
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <PwaRegister />
+      </body>
     </html>
   );
 }

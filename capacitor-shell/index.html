@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>TrustFlow</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+      background: #0F172A; color: #fff;
+      font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    .mark { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+    .spin { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,.2); border-top-color: #10B981; animation: s .8s linear infinite; }
+    @keyframes s { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <!-- Shown briefly while the live TrustFlow app loads in the native shell. -->
+  <div class="mark">
+    <svg width="72" height="72" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#10B981" />
+      <path d="M11 16.2 14.6 20 21.5 12.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+    <div class="spin"></div>
+  </div>
+</body>
+</html>

@@ -113,6 +113,16 @@ Money is the whole product, so the guardrails are not optional.
 - **Guarded money moves.** A deal only reaches funded, completed, or refunded through a verified or
   checked path. The browser can never set those directly.
 
+## On your phone
+
+TrustFlow installs as an app on both platforms. It is a full **PWA**: brand
+icon, standalone launch, splash, and an offline page, with a service worker that
+caches static assets but never API or authenticated data. On Android use Chrome
+"Install app"; on iOS use Safari "Add to Home Screen". For real App Store and
+Play Store builds there is **Capacitor** scaffolding (`capacitor.config.ts`) that
+wraps the deployed app in native shells. The full build and submit steps are in
+[`docs/mobile.md`](docs/mobile.md).
+
 ## Payments (ALAT)
 
 The money-moves (collect, hold, payout, refund) run through the deal lifecycle
