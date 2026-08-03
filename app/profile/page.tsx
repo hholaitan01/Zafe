@@ -477,8 +477,8 @@ const css = `
 .pf-pref-sub{ font-size:12px; color:var(--muted); margin-top:2px; line-height:1.4 }
 .pf-toggle{ width:40px; height:23px; border-radius:999px; background:#CBD5E1; border:none; position:relative; flex-shrink:0; cursor:pointer; padding:0; transition:background .2s var(--ease) }
 .pf-toggle.is-on{ background:var(--safe) }
-.pf-toggle-dot{ position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.2); transition:left .2s var(--ease) }
-.pf-toggle.is-on .pf-toggle-dot{ left:19px }
+.pf-toggle-dot{ position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.2); transition:transform .2s var(--ease) }
+.pf-toggle.is-on .pf-toggle-dot{ transform:translateX(17px) }
 
 /* identity verification */
 .pf-verify{ margin-top:14px }

@@ -36,9 +36,12 @@ export default function TrustDetail({ fallback = "safe" }: { fallback?: TrustVer
     return () => { alive = false; };
   }, []);
 
-  // count the dial up to the real score
+  // count the dial up to the real score (both the number and the ring read off
+  // `display`, so they rise together). Respect reduced-motion: snap, don't count.
   useEffect(() => {
     if (score == null) return;
+    const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { setDisplay(score); return; }
     let raf = 0; const start = performance.now(); const dur = 900;
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / dur);
@@ -50,7 +53,6 @@ export default function TrustDetail({ fallback = "safe" }: { fallback?: TrustVer
   }, [score]);
 
   const th = THEME[verdict];
-  const pct = score ?? 0;
 
   return (
     <main className="ts">
@@ -62,7 +64,7 @@ export default function TrustDetail({ fallback = "safe" }: { fallback?: TrustVer
         </div>
 
         <div className="ts-dialwrap">
-          <div className="ts-dial" style={{ background: `conic-gradient(${th.ring} ${pct * 3.6}deg, #EEF2F6 0)` }}>
+          <div className="ts-dial" style={{ background: `conic-gradient(${th.ring} ${display * 3.6}deg, #EEF2F6 0)` }}>
             <div className="ts-dial-hole">
               <div className="ts-score">{score == null ? "—" : display}</div>
               <div className="ts-score-sub">out of 100</div>
@@ -115,7 +117,7 @@ const css = `
 .ts-topbar h1{ font-size:20px; font-weight:700; letter-spacing:-.02em }
 
 .ts-dialwrap{ display:flex; flex-direction:column; align-items:center; margin-top:22px }
-.ts-dial{ width:200px; height:200px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition:background .4s var(--ease) }
+.ts-dial{ width:200px; height:200px; border-radius:50%; display:flex; align-items:center; justify-content:center }
 .ts-dial-hole{ width:164px; height:164px; border-radius:50%; background:#fff; box-shadow:inset 0 2px 10px rgba(15,23,42,.06); display:flex; flex-direction:column; align-items:center; justify-content:center }
 .ts-score{ font-size:60px; font-weight:700; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums }
 .ts-score-sub{ font-size:13px; color:var(--faint); margin-top:2px }

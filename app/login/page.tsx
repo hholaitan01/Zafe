@@ -202,9 +202,9 @@ const css = `
 .auth-btn:disabled{ opacity:.5; cursor:not-allowed; transform:none }
 .auth-btn:focus-visible{ outline:2px solid var(--safe); outline-offset:2px }
 .auth-btn-primary{ background:var(--ink); color:#fff; box-shadow:0 10px 22px -12px rgba(15,23,42,.55); margin-top:14px }
-.auth-btn-primary:not(:disabled):hover{ transform:translateY(-1px); box-shadow:0 14px 26px -12px rgba(15,23,42,.6) }
+@media (hover:hover) and (pointer:fine){ .auth-btn-primary:not(:disabled):hover{ transform:translateY(-1px); box-shadow:0 14px 26px -12px rgba(15,23,42,.6) } }
 .auth-btn-google{ background:#fff; color:var(--ink); border-color:var(--line); box-shadow:0 1px 2px rgba(15,23,42,.05); margin-top:20px }
-.auth-btn-google:not(:disabled):hover{ border-color:#cbd5e1; transform:translateY(-1px) }
+@media (hover:hover) and (pointer:fine){ .auth-btn-google:not(:disabled):hover{ border-color:#cbd5e1; transform:translateY(-1px) } }
 .auth-btn-ghost{ background:transparent; color:var(--ink-2); border-color:var(--line); margin-top:11px }
 .auth-btn-ghost:hover{ border-color:#cbd5e1 }
 

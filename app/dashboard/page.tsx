@@ -183,7 +183,7 @@ const css = `
 .dsh-empty{ padding:26px 18px; text-align:center; color:var(--faint); font-size:13.5px; background:#fff; border:1px dashed var(--line); border-radius:16px }
 
 .dsh-row{ width:100%; text-align:left; cursor:pointer; font-family:inherit; display:grid; grid-template-columns:44px 1fr auto; grid-template-areas:'ic main amt' 'ic main pill'; gap:2px 13px; align-items:center; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); border-radius:16px; padding:13px 15px; transition:transform .12s var(--ease), box-shadow .18s var(--ease) }
-.dsh-row:hover{ transform:translateY(-1px); box-shadow:var(--sh-2) }
+@media (hover:hover) and (pointer:fine){ .dsh-row:hover{ transform:translateY(-1px); box-shadow:var(--sh-2) } }
 .dsh-row-ic{ grid-area:ic; width:44px; height:44px; border-radius:12px; background:#F1F5F9; display:flex; align-items:center; justify-content:center }
 .dsh-row-main{ grid-area:main; min-width:0; display:flex; flex-direction:column }
 .dsh-row-title{ font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }

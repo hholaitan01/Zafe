@@ -93,7 +93,7 @@ const css = `
 .nt-list{ display:flex; flex-direction:column; gap:10px; max-width:720px }
 .nt-empty{ padding:40px 20px; text-align:center; color:var(--faint); font-size:13.5px; line-height:1.5; background:#fff; border:1px dashed var(--line); border-radius:16px }
 .nt-row{ width:100%; text-align:left; cursor:pointer; font-family:inherit; display:flex; gap:12px; align-items:flex-start; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); border-radius:16px; padding:14px 15px; transition:transform .12s var(--ease), box-shadow .18s var(--ease) }
-.nt-row:hover{ transform:translateY(-1px); box-shadow:var(--sh-2) }
+@media (hover:hover) and (pointer:fine){ .nt-row:hover{ transform:translateY(-1px); box-shadow:var(--sh-2) } }
 .nt-dot{ width:9px; height:9px; border-radius:50%; margin-top:5px; flex-shrink:0 }
 .nt-main{ flex:1; min-width:0; display:flex; flex-direction:column }
 .nt-title{ font-size:13.5px; font-weight:600 }
