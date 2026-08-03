@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-08-03T02:21:06.039Z",
+        "reason": "Inter (lowercase, from the @import URL) is the user's Claude Design system font"
+      }
+    ]
+  }
+}
