@@ -35,23 +35,23 @@ interface Step {
 
 function circle(state: StepState): string {
   if (state === "done")
-    return `<div style="width:24px;height:24px;border-radius:50%;background:#34D07E;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#0B0B0D" stroke-width="3.4" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+    return `<div style="width:24px;height:24px;border-radius:50%;background:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#fff" stroke-width="3.4" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
   if (state === "current")
-    return `<div style="width:24px;height:24px;border-radius:50%;background:#0B0B0D;border:2px solid #E4144F;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 0 4px rgba(228,20,79,.18);"><div style="width:8px;height:8px;border-radius:50%;background:#E4144F;"></div></div>`;
-  return `<div style="width:24px;height:24px;border-radius:50%;background:#141416;border:2px solid #26262b;flex-shrink:0;"></div>`;
+    return `<div style="width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #A16207;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 0 4px rgba(161,98,7,.15);"><div style="width:8px;height:8px;border-radius:50%;background:#A16207;"></div></div>`;
+  return `<div style="width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #E2E8F0;flex-shrink:0;"></div>`;
 }
 
 function stepperHtml(steps: Step[]): string {
   return steps
     .map((s, i) => {
       const last = i === steps.length - 1;
-      const lineColor = s.state === "done" ? "#34D07E" : "#26262b";
-      const labelColor = s.state === "upcoming" ? "#6d6d74" : "#fff";
-      const subColor = s.state === "current" ? "#E4144F" : "#6d6d74";
+      const lineColor = s.state === "done" ? "#059669" : "#E2E8F0";
+      const labelColor = s.state === "upcoming" ? "#94A3B8" : "#0F172A";
+      const subColor = s.state === "current" ? "#A16207" : "#64748B";
       const subWeight = s.state === "current" ? "600" : "400";
       const connector = last ? "" : `<div style="width:2px;flex:1;min-height:20px;background:${lineColor};margin:4px 0;"></div>`;
       const sub = s.sub ? `<div style="font-size:12px;color:${subColor};font-weight:${subWeight};margin-top:2px;">${esc(s.sub)}</div>` : "";
-      return `<div style="display:flex;gap:16px;"><div style="display:flex;flex-direction:column;align-items:center;">${circle(s.state)}${connector}</div><div style="padding-bottom:${last ? "0" : "18px"};"><div style="font-size:14.5px;font-weight:700;color:${labelColor};">${esc(s.label)}</div>${sub}</div></div>`;
+      return `<div style="display:flex;gap:16px;"><div style="display:flex;flex-direction:column;align-items:center;">${circle(s.state)}${connector}</div><div style="padding-bottom:${last ? "0" : "18px"};"><div style="font-size:14.5px;font-weight:600;color:${labelColor};">${esc(s.label)}</div>${sub}</div></div>`;
     })
     .join("");
 }
@@ -88,17 +88,17 @@ function buildSteps(deal: Deal): Step[] {
 
 function actionsHtml(deal: Deal): string {
   const primary = (label: string, action: string) =>
-    `<div class="navbtn" data-action="${action}" style="height:56px;border-radius:14px;background:#E4144F;display:flex;align-items:center;justify-content:center;gap:9px;font-weight:700;font-size:16px;"><svg width="17" height="17" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.4" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>${label}</div>`;
+    `<div class="navbtn" data-action="${action}" style="height:56px;border-radius:15px;background:#059669;display:flex;align-items:center;justify-content:center;gap:9px;font-weight:600;font-size:16px;color:#fff;box-shadow:0 14px 26px -12px rgba(5,150,105,.55);"><svg width="17" height="17" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.4" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>${label}</div>`;
   const outline = (label: string, nav: string) =>
-    `<div class="navbtn" data-nav="${nav}" style="margin-top:12px;height:56px;border-radius:14px;background:transparent;border:1px solid #33333a;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#e9e9ee;">${label}</div>`;
+    `<div class="navbtn" data-nav="${nav}" style="margin-top:12px;height:56px;border-radius:15px;background:#fff;border:1px solid #E6EAF0;box-shadow:0 1px 2px rgba(15,23,42,.05);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;color:#334155;">${label}</div>`;
   const pill = (text: string, fg: string, bg: string) =>
-    `<div style="height:52px;border-radius:14px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:15px;">${text}</div>`;
+    `<div style="height:52px;border-radius:15px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:15px;">${text}</div>`;
 
-  if (deal.status === "funded" || deal.status === "shipped") return primary("Confirm Received", "confirm") + outline("Open Dispute", "dispute");
-  if (deal.status === "completed") return pill("Completed. Seller paid.", "#34D07E", "rgba(52,208,126,.14)") + outline("Back to home", "dashboard");
-  if (deal.status === "disputed") return pill("Dispute under AI review", "#E0A23C", "rgba(224,162,60,.14)") + outline("View the case", "dispute");
-  if (deal.status === "refunded" || deal.status === "resolved") return pill("Resolved", "#34D07E", "rgba(52,208,126,.14)") + outline("Back to home", "dashboard");
-  return outline("Open Dispute", "dispute");
+  if (deal.status === "funded" || deal.status === "shipped") return primary("Confirm received", "confirm") + outline("Open a dispute", "dispute");
+  if (deal.status === "completed") return pill("Completed. Seller paid.", "#059669", "#ECFDF5") + outline("Back to home", "dashboard");
+  if (deal.status === "disputed") return pill("Dispute under AI review", "#B45309", "#FEF3C7") + outline("View the case", "dispute");
+  if (deal.status === "refunded" || deal.status === "resolved") return pill("Resolved", "#059669", "#ECFDF5") + outline("Back to home", "dashboard");
+  return outline("Open a dispute", "dispute");
 }
 
 export default function Page() {

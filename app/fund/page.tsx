@@ -20,9 +20,9 @@ function esc(s: string): string {
 }
 
 const TONE: Record<StandingTone, { fg: string; bg: string }> = {
-  good: { fg: "#34D07E", bg: "rgba(52,208,126,.13)" },
-  neutral: { fg: "#9A9AA0", bg: "#1A1A1D" },
-  warn: { fg: "#FF4D4D", bg: "rgba(255,77,77,.13)" },
+  good: { fg: "#059669", bg: "#ECFDF5" },
+  neutral: { fg: "#64748B", bg: "#F1F5F9" },
+  warn: { fg: "#DC2626", bg: "#FEE2E2" },
 };
 
 const SHIELD = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -35,19 +35,19 @@ function trustBannerHtml(deal: Deal): string {
   let fg: string, bg: string, icon: string, title: string, body: string;
 
   if (!t) {
-    fg = "#9A9AA0"; bg = "#1A1A1D"; icon = INFO;
+    fg = "#64748B"; bg = "#F1F5F9"; icon = INFO;
     title = "No chat scanned";
     body = "You didn't paste a chat, so we couldn't check for scam signs. The escrow still protects your money.";
   } else if (t.verdict === "safe") {
-    fg = "#34D07E"; bg = "rgba(52,208,126,.12)"; icon = SHIELD;
+    fg = "#059669"; bg = "#ECFDF5"; icon = SHIELD;
     title = `Looks safe · Trust Score ${t.score}/100`;
     body = t.headline;
   } else if (t.verdict === "caution") {
-    fg = "#E0A23C"; bg = "rgba(224,162,60,.14)"; icon = WARN;
+    fg = "#B45309"; bg = "#FEF3C7"; icon = WARN;
     title = `Be careful · Trust Score ${t.score}/100`;
     body = t.headline;
   } else {
-    fg = "#FF4D4D"; bg = "rgba(255,77,77,.12)"; icon = WARN;
+    fg = "#DC2626"; bg = "#FEE2E2"; icon = WARN;
     title = `Scam signs detected · Trust Score ${t.score}/100`;
     body = t.headline;
   }
@@ -55,8 +55,8 @@ function trustBannerHtml(deal: Deal): string {
   return `<div style="border-radius:14px; background:${bg}; border:1px solid ${fg}33; padding:13px 14px; display:flex; gap:11px; color:${fg};">
       <div style="flex-shrink:0; margin-top:1px;">${icon}</div>
       <div style="min-width:0;">
-        <div style="font-size:13px; font-weight:800; letter-spacing:-.01em;">${esc(title)}</div>
-        <div style="font-size:12px; color:#c9c9cf; line-height:1.5; margin-top:3px;">${esc(body)}</div>
+        <div style="font-size:13px; font-weight:700; letter-spacing:-.01em;">${esc(title)}</div>
+        <div style="font-size:12px; color:#475569; line-height:1.5; margin-top:3px;">${esc(body)}</div>
       </div>
     </div>`;
 }
@@ -66,17 +66,17 @@ function sellerStandingHtml(s: SellerStanding): string {
   const tone = TONE[s.tone];
   const icon = s.tone === "good" ? SHIELD : s.tone === "warn" ? WARN : INFO;
   const badge = s.verified
-    ? `<span style="font-size:10px; font-weight:800; color:#34D07E; background:rgba(52,208,126,.15); padding:2px 7px; border-radius:6px;">VERIFIED</span>`
-    : `<span style="font-size:10px; font-weight:800; color:#9A9AA0; background:#26262b; padding:2px 7px; border-radius:6px;">UNVERIFIED</span>`;
-  return `<div style="border-radius:14px; background:#141416; border:1px solid #202024; padding:12px 14px;">
+    ? `<span style="font-size:10px; font-weight:700; color:#059669; background:#ECFDF5; border:1px solid #C7F0DE; padding:2px 7px; border-radius:6px;">VERIFIED</span>`
+    : `<span style="font-size:10px; font-weight:700; color:#64748B; background:#F1F5F9; padding:2px 7px; border-radius:6px;">UNVERIFIED</span>`;
+  return `<div style="border-radius:14px; background:#fff; border:1px solid #E6EAF0; box-shadow:0 1px 2px rgba(15,23,42,.05); padding:12px 14px;">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
         <div style="display:flex; align-items:center; gap:8px; color:${tone.fg}; min-width:0;">
           ${icon}
-          <span style="font-size:13px; font-weight:800;">${esc(s.label)}</span>
+          <span style="font-size:13px; font-weight:700;">${esc(s.label)}</span>
         </div>
         ${badge}
       </div>
-      <div style="font-size:12px; color:#9A9AA0; line-height:1.5; margin-top:6px;">${esc(s.detail)}</div>
+      <div style="font-size:12px; color:#64748B; line-height:1.5; margin-top:6px;">${esc(s.detail)}</div>
     </div>`;
 }
 
@@ -84,13 +84,13 @@ function sellerStandingHtml(s: SellerStanding): string {
     the deal funded here — the verified ALATPay webhook does that once the money
     actually lands. Empty in demo mode (funding is simulated instantly). */
 function payPanelHtml(acct: CollectionAccount, amount: string, waiting: boolean): string {
-  return `<div style="border-radius:14px; background:#141416; border:1px solid #202024; padding:14px;">
-      <div style="font-size:12px; color:#9A9AA0;">Transfer exactly</div>
-      <div style="font-size:22px; font-weight:800; letter-spacing:-.02em;">${esc(amount)}</div>
-      <div style="margin-top:10px; display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9A9AA0;">Bank</span><span style="font-weight:700;">${esc(acct.bankName)}</span></div>
-      <div style="margin-top:6px; display:flex; justify-content:space-between; font-size:13px;"><span style="color:#9A9AA0;">Account number</span><span style="font-weight:700; letter-spacing:.06em;">${esc(acct.accountNumber)}</span></div>
-      <div style="margin-top:10px; font-size:12px; color:#9A9AA0; line-height:1.5;">This one-time account expires shortly. We confirm your payment automatically once it lands. No screenshot needed.</div>
-      ${waiting ? `<div style="margin-top:8px; font-size:12px; color:#E0A23C; font-weight:700;">Payment not received yet. Give it a moment after transferring.</div>` : ""}
+  return `<div style="border-radius:14px; background:#fff; border:1px solid #E6EAF0; box-shadow:0 1px 2px rgba(15,23,42,.05); padding:14px;">
+      <div style="font-size:12px; color:#64748B;">Transfer exactly</div>
+      <div style="font-size:22px; font-weight:700; letter-spacing:-.02em; color:#0F172A; font-variant-numeric:tabular-nums;">${esc(amount)}</div>
+      <div style="margin-top:10px; display:flex; justify-content:space-between; font-size:13px;"><span style="color:#64748B;">Bank</span><span style="font-weight:600; color:#0F172A;">${esc(acct.bankName)}</span></div>
+      <div style="margin-top:6px; display:flex; justify-content:space-between; font-size:13px;"><span style="color:#64748B;">Account number</span><span style="font-weight:600; letter-spacing:.06em; color:#0F172A;">${esc(acct.accountNumber)}</span></div>
+      <div style="margin-top:10px; font-size:12px; color:#64748B; line-height:1.5;">This one-time account expires shortly. We confirm your payment automatically once it lands. No screenshot needed.</div>
+      ${waiting ? `<div style="margin-top:8px; font-size:12px; color:#B45309; font-weight:600;">Payment not received yet. Give it a moment after transferring.</div>` : ""}
     </div>`;
 }
 
@@ -99,10 +99,10 @@ function payPanelHtml(acct: CollectionAccount, amount: string, waiting: boolean)
 function riskAckHtml(risky: boolean, acked: boolean, nudge: boolean, enter: boolean): string {
   if (!risky) return "";
   const box = acked
-    ? `<div class="tf-pop" style="width:22px; height:22px; border-radius:7px; background:#FF4D4D; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#fff" stroke-width="3.2" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
-    : `<div style="width:22px; height:22px; border-radius:7px; border:2px solid #FF4D4D; flex-shrink:0;"></div>`;
-  const hint = nudge && !acked ? `<div style="font-size:11.5px; color:#FF4D4D; font-weight:700; margin-top:8px;">Tick the box to confirm before paying.</div>` : "";
-  return `<div data-action="ackRisk" class="navbtn${enter ? " tf-risk-enter" : ""}" style="border-radius:14px; background:rgba(255,77,77,.08); border:1px solid rgba(255,77,77,.35); padding:13px 14px; display:flex; align-items:center; gap:11px;">${box}<div style="font-size:13px; font-weight:700; color:#ffd0d0; line-height:1.35;">I understand the risk, pay anyway</div></div>${hint}`;
+    ? `<div class="tf-pop" style="width:22px; height:22px; border-radius:7px; background:#DC2626; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" stroke="#fff" stroke-width="3.2" fill="none"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
+    : `<div style="width:22px; height:22px; border-radius:7px; border:2px solid #DC2626; background:#fff; flex-shrink:0;"></div>`;
+  const hint = nudge && !acked ? `<div style="font-size:11.5px; color:#DC2626; font-weight:600; margin-top:8px;">Tick the box to confirm before paying.</div>` : "";
+  return `<div data-action="ackRisk" class="navbtn${enter ? " tf-risk-enter" : ""}" style="border-radius:14px; background:#FEF2F2; border:1px solid #FECACA; padding:13px 14px; display:flex; align-items:center; gap:11px;">${box}<div style="font-size:13px; font-weight:600; color:#B91C1C; line-height:1.35;">I understand the risk, pay anyway</div></div>${hint}`;
 }
 
 export default function Page() {
@@ -165,11 +165,11 @@ export default function Page() {
       if (!row || !list) return;
       list.querySelectorAll<HTMLElement>("[data-pay]").forEach((r) => {
         const on = r === row;
-        r.style.border = on ? "1.5px solid #E4144F" : "1px solid #26262b";
+        r.style.border = on ? "1.5px solid #059669" : "1px solid #E6EAF0";
         const radio = r.querySelector<HTMLElement>("[data-radio]");
         if (radio) {
-          radio.style.border = on ? "6px solid #E4144F" : "2px solid #33333a";
-          radio.style.boxShadow = on ? "inset 0 0 0 2px #141416" : "none";
+          radio.style.border = on ? "6px solid #059669" : "2px solid #CBD5E1";
+          radio.style.boxShadow = on ? "inset 0 0 0 2px #fff" : "none";
         }
       });
     },
@@ -221,7 +221,7 @@ export default function Page() {
         // Live call failed — do NOT proceed; surface it and let them retry.
         baseRef.current = {
           ...baseRef.current,
-          payPanel: `<div style="border-radius:14px; background:rgba(255,77,77,.1); border:1px solid rgba(255,77,77,.35); padding:13px 14px; font-size:13px; color:#ffb3b3; line-height:1.5;">Couldn't start the payment just now. Please try again.</div>`,
+          payPanel: `<div style="border-radius:14px; background:#FEF2F2; border:1px solid #FECACA; padding:13px 14px; font-size:13px; color:#B91C1C; line-height:1.5;">Couldn't start the payment just now. Please try again.</div>`,
         };
         paint();
         return;
