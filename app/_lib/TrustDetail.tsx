@@ -77,7 +77,7 @@ export default function TrustDetail({ fallback = "safe" }: { fallback?: TrustVer
         </div>
 
         <div className="ts-headline" style={{ background: th.tint, borderColor: th.bd }}>
-          <p>{headline || (th.safe ? "This seller looks safe. Established history and a calm conversation — you can go ahead." : "We found risk signals here. Read them carefully before you send any money.")}</p>
+          <p>{headline || (th.safe ? "This seller looks safe. Established history and a calm conversation, so you can go ahead." : "We found risk signals here. Read them carefully before you send any money.")}</p>
         </div>
 
         <div className="ts-signals">

@@ -1,19 +1,31 @@
 "use client";
 
-/* Receipt — the proof a completed escrow leaves behind. Rebuilt in the v2 light
-   language and bound to the real deal (amount, parties, item, ref, timeline).
-   A centred document card that reads well at any width. Share copies a plain
-   summary; Done returns home. */
+/* Receipt — the proof a completed escrow leaves behind, styled like a bank
+   transfer receipt: a logo panel, a "Payment Released" confirmation, divider
+   rows, and a scalloped bottom edge, on a deep canvas with Share / Done. Bound
+   to the real deal (amount, parties, item, reference, release time). */
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCurrentDealId, getDeal, naira } from "@/lib/client";
+import { getCurrentDealId, getDeal } from "@/lib/client";
 import type { Deal } from "@/lib/deals/types";
 
+function money(n: number): string {
+  return `₦${n.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 function fmtDateTime(iso?: string): string {
-  if (!iso) return "—";
+  if (!iso) return "";
   const d = new Date(iso);
-  return `${d.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })} · ${d.toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" })}`;
+  const date = d.toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" });
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return `${date} at ${time}`;
+}
+/** A long, deterministic session id from the deal, in the style banks print. */
+function sessionId(deal: Deal): string {
+  if (deal.payoutRef && /\d{10,}/.test(deal.payoutRef)) return deal.payoutRef;
+  let digits = "";
+  for (const c of deal.id + deal.reference) digits += (c.charCodeAt(0) * 7 % 100).toString().padStart(2, "0");
+  return `100004${digits}${String(deal.item.amount)}`.replace(/\D/g, "").padEnd(30, "0").slice(0, 30);
 }
 
 export default function ReceiptPage() {
@@ -30,11 +42,15 @@ export default function ReceiptPage() {
   }, []);
 
   const releasedAt = deal ? [...deal.timeline].reverse().find((e) => e.status === "completed" || e.status === "resolved")?.at || deal.updatedAt : undefined;
-  const ref = deal?.reference || deal?.id.slice(0, 12) || "—";
+  const ref = deal?.reference || deal?.id.slice(0, 12) || "";
+  const seller = deal?.seller?.name || "Seller";
+  const payoutAcct = deal?.sellerPayout?.accountNumber;
+  const payoutBank = deal?.sellerPayout ? (deal.sellerPayout as { bankCode?: string }).bankCode : undefined;
+  const beneficiary = payoutAcct ? `${payoutBank || "Bank"} - ${payoutAcct}` : "Escrow release account";
 
   function share() {
     if (!deal) return;
-    const text = `TrustFlow receipt\n${naira(deal.item.amount)} · ${deal.item.title}\nSeller: ${deal.seller?.name || "—"}\nRef: ${ref}\nReleased: ${fmtDateTime(releasedAt)}`;
+    const text = `TrustFlow receipt\n${money(deal.item.amount)} released for ${deal.item.title}\nTo: ${seller}\nRef: ${ref}\n${fmtDateTime(releasedAt)}`;
     if (navigator.share) { navigator.share({ title: "TrustFlow receipt", text }).catch(() => {}); return; }
     navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {});
   }
@@ -44,68 +60,84 @@ export default function ReceiptPage() {
       <style>{css}</style>
       <div className="rc-inner">
         <div className="rc-card rc-enter">
-          <div className="rc-head">
-            <div className="rc-check"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6"><path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
-            <div className="rc-head-label">Transaction successful</div>
-            <div className="rc-amount tf-mono">{deal ? naira(deal.item.amount) : "—"}</div>
-            <div className="rc-pill">RELEASED TO SELLER</div>
+          {/* logo panel */}
+          <div className="rc-logo">
+            <span className="rc-mark"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#0F172A" /><path d="M11 16.2 14.6 20 21.5 12.5" stroke="#10B981" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+            <span className="rc-wordmark">TrustFlow<span>Escrow</span></span>
+          </div>
+
+          <div className="rc-status">
+            <span className="rc-check"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+            Payment Released
           </div>
 
           <div className="rc-rows">
-            <Row k="Item" v={deal?.item.title || "—"} />
-            <Row k="Seller" v={deal?.seller?.name || "—"} />
-            {deal?.buyerEmail && <Row k="Buyer" v={deal.buyerEmail} />}
-            <Row k="Released" v={fmtDateTime(releasedAt)} />
-            <Row k="Reference" v={ref} mono />
-            <Row k="Transaction ID" v={deal?.id || "—"} mono />
+            <Row k="Total amount" v={deal ? money(deal.item.amount) : ""} strong />
+            <Row k="From" v={deal?.buyerEmail ? deal.buyerEmail.split("@")[0].toUpperCase() : "BUYER (ESCROW)"} strong />
+            <Row k="Beneficiary account" v={beneficiary} strong />
+            <Row k="Recipient" v={seller.toUpperCase()} strong />
+            <Row k="Transaction ID" v={ref} mono />
+            <Row k="Session ID" v={deal ? sessionId(deal) : ""} mono />
+            <Row k="Item" v={deal?.item.title || ""} />
+            <Row k="Date / Time" v={fmtDateTime(releasedAt)} last />
           </div>
 
-          <div className="rc-foot">
-            <svg width="16" height="18" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#0F172A" /><path d="M11 16.2 14.6 20 21.5 12.5" stroke="#10B981" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            <span>Secured by TrustFlow escrow</span>
-          </div>
+          <div className="rc-scallop" aria-hidden="true" />
         </div>
 
         <div className="rc-actions">
-          <button className="tf-btn rc-share" onClick={share}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" /><path d="M12 15V3M8 7l4-4 4 4" /></svg>
-            {copied ? "Copied" : "Share receipt"}
-          </button>
-          <button className="tf-btn rc-done" onClick={() => router.push("/dashboard")}>Done</button>
+          <button className="rc-btn rc-share" onClick={share}>{copied ? "Copied" : "Share Receipt"}</button>
+          <button className="rc-btn rc-done" onClick={() => router.push("/dashboard")}>Done</button>
         </div>
       </div>
     </main>
   );
 }
 
-function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
-  return <div className="rc-row"><span className="rc-row-k">{k}</span><span className={`rc-row-v${mono ? " tf-mono" : ""}`}>{v}</span></div>;
+function Row({ k, v, strong, mono, last }: { k: string; v: string; strong?: boolean; mono?: boolean; last?: boolean }) {
+  return (
+    <div className={`rc-row${last ? " rc-row-last" : ""}`}>
+      <span className="rc-k">{k}</span>
+      <span className={`rc-v${strong ? " rc-v-strong" : ""}${mono ? " tf-mono" : ""}`}>{v || "—"}</span>
+    </div>
+  );
 }
 
 const css = `
-.rc{ --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --faint:#94A3B8; --bg:#F8FAFC; --card:#fff;
-  --line:#E6EAF0; --line-2:#EEF2F6; --safe:#059669; --safe-2:#10B981; --safe-tint:#ECFDF5;
-  --ease:cubic-bezier(.22,1,.36,1); font-family:'IBM Plex Sans',system-ui,sans-serif; color:var(--ink);
-  background:var(--bg); min-height:100dvh; display:flex; align-items:flex-start; justify-content:center; padding:32px 20px 40px; -webkit-font-smoothing:antialiased }
+.rc{ --paper:#0E2036; --ink:#0F172A; --muted:#6B7280; --faint:#9CA3AF; --line:#EEF0F3; --safe:#10B981;
+  --ease:cubic-bezier(.22,1,.36,1); font-family:'IBM Plex Sans',system-ui,sans-serif;
+  background:linear-gradient(180deg,#0E2036,#0B1626); min-height:100dvh; display:flex; justify-content:center;
+  padding:28px 18px 34px; -webkit-font-smoothing:antialiased }
 .rc *{ box-sizing:border-box }
 .tf-mono{ font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums }
-.rc-inner{ width:100%; max-width:440px }
-.rc-card{ background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:0 24px 48px -24px rgba(15,23,42,.30); overflow:hidden }
+.rc-inner{ width:100%; max-width:460px }
+
+.rc-card{ position:relative; background:#fff; color:var(--ink); border-radius:20px 20px 0 0; padding:22px 22px 26px; box-shadow:0 30px 60px -28px rgba(0,0,0,.55) }
 .rc-enter{ animation:rcIn .5s var(--ease) both } @keyframes rcIn{ from{ opacity:0; transform:translateY(12px) } to{ opacity:1; transform:none } }
 @media (prefers-reduced-motion:reduce){ .rc-enter{ animation:none } }
-.rc-head{ padding:28px 24px 22px; text-align:center; border-bottom:1.5px dashed var(--line) }
-.rc-check{ width:64px; height:64px; margin:0 auto; border-radius:50%; background:radial-gradient(circle at 35% 30%, #6EE7B7, var(--safe-2) 55%, var(--safe)); display:flex; align-items:center; justify-content:center; box-shadow:0 14px 30px -10px rgba(5,150,105,.5) }
-.rc-head-label{ margin-top:14px; font-size:13px; color:var(--muted) }
-.rc-amount{ margin-top:4px; font-size:32px; font-weight:700; letter-spacing:-.03em }
-.rc-pill{ margin-top:10px; display:inline-flex; align-items:center; padding:5px 12px; border-radius:999px; background:var(--safe-tint); color:#047857; font-size:11px; font-weight:700; letter-spacing:.04em }
-.rc-rows{ padding:18px 24px }
-.rc-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:9px 0; font-size:13.5px }
-.rc-row-k{ color:var(--muted); flex-shrink:0 }
-.rc-row-v{ font-weight:600; text-align:right; word-break:break-word; min-width:0 }
-.rc-foot{ padding:14px 24px 20px; border-top:1.5px dashed var(--line); display:flex; align-items:center; justify-content:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--muted) }
-.rc-actions{ margin-top:20px; display:flex; gap:12px }
-.rc-btn, .tf-btn{ flex:1; height:54px; border-radius:14px; display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; font-weight:600; font-size:15px; cursor:pointer; border:1px solid transparent; transition:transform .12s var(--ease), border-color .18s var(--ease), background .18s var(--ease) }
-.tf-btn:active{ transform:scale(.98) }
-.rc-share{ background:#fff; border-color:var(--line); color:var(--ink); box-shadow:0 1px 2px rgba(15,23,42,.05) } .rc-share:hover{ border-color:#CBD5E1 }
-.rc-done{ background:var(--ink); color:#fff } .rc-done:hover{ background:#06152A }
+
+.rc-logo{ background:#F4F7FA; border-radius:14px; padding:22px; display:flex; align-items:center; justify-content:center; gap:10px }
+.rc-mark{ width:38px; height:38px; border-radius:11px; background:#fff; border:1px solid var(--line); display:flex; align-items:center; justify-content:center }
+.rc-wordmark{ font-size:19px; font-weight:800; letter-spacing:-.02em; color:var(--ink); display:flex; flex-direction:column; line-height:1 }
+.rc-wordmark span{ font-size:10px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-top:3px }
+
+.rc-status{ display:flex; align-items:center; justify-content:center; gap:10px; margin-top:24px; font-size:21px; font-weight:800; letter-spacing:-.02em }
+.rc-check{ width:26px; height:26px; border-radius:50%; background:var(--safe); display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+
+.rc-rows{ margin-top:22px }
+.rc-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding:16px 0; border-bottom:1px solid var(--line) }
+.rc-row-last{ border-bottom:none }
+.rc-k{ font-size:15px; color:var(--muted); flex-shrink:0 }
+.rc-v{ font-size:15px; text-align:right; word-break:break-word; min-width:0; color:var(--ink) }
+.rc-v-strong{ font-weight:800; letter-spacing:-.01em }
+
+.rc-scallop{ position:absolute; left:0; right:0; bottom:-13px; height:14px;
+  background:radial-gradient(circle 9px at 11px -1px, var(--paper) 0 9px, transparent 9.5px) repeat-x;
+  background-size:22px 14px }
+
+.rc-actions{ margin-top:26px; display:flex; flex-direction:column; gap:12px }
+.rc-btn{ width:100%; height:56px; border-radius:14px; font-family:inherit; font-weight:700; font-size:16px; cursor:pointer; border:1px solid transparent; transition:transform .12s var(--ease), background .18s var(--ease), border-color .18s var(--ease) }
+.rc-btn:active{ transform:scale(.99) }
+.rc-share{ background:#fff; color:var(--ink) } .rc-share:hover{ background:#F1F5F9 }
+.rc-done{ background:transparent; color:#fff; border-color:rgba(255,255,255,.35) } .rc-done:hover{ border-color:rgba(255,255,255,.6) }
 `;

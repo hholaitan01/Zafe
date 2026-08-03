@@ -108,7 +108,7 @@ export default function SellingPage() {
                   <button className="sg-card-top" onClick={() => open(d.id)}>
                     <span className="sg-ic">{itemIcon(d.item.title)}</span>
                     <span className="sg-main"><span className="sg-title">{d.item.title}</span><span className="sg-sub tf-mono">{naira(d.item.amount)} · {d.buyerEmail || "a buyer"}</span></span>
-                    <span className="tf-pill" style={{ background: p.bg, color: p.fg }}><span className="dot" style={{ background: p.dot }} />{p.label}</span>
+                    <span className="tf-pill" style={{ background: p.bg, color: p.fg }}>{p.label}</span>
                   </button>
                   {d.status === "funded" && (
                     <button className="tf-btn tf-btn--primary sg-ship" disabled={shipping === d.id} onClick={() => void ship(d.id)}>

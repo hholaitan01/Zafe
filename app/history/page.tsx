@@ -1,10 +1,10 @@
 "use client";
 
-/* Activity — every deal the user is a party to (as buyer or seller). Desktop
-   keeps the imported design's structure: a page head, a 4-cell summary strip,
-   a filter-chip + search toolbar, then the transaction rows. It stacks to a
-   mobile column inside AppShell. Filters and search are functional and
-   client-side; tapping a row opens its timeline. */
+/* Activity — every deal the user is a party to (as buyer or seller). Modelled
+   on a bank transaction history: results are grouped by month with an In / Out
+   summary per group, each row signs its amount by direction and carries a clean
+   status pill (no leading dot). Filters and search run client-side. Desktop and
+   mobile share the layout inside AppShell; a row opens that deal's timeline. */
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -13,14 +13,14 @@ import { getCurrentUser } from "@/lib/auth";
 import { getMyReputation, listMyDeals, listMySales, naira, setCurrentDealId } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
-const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: string }> = {
-  created: { label: "Awaiting payment", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
-  funded: { label: "Funded", bg: "#ECFDF5", fg: "#047857", dot: "#10B981" },
-  shipped: { label: "Delivered", bg: "#FEF3C7", fg: "#A16207", dot: "#E89914" },
-  completed: { label: "Released", bg: "#ECFDF5", fg: "#047857", dot: "#10B981" },
-  disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C", dot: "#DC2626" },
-  refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
-  resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3", dot: "#6366F1" },
+const PILL: Record<DealStatus, { label: string; bg: string; fg: string }> = {
+  created: { label: "Awaiting payment", bg: "#F1F5F9", fg: "#475569" },
+  funded: { label: "Funded", bg: "#ECFDF5", fg: "#047857" },
+  shipped: { label: "Delivered", bg: "#FEF3C7", fg: "#A16207" },
+  completed: { label: "Successful", bg: "#ECFDF5", fg: "#047857" },
+  disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C" },
+  refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569" },
+  resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3" },
 };
 
 function itemIcon(t: string, size = 20): React.ReactNode {
@@ -34,31 +34,28 @@ function itemIcon(t: string, size = 20): React.ReactNode {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
 
-type Row = Deal & { role: string };
+type Row = Deal & { role: string; incoming: boolean };
 
 const FILTERS: { id: string; label: string; match: (s: DealStatus) => boolean }[] = [
   { id: "all", label: "All", match: () => true },
   { id: "active", label: "Active", match: (s) => ["created", "funded", "shipped"].includes(s) },
   { id: "funded", label: "Funded", match: (s) => s === "funded" },
   { id: "shipped", label: "Delivered", match: (s) => s === "shipped" },
-  { id: "completed", label: "Released", match: (s) => s === "completed" || s === "resolved" },
+  { id: "completed", label: "Successful", match: (s) => s === "completed" || s === "resolved" },
   { id: "disputed", label: "Disputed", match: (s) => s === "disputed" },
 ];
 
-function TxRow({ tx, onOpen }: { tx: Row; onOpen: (id: string) => void }) {
-  const p = PILL[tx.status];
-  const who = tx.seller?.name || tx.buyerEmail || "Counterparty";
-  return (
-    <button className="ac-row" onClick={() => onOpen(tx.id)}>
-      <span className="ac-row-ic">{itemIcon(tx.item.title)}</span>
-      <span className="ac-row-main">
-        <span className="ac-row-title">{tx.item.title}</span>
-        <span className="ac-row-sub tf-mono">{tx.id.slice(0, 10)} · {tx.role} · {who}</span>
-      </span>
-      <span className="ac-row-amt tf-mono">{naira(tx.item.amount)}</span>
-      <span className="tf-pill" style={{ background: p.bg, color: p.fg }}><span className="dot" style={{ background: p.dot }} />{p.label}</span>
-    </button>
-  );
+function monthKey(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const m = d.toLocaleDateString("en-NG", { month: "long" });
+  return d.getFullYear() === now.getFullYear() ? m : `${m} ${d.getFullYear()}`;
+}
+function rowDate(iso: string): string {
+  const d = new Date(iso);
+  const day = d.getDate();
+  const ord = day % 10 === 1 && day !== 11 ? "st" : day % 10 === 2 && day !== 12 ? "nd" : day % 10 === 3 && day !== 13 ? "rd" : "th";
+  return `${d.toLocaleDateString("en-NG", { month: "short" })} ${day}${ord}, ${d.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 export default function ActivityPage() {
@@ -81,28 +78,20 @@ export default function ActivityPage() {
         getMyReputation(email, user?.name).catch(() => null),
       ]);
       if (!alive) return;
-      const roles = new Map<string, string>();
-      buying.forEach((d) => roles.set(d.id, "You bought"));
-      selling.forEach((d) => roles.set(d.id, roles.has(d.id) ? "You bought" : "You're selling"));
+      const sellerIds = new Set(selling.map((d) => d.id));
       const byId = new Map<string, Deal>();
       [...buying, ...selling].forEach((d) => byId.set(d.id, d));
       const all: Row[] = [...byId.values()]
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        .map((d) => ({ ...d, role: roles.get(d.id) || "" }));
+        .map((d) => {
+          const isSeller = sellerIds.has(d.id) && !buying.some((b) => b.id === d.id);
+          return { ...d, role: isSeller ? "You're selling" : "You bought", incoming: isSeller };
+        });
       setRows(all);
       setShell({ name, initials, photo: "", score: rep?.score });
     })();
     return () => { alive = false; };
   }, []);
-
-  const summary = useMemo(() => {
-    const list = rows || [];
-    const inEscrow = list.filter((d) => d.status === "funded" || d.status === "shipped").reduce((a, d) => a + (d.item.amount || 0), 0);
-    const released = list.filter((d) => d.status === "completed" || d.status === "resolved").reduce((a, d) => a + (d.item.amount || 0), 0);
-    const asBuyer = list.filter((d) => d.role === "You bought").length;
-    const asSeller = list.filter((d) => d.role === "You're selling").length;
-    return { inEscrow, released, asBuyer, asSeller };
-  }, [rows]);
 
   const shown = useMemo(() => {
     const f = FILTERS.find((x) => x.id === filter) || FILTERS[0];
@@ -110,10 +99,23 @@ export default function ActivityPage() {
     return (rows || []).filter((d) => {
       if (!f.match(d.status)) return false;
       if (!q) return true;
-      const hay = `${d.item.title} ${d.id} ${d.seller?.name || ""} ${d.buyerEmail || ""}`.toLowerCase();
-      return hay.includes(q);
+      return `${d.item.title} ${d.id} ${d.seller?.name || ""} ${d.buyerEmail || ""}`.toLowerCase().includes(q);
     });
   }, [rows, filter, query]);
+
+  // group the filtered rows by month, newest month first
+  const groups = useMemo(() => {
+    const map = new Map<string, Row[]>();
+    for (const r of shown) {
+      const k = monthKey(r.createdAt);
+      (map.get(k) || map.set(k, []).get(k)!).push(r);
+    }
+    return [...map.entries()].map(([month, items]) => {
+      const inTotal = items.filter((d) => d.incoming && (d.status === "completed" || d.status === "resolved")).reduce((a, d) => a + d.item.amount, 0);
+      const outTotal = items.filter((d) => !d.incoming).reduce((a, d) => a + d.item.amount, 0);
+      return { month, items, inTotal, outTotal };
+    });
+  }, [shown]);
 
   const open = (id: string) => { setCurrentDealId(id); router.push("/timeline"); };
 
@@ -123,13 +125,6 @@ export default function ActivityPage() {
 
       <div className="tf-ph-head ac-head">
         <div><div className="tf-eyebrow">Activity</div><h1>All transactions</h1></div>
-      </div>
-
-      <div className="ac-summary">
-        <div className="ac-sum-cell"><div className="ac-sum-label">In escrow</div><div className="ac-sum-val tf-mono">{naira(summary.inEscrow)}</div></div>
-        <div className="ac-sum-cell"><div className="ac-sum-label">Released</div><div className="ac-sum-val tf-mono">{naira(summary.released)}</div></div>
-        <div className="ac-sum-cell"><div className="ac-sum-label">As buyer</div><div className="ac-sum-val">{summary.asBuyer}</div></div>
-        <div className="ac-sum-cell ac-sum-last"><div className="ac-sum-label">As seller</div><div className="ac-sum-val">{summary.asSeller}</div></div>
       </div>
 
       <div className="ac-toolbar">
@@ -144,28 +139,49 @@ export default function ActivityPage() {
         </div>
       </div>
 
-      <div className="ac-list">
-        {rows == null ? (
-          <div className="ac-empty">Loading your transactions…</div>
-        ) : shown.length ? (
-          shown.map((tx) => <TxRow key={tx.id} tx={tx} onOpen={open} />)
-        ) : (
-          <div className="ac-empty">{query || filter !== "all" ? "No transactions match this view." : "No deals yet. Your escrows, as buyer or seller, appear here."}</div>
-        )}
-      </div>
+      {rows == null ? (
+        <div className="ac-empty">Loading your transactions…</div>
+      ) : groups.length ? (
+        <div className="ac-groups">
+          {groups.map((g) => (
+            <section key={g.month} className="tf-card ac-group">
+              <header className="ac-group-head">
+                <span className="ac-month">{g.month}</span>
+                <span className="ac-inout">
+                  <span className="ac-in">In <b className="tf-mono">{naira(g.inTotal)}</b></span>
+                  <span className="ac-out">Out <b className="tf-mono">{naira(g.outTotal)}</b></span>
+                </span>
+              </header>
+              <div className="ac-rows">
+                {g.items.map((tx) => {
+                  const p = PILL[tx.status];
+                  return (
+                    <button key={tx.id} className="ac-row" onClick={() => open(tx.id)}>
+                      <span className="ac-ic">{itemIcon(tx.item.title)}</span>
+                      <span className="ac-main">
+                        <span className="ac-title">{tx.item.title}</span>
+                        <span className="ac-date tf-mono">{rowDate(tx.createdAt)}</span>
+                      </span>
+                      <span className="ac-right">
+                        <span className={`ac-amt tf-mono${tx.incoming ? " ac-amt-in" : ""}`}>{tx.incoming ? "+" : "-"}{naira(tx.item.amount)}</span>
+                        <span className="ac-pill" style={{ background: p.bg, color: p.fg }}>{p.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div className="ac-empty">{query || filter !== "all" ? "No transactions match this view." : "No deals yet. Your escrows, as buyer or seller, appear here."}</div>
+      )}
     </AppShell>
   );
 }
 
 const css = `
 .ac-head{ display:none }
-
-.ac-summary{ display:grid; grid-template-columns:repeat(2,1fr); border:1px solid var(--line); border-radius:16px; background:#fff; overflow:hidden; margin-bottom:18px; box-shadow:var(--sh-1) }
-.ac-sum-cell{ padding:14px 16px; border-right:1px solid var(--line-2); border-bottom:1px solid var(--line-2) }
-.ac-sum-cell:nth-child(2n){ border-right:none }
-.ac-sum-cell:nth-child(n+3){ border-bottom:none }
-.ac-sum-label{ font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--faint) }
-.ac-sum-val{ font-size:22px; font-weight:700; letter-spacing:-.02em; margin-top:5px; color:var(--ink) }
 
 .ac-toolbar{ display:flex; flex-direction:column; gap:12px; margin-bottom:16px }
 .ac-chips{ display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; -ms-overflow-style:none; scrollbar-width:none }
@@ -177,28 +193,33 @@ const css = `
 .ac-search input{ flex:1; min-width:0; border:none; outline:none; background:transparent; font-family:inherit; font-size:14px; color:var(--ink) }
 .ac-search input::placeholder{ color:var(--faint) }
 
-.ac-list{ display:flex; flex-direction:column; gap:10px }
-.ac-empty{ padding:40px 20px; text-align:center; color:var(--faint); font-size:13.5px; line-height:1.5; background:#fff; border:1px dashed var(--line); border-radius:16px }
+.ac-groups{ display:flex; flex-direction:column; gap:16px }
+.ac-group{ padding:6px 4px 4px }
+.ac-group-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px 12px }
+.ac-month{ font-size:16px; font-weight:700; letter-spacing:-.01em }
+.ac-inout{ display:flex; gap:16px; font-size:12.5px; color:var(--muted) } .ac-inout b{ font-weight:600 }
+.ac-in b{ color:var(--safe) } .ac-out b{ color:var(--ink) }
 
-.ac-row{ width:100%; text-align:left; cursor:pointer; font-family:inherit; display:grid; grid-template-columns:44px 1fr auto; grid-template-areas:'ic main amt' 'ic main pill'; gap:2px 13px; align-items:center; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); border-radius:16px; padding:13px 15px; transition:transform .12s var(--ease), box-shadow .18s var(--ease) }
-.ac-row:hover{ transform:translateY(-1px); box-shadow:var(--sh-2) }
-.ac-row-ic{ grid-area:ic; width:44px; height:44px; border-radius:12px; background:#F1F5F9; display:flex; align-items:center; justify-content:center }
-.ac-row-main{ grid-area:main; min-width:0; display:flex; flex-direction:column }
-.ac-row-title{ font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.ac-row-sub{ font-size:11.5px; color:var(--faint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.ac-row-amt{ grid-area:amt; font-size:15px; font-weight:600; text-align:right; letter-spacing:-.01em }
-.ac-row .tf-pill{ grid-area:pill; justify-self:end; margin-top:2px }
+.ac-rows{ display:flex; flex-direction:column }
+.ac-row{ width:100%; text-align:left; cursor:pointer; font-family:inherit; background:none; border:none; border-top:1px solid var(--line-2); display:flex; align-items:center; gap:13px; padding:14px }
+.ac-row:hover{ background:var(--bg) }
+.ac-ic{ width:44px; height:44px; border-radius:13px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+.ac-main{ flex:1; min-width:0; display:flex; flex-direction:column }
+.ac-title{ font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.ac-date{ font-size:11.5px; color:var(--faint); margin-top:3px }
+.ac-right{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0 }
+.ac-amt{ font-size:14.5px; font-weight:700; letter-spacing:-.01em; color:var(--ink) }
+.ac-amt-in{ color:var(--safe) }
+.ac-pill{ display:inline-flex; align-items:center; padding:3px 9px; border-radius:8px; font-size:11px; font-weight:600; letter-spacing:.01em; white-space:nowrap }
+
+.ac-empty{ padding:40px 20px; text-align:center; color:var(--faint); font-size:13.5px; line-height:1.5; background:#fff; border:1px dashed var(--line); border-radius:16px }
 
 @media (min-width:1024px){
   .ac-head{ display:flex }
-  .ac-summary{ grid-template-columns:repeat(4,1fr) }
-  .ac-sum-cell{ border-bottom:none; padding:16px 18px }
-  .ac-sum-cell:nth-child(2n){ border-right:1px solid var(--line-2) }
-  .ac-sum-last{ border-right:none }
-  .ac-sum-val{ font-size:26px }
   .ac-toolbar{ flex-direction:row; align-items:center; justify-content:space-between }
   .ac-search{ width:300px; flex-shrink:0 }
-  .ac-row{ grid-template-columns:44px 1fr auto 150px; grid-template-areas:'ic main amt pill'; padding:14px 18px }
-  .ac-row .tf-pill{ justify-self:end; margin-top:0 }
+  .ac-group{ padding:8px 8px 6px }
+  .ac-group-head{ padding:14px 16px }
+  .ac-row{ padding:15px 16px }
 }
 `;

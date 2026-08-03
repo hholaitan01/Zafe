@@ -53,7 +53,7 @@ function TxRow({ tx, onOpen }: { tx: Deal; onOpen: (id: string) => void }) {
         <span className="dsh-row-sub tf-mono">{tx.id.slice(0, 10)} · {who}</span>
       </span>
       <span className="dsh-row-amt tf-mono">{naira(tx.item.amount)}</span>
-      <span className="tf-pill" style={{ background: p.bg, color: p.fg }}><span className="dot" style={{ background: p.dot }} />{p.label}</span>
+      <span className="tf-pill" style={{ background: p.bg, color: p.fg }}>{p.label}</span>
     </button>
   );
 }

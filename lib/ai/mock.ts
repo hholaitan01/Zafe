@@ -68,7 +68,7 @@ function sellerAdjustment(seller?: SellerProfile): { delta: number; reasons: Tru
   const reasons: TrustReason[] = [];
   const flags: string[] = [];
   if (!seller) {
-    reasons.push({ label: "No seller history", detail: "We know nothing about this seller yet — treat with extra care.", weight: "negative" });
+    reasons.push({ label: "No seller history", detail: "We know nothing about this seller yet, so treat with extra care.", weight: "negative" });
     return { delta: -10, reasons, flags };
   }
 
@@ -92,7 +92,7 @@ function sellerAdjustment(seller?: SellerProfile): { delta: number; reasons: Tru
     reasons.push({ label: "Some track record", detail: `${deals} completed deals so far.`, weight: "positive" });
   } else {
     delta -= 6;
-    reasons.push({ label: "Little history", detail: `Only ${deals} completed deal${deals === 1 ? "" : "s"} — not much to go on.`, weight: "negative" });
+    reasons.push({ label: "Little history", detail: `Only ${deals} completed deal${deals === 1 ? "" : "s"}. Not much to go on.`, weight: "negative" });
   }
 
   const disputes = seller.disputes ?? 0;
@@ -145,17 +145,17 @@ export function mockTrustScore(req: TrustScoreRequest): TrustScoreResult {
 
   const headline =
     verdict === "safe"
-      ? "Looks safe — the usual protections apply."
+      ? "Looks safe. The usual protections apply."
       : verdict === "caution"
         ? "Be careful — a few things don't add up."
-        : "High risk — this deal shows classic scam signs.";
+        : "High risk. This deal shows classic scam signs.";
 
   const recommendation =
     verdict === "safe"
       ? "Go ahead, but still pay through TrustFlow escrow so your money is protected until you confirm."
       : verdict === "caution"
         ? "Only proceed inside TrustFlow escrow, and don't pay any 'fees' to release your item."
-        : "Do not pay this seller directly. If you continue at all, use escrow only — and be ready to walk away.";
+        : "Do not pay this seller directly. If you continue at all, use escrow only, and be ready to walk away.";
 
   return {
     score,

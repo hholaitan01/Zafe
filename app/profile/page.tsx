@@ -35,9 +35,9 @@ function initialsOf(name: string): string {
 }
 
 function riskBand(score: number): string {
-  if (score >= 70) return "Low risk range (70–100)";
-  if (score >= 40) return "Medium risk range (40–69)";
-  return "Building trust (0–39)";
+  if (score >= 70) return "Low risk range (70-100)";
+  if (score >= 40) return "Medium risk range (40-69)";
+  return "Building trust (0-39)";
 }
 
 /** A rising history that lands on the trader's real current score, labelled

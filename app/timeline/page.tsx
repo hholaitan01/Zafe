@@ -145,7 +145,7 @@ export default function TimelinePage() {
                 <div className="td-item">{deal.item.title}</div>
                 <div className="td-ref tf-mono">{deal.reference || deal.id.slice(0, 12)} · Created {fmtTime(deal.createdAt)}</div>
               </div>
-              <span className="tf-pill" style={{ background: sp.bg, color: sp.fg }}><span className="dot" style={{ background: sp.dot }} />{sp.label}</span>
+              <span className="tf-pill" style={{ background: sp.bg, color: sp.fg }}>{sp.label}</span>
             </div>
             <div className="td-amount"><span className="td-amount-val tf-mono">{naira(deal.item.amount)}</span><span className="tf-eyebrow">{released ? "released to seller" : "held in escrow"}</span></div>
             <div className="td-parties">
@@ -201,7 +201,7 @@ export default function TimelinePage() {
             <div className="tf-eyebrow">Seller Trust Score</div>
             <div className="td-trust-row">
               <div className="td-trust-score">{deal.trust?.score ?? "—"}<span>/100</span></div>
-              {verdict && <span className="tf-pill" style={{ background: verdict.bg, color: verdict.fg }}><span className="dot" style={{ background: verdict.dot }} />{verdict.label}</span>}
+              {verdict && <span className="tf-pill" style={{ background: verdict.bg, color: verdict.fg }}>{verdict.label}</span>}
             </div>
             <p className="td-trust-sub">{deal.trust ? "Scored from the seller's history and the chat you shared." : "Not scored for this deal."}</p>
           </div>
