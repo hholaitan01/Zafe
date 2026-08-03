@@ -3,8 +3,8 @@ export const html = `<div data-tabs style="width:366px; height:820px; border-rad
           <div style="height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 26px; font-size:13px; font-weight:600; position:relative; z-index:3;"><span>9:41</span><span style="opacity:.7;">▂▃▄ ᯤ ▮</span></div>
           <div style="padding:6px 22px 0; position:relative; z-index:3;"><h2 style="font-size:20px; font-weight:800; letter-spacing:-.02em;">Live proof</h2></div>
           <div style="margin:12px 22px 0; position:relative; z-index:3; height:44px; border-radius:14px; background:rgba(20,20,22,.7); border:1px solid #202024; display:flex; padding:4px; backdrop-filter:blur(6px);">
-            <span data-tab="pane-sellcam" style="flex:1; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; cursor:pointer; background:#E4144F; color:#fff;">Seller · photo</span>
-            <span data-tab="pane-buycam" style="flex:1; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; cursor:pointer; background:transparent; color:#9A9AA0;">Buyer · unboxing</span>
+            <span data-tab="pane-sellcam" style="flex:1; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; cursor:pointer; background:#059669; color:#fff;">Seller · photo</span>
+            <span data-tab="pane-buycam" style="flex:1; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:#9A9AA0;">Buyer · unboxing</span>
           </div>
           <!-- SELLER camera -->
           <div id="pane-sellcam" data-pane style="position:absolute; inset:0; z-index:1;">

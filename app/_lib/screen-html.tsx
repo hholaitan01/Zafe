@@ -79,8 +79,8 @@ export default function ScreenHtml({
         host.querySelectorAll<HTMLElement>("[data-pane]").forEach((p) => (p.style.display = p.id === paneId ? "" : "none"));
         host.querySelectorAll<HTMLElement>("[data-tab]").forEach((tb) => {
           const on = tb === tabEl;
-          tb.style.background = on ? "#E4144F" : "transparent";
-          tb.style.color = on ? "#fff" : "#9A9AA0";
+          tb.style.background = on ? "#059669" : "transparent";
+          tb.style.color = on ? "#fff" : "#64748B";
         });
         return;
       }
