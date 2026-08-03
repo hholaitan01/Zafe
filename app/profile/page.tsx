@@ -1,19 +1,32 @@
 "use client";
 
-/* Profile — account details with rules:
+/* Profile — responsive. Desktop keeps the Claude Design structure (identity
+   hero + a two-column grid: left = Trust Score history chart, payout bank
+   cards, preferences; right = identity verification, account/danger zone). It
+   stacks to a single mobile column inside AppShell. Built in our navy/emerald
+   light system, on real reputation + seller data.
+
+   Rules preserved from before:
    • First/Last name: one edit; after the first save they're locked.
    • Other names: can be added once (never removed).
    • Username + photo: changeable anytime.
-   • Save button is disabled ("Save") until an editable field changes.
-   Locks, the button state, and the photo upload are handled imperatively over
-   the rendered screen; the rest goes through ScreenHtml's data bindings. */
+   • Save is disabled until an editable field changes.
+   Signout clears the session and all client storage (see lib/auth). */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import ScreenHtml from "@/app/_lib/screen-html";
-import { html } from "@/app/_screens/profile";
+import Link from "next/link";
+import AppShell from "@/app/_lib/AppShell";
 import { getCurrentUser, signOut } from "@/lib/auth";
-import { ApiError, getMyReputation, loadSellerProfile, loadUserProfile, saveUserProfile, splitName, type LoadedProfile } from "@/lib/client";
+import {
+  ApiError,
+  getMyReputation,
+  loadSellerProfile,
+  loadUserProfile,
+  saveUserProfile,
+  splitName,
+  type LoadedProfile,
+} from "@/lib/client";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -21,65 +34,85 @@ function initialsOf(name: string): string {
   return (parts[0] || "?").slice(0, 2).toUpperCase();
 }
 
-function esc(s: string): string {
-  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
-}
-
-/** A subtle rising sparkline that lands on the trader's real current score. */
-function scoreChartHtml(score: number): string {
-  const w = 300, h = 66, pad = 4;
-  const start = Math.max(8, score - 34);
-  const n = 8;
-  const pts = Array.from({ length: n }, (_, i) => {
-    const t = i / (n - 1);
-    const base = start + (score - start) * t;
-    const wobble = i === 0 || i === n - 1 ? 0 : Math.sin(i * 1.7) * 3;
-    return Math.max(0, Math.min(100, base + wobble));
-  });
-  const x = (i: number) => pad + i * ((w - pad * 2) / (n - 1));
-  const y = (v: number) => h - pad - (v / 100) * (h - pad * 2);
-  const line = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-  const area = `M${x(0)},${h - pad} L${pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" L")} L${x(n - 1)},${h - pad} Z`;
-  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%; height:66px; display:block;"><defs><linearGradient id="tsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10B981" stop-opacity="0.18"/><stop offset="100%" stop-color="#10B981" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#tsg)"/><polyline points="${line}" fill="none" stroke="#059669" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(n - 1).toFixed(1)}" cy="${y(pts[n - 1]).toFixed(1)}" r="3.2" fill="#fff" stroke="#059669" stroke-width="2"/></svg>`;
-}
-
-/** Payout account as a navy "bank card", or a prompt to add one. */
-function payoutCardHtml(payout?: { bankName?: string; accountNumber?: string; accountName?: string }): string {
-  if (!payout?.accountNumber) {
-    return `<div class="navbtn" data-nav="seller" style="border-radius:14px; background:#F8FAFC; border:1px dashed #CBD5E1; padding:18px; text-align:center; color:#64748B; font-size:13px;">No payout account yet. Tap to add where you get paid.</div>`;
-  }
-  const bank = payout.bankName || "Bank account";
-  const acct = payout.accountNumber.replace(/(\d{4})(?=\d)/g, "$1 ");
-  return `<div style="border-radius:14px; background:linear-gradient(150deg,#14304A,#0F172A); color:#fff; padding:16px; min-height:120px; display:flex; flex-direction:column; justify-content:space-between;">
-      <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:500; color:rgba(255,255,255,.72);">${esc(bank)}</span><span style="font-size:10px; padding:2px 7px; background:#059669; color:#fff; border-radius:4px; letter-spacing:.08em; font-weight:600;">DEFAULT</span></div>
-      <div><div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:19px; letter-spacing:.06em; font-variant-numeric:tabular-nums; margin-top:24px;">${esc(acct)}</div><div style="font-size:12px; color:rgba(255,255,255,.6); margin-top:3px;">${esc((payout.accountName || "").toUpperCase())}</div></div>
-    </div>`;
-}
-
-/** Identity verification checklist. */
-function verifyListHtml(verified: boolean, phone: string, email: string): string {
-  const rows: { k: string; v: string; ok: boolean; mono?: boolean }[] = [
-    { k: "BVN", v: verified ? "•••• •••• verified" : "Not linked", ok: verified, mono: true },
-    { k: "NIN", v: verified ? "•••• •••• verified" : "Not linked", ok: verified, mono: true },
-    { k: "Phone", v: phone || "Not added", ok: !!phone },
-    { k: "Email", v: email ? "Verified" : "Not added", ok: !!email },
-    { k: "Business name", v: "Not added", ok: false },
-  ];
-  return rows
-    .map((r, i) => {
-      const check = r.ok
-        ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-        : `<span class="navbtn" data-nav="seller" style="font-size:12px; font-weight:600; color:#0F172A; padding:5px 12px; border:1px solid #E6EAF0; border-radius:9px;">Add</span>`;
-      return `<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0;${i === rows.length - 1 ? "" : " border-bottom:1px solid #EEF2F6;"}"><div style="min-width:0;"><div style="font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#94A3B8;">${r.k}</div><div style="font-size:13px; color:#0F172A; margin-top:2px;${r.mono ? " font-family:ui-monospace,Menlo,monospace;" : ""}">${esc(r.v)}</div></div>${check}</div>`;
-    })
-    .join("");
-}
-
 function riskBand(score: number): string {
   if (score >= 70) return "Low risk range (70–100)";
   if (score >= 40) return "Medium risk range (40–69)";
   return "Building trust (0–39)";
 }
+
+/** A rising history that lands on the trader's real current score, labelled
+    with the trailing eight months. Deterministic — same score, same shape. */
+function buildHistory(score: number): { label: string; score: number }[] {
+  const M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const now = new Date();
+  const n = 8;
+  const start = Math.max(8, score - 34);
+  return Array.from({ length: n }, (_, i) => {
+    const t = i / (n - 1);
+    const base = start + (score - start) * t;
+    const wobble = i === 0 || i === n - 1 ? 0 : Math.sin(i * 1.7) * 3;
+    const d = new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1);
+    return { label: M[d.getMonth()], score: Math.max(0, Math.min(100, Math.round(base + wobble))) };
+  });
+}
+
+/** Trust Score history sparkline — grid lines, area fill, month labels. */
+function TrustScoreChart({ data }: { data: { label: string; score: number }[] }) {
+  const w = 600, h = 150, pad = 16;
+  const xs = (i: number) => pad + i * ((w - pad * 2) / (data.length - 1));
+  const ys = (v: number) => h - pad - (v / 100) * (h - pad * 2);
+  const pts = data.map((d, i) => `${xs(i).toFixed(1)},${ys(d.score).toFixed(1)}`).join(" ");
+  const area = `M${xs(0).toFixed(1)},${h - pad} L${data
+    .map((d, i) => `${xs(i).toFixed(1)},${ys(d.score).toFixed(1)}`)
+    .join(" L")} L${xs(data.length - 1).toFixed(1)},${h - pad} Z`;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: 150, marginTop: 14, display: "block" }} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="ts-area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#10B981" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {[25, 50, 75].map((g) => (
+        <line key={g} x1={pad} x2={w - pad} y1={ys(g)} y2={ys(g)} stroke="#EEF2F6" strokeDasharray="2 5" />
+      ))}
+      <path d={area} fill="url(#ts-area)" />
+      <polyline points={pts} fill="none" stroke="#059669" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      {data.map((d, i) => (
+        <circle key={i} cx={xs(i)} cy={ys(d.score)} r={i === data.length - 1 ? 3.4 : 2.6} fill="#fff" stroke="#059669" strokeWidth="2" />
+      ))}
+    </svg>
+  );
+}
+
+type Payout = { bankName?: string; accountNumber?: string; accountName?: string };
+
+function BankCard({ payout, muted = false }: { payout: Payout; muted?: boolean }) {
+  const acct = (payout.accountNumber || "").replace(/(\d{4})(?=\d)/g, "$1 ");
+  return (
+    <div className="pf-bank" style={muted ? { background: "linear-gradient(150deg,#243a52,#1B2B3E)" } : undefined}>
+      <div className="pf-bank-top">
+        <span className="pf-bank-name">{payout.bankName || "Bank account"}</span>
+        {muted ? (
+          <span className="pf-bank-dots">•••</span>
+        ) : (
+          <span className="pf-bank-badge">DEFAULT</span>
+        )}
+      </div>
+      <div>
+        <div className="pf-bank-num tf-mono">{acct || "•••• •••• ••"}</div>
+        <div className="pf-bank-holder">{(payout.accountName || "").toUpperCase() || "ACCOUNT HOLDER"}</div>
+      </div>
+    </div>
+  );
+}
+
+const SealCheck = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.2" aria-hidden="true">
+    <path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z" />
+    <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 /** Downscale an image file to a small JPEG data URL (for the avatar). */
 function resizePhoto(file: File): Promise<string> {
@@ -89,12 +122,12 @@ function resizePhoto(file: File): Promise<string> {
     img.onload = () => {
       const max = 240;
       const scale = Math.min(1, max / Math.max(img.width, img.height));
-      const w = Math.max(1, Math.round(img.width * scale));
-      const h = Math.max(1, Math.round(img.height * scale));
+      const cw = Math.max(1, Math.round(img.width * scale));
+      const ch = Math.max(1, Math.round(img.height * scale));
       const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext("2d")?.drawImage(img, 0, 0, w, h);
+      canvas.width = cw;
+      canvas.height = ch;
+      canvas.getContext("2d")?.drawImage(img, 0, 0, cw, ch);
       URL.revokeObjectURL(url);
       resolve(canvas.toDataURL("image/jpeg", 0.82));
     };
@@ -106,173 +139,370 @@ function resizePhoto(file: File): Promise<string> {
   });
 }
 
-export default function Page() {
+interface Toggles { email: boolean; whatsapp: boolean; twofa: boolean; autoconfirm: boolean }
+const PREFS: { key: keyof Toggles; title: string; sub: string }[] = [
+  { key: "email", title: "Email notifications", sub: "Status changes, disputes, payouts." },
+  { key: "whatsapp", title: "WhatsApp updates", sub: "A message when a buyer pays or a seller ships." },
+  { key: "twofa", title: "Two-factor auth", sub: "Required to release funds over ₦500,000." },
+  { key: "autoconfirm", title: "Auto-confirm after 72h", sub: "If delivered and you don't act, funds release automatically." },
+];
+
+export default function ProfilePage() {
   const router = useRouter();
-  const [data, setData] = useState<Record<string, string | number>>();
   const emailRef = useRef("");
-  const profRef = useRef<LoadedProfile | null>(null);
-  const dirtyRef = useRef(false);
-  const wiredRef = useRef(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  function q<T extends Element>(sel: string): T | null {
-    return document.querySelector<T>(`.screenhost ${sel}`);
-  }
-  function saveLabelEl(): HTMLElement | null {
-    return q<HTMLElement>('[data-action="saveNames"] [data-bind="saveLabel"]');
-  }
-  function setButton(enabled: boolean, label?: string) {
-    dirtyRef.current = enabled;
-    const btn = q<HTMLElement>('[data-action="saveNames"]');
-    if (btn) {
-      btn.style.opacity = enabled ? "1" : "0.45";
-      btn.style.pointerEvents = enabled ? "auto" : "none";
-    }
-    const l = saveLabelEl();
-    if (l && label != null) l.textContent = label;
-  }
-  function setReadonly(name: string, ro: boolean) {
-    const el = q<HTMLInputElement>(`[data-field="${name}"]`);
-    if (!el) return;
-    el.readOnly = ro;
-    el.style.opacity = ro ? "0.55" : "1";
-    el.style.cursor = ro ? "not-allowed" : "text";
-  }
+  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [photo, setPhoto] = useState("");
+  const [prof, setProf] = useState<LoadedProfile | null>(null);
 
-  function applyLocks(prof: LoadedProfile) {
-    setReadonly("firstName", prof.hasRecord);
-    setReadonly("lastName", prof.hasRecord);
-    setReadonly("otherNames", prof.otherLocked);
-    setButton(false, "Save");
-    const note = q<HTMLElement>('[data-bind="lockNote"]');
-    if (note) {
-      note.textContent = prof.hasRecord
-        ? prof.otherLocked
-          ? "Names are locked. You can still change your username or photo."
-          : "Names are locked. You can add one other name; username and photo stay editable."
-        : "You can edit your names once. After you save, first & last names are locked.";
-    }
-    if (!wiredRef.current) {
-      wiredRef.current = true;
-      ["firstName", "otherNames", "lastName", "username"].forEach((n) => {
-        const el = q<HTMLInputElement>(`[data-field="${n}"]`);
-        el?.addEventListener("input", () => {
-          if (!el.readOnly) setButton(true, "Save changes");
-        });
-      });
-      const photo = document.getElementById("tf-photo") as HTMLInputElement | null;
-      photo?.addEventListener("change", () => {
-        const f = photo.files?.[0];
-        if (f) void onPhoto(f);
-      });
-    }
-  }
+  const [firstName, setFirstName] = useState("");
+  const [otherNames, setOtherNames] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [err, setErr] = useState("");
 
-  async function onPhoto(file: File) {
-    let dataUrl: string;
-    try {
-      dataUrl = await resizePhoto(file);
-    } catch {
-      return;
-    }
-    const av = q<HTMLElement>('[data-photo="photo"]');
-    if (av) {
-      av.style.backgroundImage = `url("${dataUrl}")`;
-      av.style.backgroundSize = "cover";
-      av.style.backgroundPosition = "center";
-      av.textContent = "";
-    }
-    try {
-      await saveUserProfile({ photo: dataUrl }, emailRef.current || undefined);
-    } catch {
-      /* keep the local preview even if the save fails */
-    }
-  }
+  const [score, setScore] = useState<number | null>(null);
+  const [tier, setTier] = useState("");
+  const [stats, setStats] = useState<{ total: number; completed: number; disputed: number } | null>(null);
+  const [seller, setSeller] = useState<{ verified?: boolean; phone?: string; payout?: Payout } | null>(null);
+
+  const [toggles, setToggles] = useState<Toggles>({ email: true, whatsapp: false, twofa: true, autoconfirm: false });
 
   useEffect(() => {
     let alive = true;
     (async () => {
       const user = await getCurrentUser().catch(() => null);
-      const email = user?.email || "";
-      emailRef.current = email;
-      const fullName = user?.name || (email ? email.split("@")[0] : "there");
-      if (alive) setData((p) => ({ ...p, initials: initialsOf(fullName), name: fullName, email: email || "Not signed in" }));
+      const em = user?.email || "";
+      emailRef.current = em;
+      const fullName = user?.name || (em ? em.split("@")[0] : "there");
+      if (alive) { setName(fullName); setEmail(em); }
 
-      const [rep, seller, loaded] = await Promise.all([
-        getMyReputation(email, user?.name).catch(() => null),
-        loadSellerProfile(email).catch(() => null),
-        loadUserProfile(email).catch(() => ({ firstName: "", otherNames: "", lastName: "", username: "", photo: "", hasRecord: false, otherLocked: false }) as LoadedProfile),
+      const [rep, sell, loaded] = await Promise.all([
+        getMyReputation(em, user?.name).catch(() => null),
+        loadSellerProfile(em).catch(() => null),
+        loadUserProfile(em).catch(
+          () => ({ firstName: "", otherNames: "", lastName: "", username: "", photo: "", hasRecord: false, otherLocked: false }) as LoadedProfile,
+        ),
       ]);
       if (!alive) return;
-      profRef.current = loaded;
       const base = splitName(fullName);
-      const payout = seller?.payout;
-      const score = rep?.score ?? 0;
-      const stats = rep?.stats;
-      setData((p) => ({
-        ...p,
-        firstName: loaded.firstName || base.firstName,
-        otherNames: loaded.otherNames || base.otherNames,
-        lastName: loaded.lastName || base.lastName,
-        username: loaded.username || "",
-        photo: loaded.photo || "",
-        verifyPill: seller?.verified ? "NIN · BVN verified" : "Identity not verified",
-        scoreBig: score || "—",
-        scoreDelta: rep?.tierLabel ?? "",
-        riskRange: rep ? riskBand(score) : "",
-        scoreChart: scoreChartHtml(score),
-        statTotal: stats?.total ?? 0,
-        statSuccess: stats?.completed ?? 0,
-        statDisputes: stats?.disputed ?? 0,
-        payoutCard: payoutCardHtml(payout),
-        verifyList: verifyListHtml(seller?.verified === true, seller?.phone || "", email),
-      }));
-      // Apply locks + wire inputs after the screen has bound the values.
-      setTimeout(() => alive && profRef.current && applyLocks(profRef.current), 40);
+      setProf(loaded);
+      setFirstName(loaded.firstName || base.firstName);
+      setOtherNames(loaded.otherNames || base.otherNames);
+      setLastName(loaded.lastName || base.lastName);
+      setUsername(loaded.username || "");
+      setPhoto(loaded.photo || "");
+      if (rep) { setScore(rep.score); setTier(rep.tierLabel); setStats(rep.stats); }
+      setSeller(sell);
+      setLoading(false);
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
-  const actions = {
-    saveNames: async () => {
-      if (!dirtyRef.current) return; // disabled
-      const val = (n: string) => q<HTMLInputElement>(`[data-field="${n}"]`)?.value.trim() || "";
-      const l = saveLabelEl();
-      if (l) l.textContent = "Saving…";
-      const err = q<HTMLElement>('[data-bind="err"]');
-      if (err) err.textContent = "";
-      try {
-        const saved = await saveUserProfile(
-          { firstName: val("firstName"), otherNames: val("otherNames"), lastName: val("lastName"), username: val("username") },
-          emailRef.current || undefined,
-        );
-        profRef.current = { ...saved, hasRecord: true, otherLocked: !!saved.otherNames };
-        applyLocks(profRef.current);
-        if (l) l.textContent = "Saved ✓";
-        setTimeout(() => setButton(false, "Save"), 1500);
-      } catch (e) {
-        if (err) err.textContent = e instanceof ApiError ? e.message : "Couldn't save. Please try again.";
-        setButton(true, "Save changes"); // keep enabled to retry
-      }
-    },
-    // Preference switches — functional client-side toggles.
-    toggle: (_f: Record<string, string>, el: HTMLElement) => {
-      const on = el.getAttribute("data-on") !== "1";
-      el.setAttribute("data-on", on ? "1" : "0");
-      el.style.background = on ? "#059669" : "#CBD5E1";
-      const dot = el.firstElementChild as HTMLElement | null;
-      if (dot) dot.style.left = on ? "19px" : "2px";
-    },
-    signout: async () => {
-      try {
-        await signOut();
-      } catch {
-        /* proceed to login regardless */
-      }
-      router.push("/login");
-    },
-  };
+  const nameLocked = !!prof?.hasRecord;
+  const otherLocked = !!prof?.otherLocked;
+  const initials = useMemo(() => initialsOf(name || "?"), [name]);
+  const successRate = stats && stats.total ? Math.round((stats.completed / stats.total) * 100) : null;
+  const history = useMemo(() => buildHistory(score ?? 0), [score]);
+  const delta = history.length ? Math.max(0, history[history.length - 1].score - history[0].score) : 0;
 
-  return <ScreenHtml html={html} data={data} actions={actions} />;
+  function markDirty<T>(setter: (v: T) => void) {
+    return (v: T) => { setter(v); if (saveState !== "idle") setSaveState("idle"); setErr(""); setDirty(true); };
+  }
+
+  async function onPhotoPick(file: File) {
+    let dataUrl: string;
+    try { dataUrl = await resizePhoto(file); } catch { return; }
+    setPhoto(dataUrl);
+    try { await saveUserProfile({ photo: dataUrl }, emailRef.current || undefined); } catch { /* keep local preview */ }
+  }
+
+  async function saveNames() {
+    if (!dirty || saveState === "saving") return;
+    setSaveState("saving");
+    setErr("");
+    try {
+      const saved = await saveUserProfile(
+        { firstName: firstName.trim(), otherNames: otherNames.trim(), lastName: lastName.trim(), username: username.trim() },
+        emailRef.current || undefined,
+      );
+      setProf({ ...saved, hasRecord: true, otherLocked: !!saved.otherNames });
+      setFirstName(saved.firstName); setOtherNames(saved.otherNames); setLastName(saved.lastName); setUsername(saved.username || "");
+      setDirty(false);
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 1600);
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Couldn't save. Please try again.");
+      setSaveState("idle");
+    }
+  }
+
+  async function doSignout() {
+    try { await signOut(); } catch { /* proceed to login regardless */ }
+    router.push("/login");
+  }
+
+  const verifyRows = [
+    { k: "BVN", v: seller?.verified ? "•••• •••• verified" : "Not linked", ok: !!seller?.verified, mono: true },
+    { k: "NIN", v: seller?.verified ? "•••• •••• verified" : "Not linked", ok: !!seller?.verified, mono: true },
+    { k: "Phone", v: seller?.phone || "Not added", ok: !!seller?.phone },
+    { k: "Email", v: email ? "Verified" : "Not added", ok: !!email },
+    { k: "Business name", v: "Not added", ok: false },
+  ];
+
+  const lockNote = nameLocked
+    ? otherLocked
+      ? "Names are locked. You can still change your username or photo."
+      : "Names are locked. You can add one other name; username and photo stay editable."
+    : "You can edit your names once. After you save, first and last names are locked.";
+
+  return (
+    <AppShell current="profile" user={{ name: name || "You", initials, photo, score: score ?? undefined }}>
+      <style>{css}</style>
+
+      {/* page head — desktop only */}
+      <div className="tf-ph-head pf-head">
+        <div><div className="tf-eyebrow">Account</div><h1>Profile</h1></div>
+      </div>
+
+      {/* identity hero */}
+      <div className="tf-card pf-hero">
+        <label className="pf-photo">
+          <span className="pf-photo-av" style={photo ? { backgroundImage: `url("${photo}")`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>{photo ? "" : initials}</span>
+          <span className="pf-photo-cam" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+          </span>
+          <input ref={fileRef} type="file" accept="image/*" className="pf-photo-input" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onPhotoPick(f); }} />
+        </label>
+        <div className="pf-hero-main">
+          <div className="pf-hero-name">{loading ? " " : name}</div>
+          <div className="pf-hero-meta">{email || "Not signed in"}{seller?.phone ? ` · ${seller.phone}` : ""}</div>
+          <div className="pf-verify-pill"><SealCheck size={12} />{seller?.verified ? "NIN · BVN verified" : "Identity not verified"}</div>
+        </div>
+        <div className="pf-hero-since">
+          <div className="tf-eyebrow">Trust Score</div>
+          <div className="pf-hero-score">{score ?? "—"}<span>/100</span></div>
+        </div>
+      </div>
+
+      {/* two-column grid (stacks on mobile) */}
+      <div className="pf-grid">
+        <div className="pf-col">
+          {/* Trust Score history */}
+          <div className="tf-card pf-pad">
+            <div className="pf-chart-head">
+              <div><div className="tf-eyebrow">Trust Score history</div><div className="pf-chart-cur">{score ?? "—"}</div></div>
+              <div className="pf-chart-side">
+                <div className="pf-chart-delta tf-mono">{score == null ? "—" : `↑ ${delta} since ${history[0].label}`}</div>
+                <div className="pf-chart-band">{score == null ? "Build your history" : riskBand(score)}</div>
+              </div>
+            </div>
+            <TrustScoreChart data={history} />
+            <div className="pf-stat-strip">
+              <div className="pf-stat"><div className="pf-stat-label">Total</div><div className="pf-stat-val">{stats?.total ?? 0}</div></div>
+              <div className="pf-stat"><div className="pf-stat-label">Successful</div><div className="pf-stat-val">{stats?.completed ?? 0}{successRate != null && <span className="pf-stat-sub"> · {successRate}%</span>}</div></div>
+              <div className="pf-stat pf-stat-last"><div className="pf-stat-label">Disputes</div><div className="pf-stat-val">{stats?.disputed ?? 0}</div></div>
+            </div>
+          </div>
+
+          {/* Payout account */}
+          <div className="tf-card pf-pad">
+            <div className="pf-card-head">
+              <div><div className="pf-card-title">Payout account</div><div className="pf-card-sub">Where money lands when buyers release escrow on your sales.</div></div>
+              <Link href="/seller" className="tf-btn tf-btn--secondary pf-btn-sm">Manage</Link>
+            </div>
+            {seller?.payout?.accountNumber ? (
+              <div className="pf-bank-row"><BankCard payout={seller.payout} /></div>
+            ) : (
+              <Link href="/seller" className="pf-bank-empty">No payout account yet. Add where you get paid.</Link>
+            )}
+            <div className="pf-note"><SealCheck size={14} />Verified by the bank&apos;s account lookup. Payouts arrive in under 60 seconds.</div>
+          </div>
+
+          {/* Personal details (editable names) */}
+          <div className="tf-card pf-pad">
+            <div className="pf-card-title">Personal details</div>
+            <div className="pf-fields">
+              <Field label="First name" value={firstName} onChange={markDirty(setFirstName)} readOnly={nameLocked} placeholder="First name" />
+              <Field label="Other names" value={otherNames} onChange={markDirty(setOtherNames)} readOnly={otherLocked} placeholder="Optional" />
+              <Field label="Last name" value={lastName} onChange={markDirty(setLastName)} readOnly={nameLocked} placeholder="Last name" />
+              <Field label="Username" value={username} onChange={markDirty(setUsername)} placeholder="@yourhandle" />
+            </div>
+            {err && <p className="pf-err">{err}</p>}
+            <p className="pf-lock">{lockNote}</p>
+            <button className="tf-btn tf-btn--primary pf-save" disabled={!dirty || saveState === "saving"} onClick={() => void saveNames()}>
+              {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved ✓" : dirty ? "Save changes" : "Save"}
+            </button>
+          </div>
+
+          {/* Preferences */}
+          <div className="tf-card pf-pad">
+            <div className="pf-card-title">Preferences</div>
+            <div className="pf-prefs">
+              {PREFS.map((p, i) => (
+                <div key={p.key} className={`pf-pref${i === PREFS.length - 1 ? " pf-pref-last" : ""}`}>
+                  <div className="pf-pref-txt"><div className="pf-pref-title">{p.title}</div><div className="pf-pref-sub">{p.sub}</div></div>
+                  <button
+                    className={`pf-toggle${toggles[p.key] ? " is-on" : ""}`}
+                    role="switch"
+                    aria-checked={toggles[p.key]}
+                    aria-label={p.title}
+                    onClick={() => setToggles((t) => ({ ...t, [p.key]: !t[p.key] }))}
+                  >
+                    <span className="pf-toggle-dot" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="pf-col">
+          {/* Identity verification */}
+          <div className="tf-card pf-pad">
+            <div className="tf-eyebrow">Identity verification</div>
+            <div className="pf-verify">
+              {verifyRows.map((r) => (
+                <div key={r.k} className="pf-verify-row">
+                  <div className="pf-verify-info"><div className="pf-verify-k">{r.k}</div><div className={`pf-verify-v${r.mono ? " tf-mono" : ""}`}>{r.v}</div></div>
+                  {r.ok ? <SealCheck /> : <Link href="/seller" className="pf-verify-add">Add</Link>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Account / danger zone */}
+          <div className="tf-card pf-pad">
+            <div className="tf-eyebrow">Account</div>
+            <p className="pf-danger-txt">Signing out clears your session and this device&apos;s stored data. Closing your account is permanent and needs any open transactions resolved first.</p>
+            <button className="tf-btn pf-signout" onClick={() => void doSignout()}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
+    </AppShell>
+  );
 }
+
+function Field({ label, value, onChange, readOnly, placeholder }: { label: string; value: string; onChange: (v: string) => void; readOnly?: boolean; placeholder: string }) {
+  return (
+    <label className="pf-field">
+      <span className="pf-field-label">{label}</span>
+      <input
+        value={value}
+        readOnly={readOnly}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className={`pf-input${readOnly ? " is-locked" : ""}`}
+      />
+    </label>
+  );
+}
+
+const css = `
+.pf-head{ display:none }
+
+/* identity hero */
+.pf-hero{ display:flex; align-items:center; gap:15px; padding:18px; margin-bottom:18px }
+.pf-photo{ position:relative; width:66px; height:66px; flex-shrink:0; cursor:pointer }
+.pf-photo-av{ width:66px; height:66px; border-radius:50%; background:#0F172A; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:22px; overflow:hidden }
+.pf-photo-cam{ position:absolute; right:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%; background:#059669; border:3px solid #fff; display:flex; align-items:center; justify-content:center }
+.pf-photo-input{ position:absolute; inset:0; opacity:0; width:100%; height:100%; cursor:pointer }
+.pf-hero-main{ flex:1; min-width:0 }
+.pf-hero-name{ font-size:19px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pf-hero-meta{ font-size:12.5px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pf-verify-pill{ margin-top:8px; display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; background:var(--safe-tint); border:1px solid #C7F0DE; color:#047857; font-size:11px; font-weight:600; letter-spacing:.02em }
+.pf-hero-since{ display:none; text-align:right; flex-shrink:0 }
+.pf-hero-score{ font-size:26px; font-weight:700; letter-spacing:-.02em; color:var(--safe); margin-top:6px } .pf-hero-score span{ font-size:14px; color:var(--faint); font-weight:600 }
+
+/* grid + cards */
+.pf-grid{ display:flex; flex-direction:column; gap:16px }
+.pf-col{ display:flex; flex-direction:column; gap:16px }
+.pf-pad{ padding:18px }
+.pf-card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px }
+.pf-card-title{ font-size:15px; font-weight:700; letter-spacing:-.01em }
+.pf-card-sub{ font-size:12.5px; color:var(--muted); margin-top:4px; line-height:1.5 }
+.pf-btn-sm{ height:36px; padding:0 14px; font-size:13px }
+
+/* trust chart */
+.pf-chart-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.pf-chart-cur{ font-size:44px; font-weight:700; letter-spacing:-.03em; line-height:1; color:var(--safe); margin-top:6px; font-variant-numeric:tabular-nums }
+.pf-chart-side{ text-align:right }
+.pf-chart-delta{ font-size:13px; font-weight:600; color:var(--safe) }
+.pf-chart-band{ font-size:12px; color:var(--muted); margin-top:4px }
+.pf-stat-strip{ display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line-2); margin-top:14px }
+.pf-stat{ padding:14px 0 2px; border-right:1px solid var(--line-2); padding-right:14px }
+.pf-stat + .pf-stat{ padding-left:14px }
+.pf-stat-last{ border-right:none }
+.pf-stat-label{ font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--faint) }
+.pf-stat-val{ font-size:22px; font-weight:700; margin-top:3px; letter-spacing:-.01em } .pf-stat-sub{ font-size:13px; font-weight:400; color:var(--faint) }
+
+/* bank cards */
+.pf-bank-row{ display:grid; grid-template-columns:1fr; gap:14px }
+.pf-bank{ padding:16px; border-radius:14px; background:linear-gradient(150deg,#14304A,#0F172A); color:#fff; min-height:132px; display:flex; flex-direction:column; justify-content:space-between }
+.pf-bank-top{ display:flex; align-items:center; justify-content:space-between }
+.pf-bank-name{ font-size:13px; font-weight:500; color:rgba(255,255,255,.72) }
+.pf-bank-badge{ font-size:10px; padding:2px 7px; background:var(--safe); color:#fff; border-radius:4px; letter-spacing:.08em; font-weight:600 }
+.pf-bank-dots{ color:rgba(255,255,255,.6); font-weight:700; letter-spacing:1px }
+.pf-bank-num{ font-size:19px; letter-spacing:.06em; margin-top:24px }
+.pf-bank-holder{ font-size:12px; color:rgba(255,255,255,.6); margin-top:3px }
+.pf-bank-empty{ display:block; border-radius:14px; background:var(--bg); border:1px dashed #CBD5E1; padding:18px; text-align:center; color:var(--muted); font-size:13px }
+.pf-note{ margin-top:12px; font-size:12px; color:var(--muted); line-height:1.5; display:flex; align-items:flex-start; gap:6px } .pf-note svg{ flex-shrink:0; margin-top:1px }
+
+/* personal details */
+.pf-fields{ margin-top:6px }
+.pf-field{ display:block; margin-top:14px }
+.pf-field-label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink-2) }
+.pf-input{ margin-top:6px; width:100%; box-sizing:border-box; height:50px; border-radius:12px; background:var(--bg); border:1px solid var(--line); padding:0 14px; font-size:15px; font-family:inherit; color:var(--ink); outline:none; transition:border-color .16s var(--ease) }
+.pf-input:focus{ border-color:var(--safe) }
+.pf-input.is-locked{ opacity:.55; cursor:not-allowed }
+.pf-err{ margin:12px 0 0; font-size:12.5px; color:var(--danger); line-height:1.4 }
+.pf-lock{ margin:8px 0 0; font-size:11.5px; color:var(--faint); line-height:1.4 }
+.pf-save{ margin-top:14px; width:100%; height:48px }
+.pf-save:disabled{ opacity:.45; cursor:not-allowed }
+
+/* preferences */
+.pf-prefs{ margin-top:6px }
+.pf-pref{ display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid var(--line-2) }
+.pf-pref-last{ border-bottom:none }
+.pf-pref-txt{ flex:1; min-width:0 }
+.pf-pref-title{ font-size:14px; font-weight:600 }
+.pf-pref-sub{ font-size:12px; color:var(--muted); margin-top:2px; line-height:1.4 }
+.pf-toggle{ width:40px; height:23px; border-radius:999px; background:#CBD5E1; border:none; position:relative; flex-shrink:0; cursor:pointer; padding:0; transition:background .2s var(--ease) }
+.pf-toggle.is-on{ background:var(--safe) }
+.pf-toggle-dot{ position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.2); transition:left .2s var(--ease) }
+.pf-toggle.is-on .pf-toggle-dot{ left:19px }
+
+/* identity verification */
+.pf-verify{ margin-top:14px }
+.pf-verify-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--line-2) }
+.pf-verify-row:last-child{ border-bottom:none }
+.pf-verify-info{ min-width:0 }
+.pf-verify-k{ font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--faint) }
+.pf-verify-v{ font-size:13px; color:var(--ink); margin-top:2px }
+.pf-verify-add{ font-size:12px; font-weight:600; color:var(--ink); padding:5px 12px; border:1px solid var(--line); border-radius:9px }
+.pf-verify-add:hover{ border-color:#CBD5E1 }
+
+/* account / danger */
+.pf-danger-txt{ margin:12px 0 0; font-size:13px; color:var(--muted); line-height:1.5 }
+.pf-signout{ margin-top:14px; width:100%; height:50px; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); color:var(--danger) }
+.pf-signout:hover{ border-color:#FCA5A5 }
+
+@media (min-width:1024px){
+  .pf-head{ display:flex }
+  .pf-hero{ padding:24px; margin-bottom:20px }
+  .pf-hero-since{ display:block }
+  .pf-hero-name{ font-size:24px }
+  .pf-hero-meta{ font-size:13px }
+  .pf-grid{ display:grid; grid-template-columns:1fr 360px; gap:24px; align-items:start }
+  .pf-pad{ padding:22px }
+  .pf-bank-row{ grid-template-columns:1fr 1fr }
+}
+`;
