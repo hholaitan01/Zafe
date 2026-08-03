@@ -52,6 +52,14 @@ function greetingFor(d: Date): string {
   return "Good evening,";
 }
 
+/** Proactive AI banner — surfaces a delivered deal awaiting confirmation.
+    Empty when there's nothing to act on. Taps through to that deal. */
+function aiBannerHtml(deal?: Deal): string {
+  if (!deal) return "";
+  const short = deal.id.slice(0, 12);
+  return `<div data-action="open" data-id="${deal.id}" class="navbtn" style="margin-top:12px; border-radius:16px; background:#0F172A; padding:14px 15px; display:flex; gap:12px; align-items:flex-start;"><span style="font-size:10px; font-weight:700; letter-spacing:.06em; color:#fff; background:#059669; padding:3px 7px; border-radius:5px; flex-shrink:0; margin-top:1px;">AI</span><div style="flex:1; min-width:0; font-size:13px; line-height:1.5; color:rgba(255,255,255,.9);"><b style="color:#fff;">${esc(deal.item.title)}</b> is marked shipped and waiting on your confirmation. Check it before the auto-dispute window opens.</div><svg width="17" height="17" viewBox="0 0 24 24" stroke="rgba(255,255,255,.5)" stroke-width="2" fill="none" style="flex-shrink:0; margin-top:2px;"><path d="M9 18l6-6-6-6"/></svg></div>`;
+}
+
 function card(d: Deal): string {
   const p = PILL[d.status];
   return `<div data-action="open" data-id="${d.id}" class="navbtn" style="border-radius:18px; background:#fff; border:1px solid #E6EAF0; box-shadow:0 1px 2px rgba(15,23,42,.05); padding:14px 15px; display:flex; align-items:center; gap:13px;"><div style="width:46px; height:46px; border-radius:13px; background:#F1F5F9; display:flex; align-items:center; justify-content:center;">${itemIcon(d.item.title)}</div><div style="flex:1; min-width:0;"><div style="font-size:14.5px; font-weight:600; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(d.item.title)}</div><div style="font-size:12.5px; color:#64748B; margin-top:2px;">${naira(d.item.amount)} · ${esc(d.seller.name || "Seller")}</div></div><span style="padding:5px 10px; border-radius:999px; background:${p.bg}; color:${p.fg}; font-size:11px; font-weight:700; white-space:nowrap;">${p.label}</span></div>`;
@@ -82,6 +90,12 @@ export default function Page() {
       // (funded or shipped: paid in, not yet released/refunded).
       const held = deals.filter((d) => d.status === "funded" || d.status === "shipped");
       const heldTotal = held.reduce((sum, d) => sum + (d.item.amount || 0), 0);
+      const active = deals.filter((d) => d.status === "created" || d.status === "funded" || d.status === "shipped");
+      const total = rep?.stats?.total ?? deals.length;
+      const completed = rep?.stats?.completed ?? deals.filter((d) => d.status === "completed").length;
+      // Proactive AI insight: a shipped deal is delivered and awaiting the
+      // buyer's confirmation — the one thing worth nudging about.
+      const needsConfirm = deals.find((d) => d.status === "shipped");
       setData((prev) => ({
         ...prev,
         name,
@@ -94,6 +108,9 @@ export default function Page() {
           heldTotal > 0
             ? `Across ${held.length} active deal${held.length === 1 ? "" : "s"}. Released only when you confirm.`
             : "Nothing in escrow yet. Start a protected deal and your money stays locked until you confirm.",
+        kpiSuccess: `${completed}/${total}`,
+        kpiActive: active.length,
+        aiBanner: aiBannerHtml(needsConfirm),
         deals: deals.length
           ? deals.map(card).join("")
           : `<div style="padding:22px 18px; text-align:center; color:#94A3B8; font-size:13.5px; line-height:1.5; background:#fff; border:1px solid #E6EAF0; border-radius:16px;">No escrows yet.<br>Tap New Escrow to protect your first deal.</div>`,
