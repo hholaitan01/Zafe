@@ -21,6 +21,66 @@ function initialsOf(name: string): string {
   return (parts[0] || "?").slice(0, 2).toUpperCase();
 }
 
+function esc(s: string): string {
+  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
+}
+
+/** A subtle rising sparkline that lands on the trader's real current score. */
+function scoreChartHtml(score: number): string {
+  const w = 300, h = 66, pad = 4;
+  const start = Math.max(8, score - 34);
+  const n = 8;
+  const pts = Array.from({ length: n }, (_, i) => {
+    const t = i / (n - 1);
+    const base = start + (score - start) * t;
+    const wobble = i === 0 || i === n - 1 ? 0 : Math.sin(i * 1.7) * 3;
+    return Math.max(0, Math.min(100, base + wobble));
+  });
+  const x = (i: number) => pad + i * ((w - pad * 2) / (n - 1));
+  const y = (v: number) => h - pad - (v / 100) * (h - pad * 2);
+  const line = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const area = `M${x(0)},${h - pad} L${pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" L")} L${x(n - 1)},${h - pad} Z`;
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%; height:66px; display:block;"><defs><linearGradient id="tsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10B981" stop-opacity="0.18"/><stop offset="100%" stop-color="#10B981" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#tsg)"/><polyline points="${line}" fill="none" stroke="#059669" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(n - 1).toFixed(1)}" cy="${y(pts[n - 1]).toFixed(1)}" r="3.2" fill="#fff" stroke="#059669" stroke-width="2"/></svg>`;
+}
+
+/** Payout account as a navy "bank card", or a prompt to add one. */
+function payoutCardHtml(payout?: { bankName?: string; accountNumber?: string; accountName?: string }): string {
+  if (!payout?.accountNumber) {
+    return `<div class="navbtn" data-nav="seller" style="border-radius:14px; background:#F8FAFC; border:1px dashed #CBD5E1; padding:18px; text-align:center; color:#64748B; font-size:13px;">No payout account yet. Tap to add where you get paid.</div>`;
+  }
+  const bank = payout.bankName || "Bank account";
+  const acct = payout.accountNumber.replace(/(\d{4})(?=\d)/g, "$1 ");
+  return `<div style="border-radius:14px; background:linear-gradient(150deg,#14304A,#0F172A); color:#fff; padding:16px; min-height:120px; display:flex; flex-direction:column; justify-content:space-between;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:500; color:rgba(255,255,255,.72);">${esc(bank)}</span><span style="font-size:10px; padding:2px 7px; background:#059669; color:#fff; border-radius:4px; letter-spacing:.08em; font-weight:600;">DEFAULT</span></div>
+      <div><div style="font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:19px; letter-spacing:.06em; font-variant-numeric:tabular-nums; margin-top:24px;">${esc(acct)}</div><div style="font-size:12px; color:rgba(255,255,255,.6); margin-top:3px;">${esc((payout.accountName || "").toUpperCase())}</div></div>
+    </div>`;
+}
+
+/** Identity verification checklist. */
+function verifyListHtml(verified: boolean, phone: string, email: string): string {
+  const rows: { k: string; v: string; ok: boolean; mono?: boolean }[] = [
+    { k: "BVN", v: verified ? "•••• •••• verified" : "Not linked", ok: verified, mono: true },
+    { k: "NIN", v: verified ? "•••• •••• verified" : "Not linked", ok: verified, mono: true },
+    { k: "Phone", v: phone || "Not added", ok: !!phone },
+    { k: "Email", v: email ? "Verified" : "Not added", ok: !!email },
+    { k: "Business name", v: "Not added", ok: false },
+  ];
+  return rows
+    .map((r, i) => {
+      const check = r.ok
+        ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+        : `<span class="navbtn" data-nav="seller" style="font-size:12px; font-weight:600; color:#0F172A; padding:5px 12px; border:1px solid #E6EAF0; border-radius:9px;">Add</span>`;
+      return `<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0;${i === rows.length - 1 ? "" : " border-bottom:1px solid #EEF2F6;"}"><div style="min-width:0;"><div style="font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#94A3B8;">${r.k}</div><div style="font-size:13px; color:#0F172A; margin-top:2px;${r.mono ? " font-family:ui-monospace,Menlo,monospace;" : ""}">${esc(r.v)}</div></div>${check}</div>`;
+    })
+    .join("");
+}
+
+function riskBand(score: number): string {
+  if (score >= 70) return "Low risk range (70–100)";
+  if (score >= 40) return "Medium risk range (40–69)";
+  return "Building trust (0–39)";
+}
+
 /** Downscale an image file to a small JPEG data URL (for the avatar). */
 function resizePhoto(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -146,6 +206,8 @@ export default function Page() {
       profRef.current = loaded;
       const base = splitName(fullName);
       const payout = seller?.payout;
+      const score = rep?.score ?? 0;
+      const stats = rep?.stats;
       setData((p) => ({
         ...p,
         firstName: loaded.firstName || base.firstName,
@@ -153,9 +215,16 @@ export default function Page() {
         lastName: loaded.lastName || base.lastName,
         username: loaded.username || "",
         photo: loaded.photo || "",
-        ...(rep ? { scoreLine: `Trust Score ${rep.score} · ${rep.tierLabel}` } : {}),
-        idStatus: seller?.verified ? "Verified" : "Not verified. Tap to verify.",
-        payout: payout?.accountNumber ? `${payout.bankName ? payout.bankName + " · " : ""}${payout.accountNumber}` : "Not set. Tap to add.",
+        verifyPill: seller?.verified ? "NIN · BVN verified" : "Identity not verified",
+        scoreBig: score || "—",
+        scoreDelta: rep?.tierLabel ?? "",
+        riskRange: rep ? riskBand(score) : "",
+        scoreChart: scoreChartHtml(score),
+        statTotal: stats?.total ?? 0,
+        statSuccess: stats?.completed ?? 0,
+        statDisputes: stats?.disputed ?? 0,
+        payoutCard: payoutCardHtml(payout),
+        verifyList: verifyListHtml(seller?.verified === true, seller?.phone || "", email),
       }));
       // Apply locks + wire inputs after the screen has bound the values.
       setTimeout(() => alive && profRef.current && applyLocks(profRef.current), 40);
@@ -186,6 +255,14 @@ export default function Page() {
         if (err) err.textContent = e instanceof ApiError ? e.message : "Couldn't save. Please try again.";
         setButton(true, "Save changes"); // keep enabled to retry
       }
+    },
+    // Preference switches — functional client-side toggles.
+    toggle: (_f: Record<string, string>, el: HTMLElement) => {
+      const on = el.getAttribute("data-on") !== "1";
+      el.setAttribute("data-on", on ? "1" : "0");
+      el.style.background = on ? "#059669" : "#CBD5E1";
+      const dot = el.firstElementChild as HTMLElement | null;
+      if (dot) dot.style.left = on ? "19px" : "2px";
     },
     signout: async () => {
       try {
