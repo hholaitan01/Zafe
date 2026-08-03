@@ -51,6 +51,9 @@ export default function ScreenHtml({
     if (!host) return;
     const d = dataRef.current;
 
+    const reduced =
+      typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
     // Hide the mock "9:41" status bar baked into each design screen — on a real
     // phone it sits under the actual status bar and makes the app look like a
     // screenshot.
@@ -76,8 +79,8 @@ export default function ScreenHtml({
         host.querySelectorAll<HTMLElement>("[data-pane]").forEach((p) => (p.style.display = p.id === paneId ? "" : "none"));
         host.querySelectorAll<HTMLElement>("[data-tab]").forEach((tb) => {
           const on = tb === tabEl;
-          tb.style.background = on ? "#E4144F" : "transparent";
-          tb.style.color = on ? "#fff" : "#9A9AA0";
+          tb.style.background = on ? "#059669" : "transparent";
+          tb.style.color = on ? "#fff" : "#64748B";
         });
         return;
       }
@@ -142,7 +145,15 @@ export default function ScreenHtml({
       });
       host.querySelectorAll<HTMLElement>("[data-html]").forEach((el) => {
         const k = el.getAttribute("data-html") || "";
-        if (d[k] != null) el.innerHTML = String(d[k]);
+        if (d[k] == null) return;
+        el.innerHTML = String(d[k]);
+        // Lists marked .js-fade-in settle in softly the first time their data
+        // lands, instead of teleporting over the "Loading…" placeholder.
+        if (!reduced && el.classList.contains("js-fade-in")) {
+          el.classList.remove("tf-faded");
+          void el.offsetWidth; // restart the animation on re-injection
+          el.classList.add("tf-faded");
+        }
       });
       // Prefill form fields from data (only when empty, so we never clobber typing).
       host.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-field]").forEach((el) => {
@@ -165,9 +176,6 @@ export default function ScreenHtml({
 
     // Reveal the flag rows.
     host.querySelectorAll<HTMLElement>(".flag").forEach((f) => f.classList.add("in-view"));
-
-    const reduced =
-      typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
     // Trust Score: drive the number + dial from real data when provided.
     const score = d && typeof d.score === "number" ? d.score : null;

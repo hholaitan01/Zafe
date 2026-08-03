@@ -1,108 +1,165 @@
 "use client";
 
-/* My sales — deals where the signed-in user is the seller. Shows each sale's
-   status and lets the seller mark a funded deal as shipped (which mints the
-   buyer's handover code). "Request a payment" starts a seller-initiated deal. */
+/* My sales — deals where the signed-in user is the seller. Now inside the
+   responsive app shell. Shows each sale's status and lets the seller mark a
+   funded deal as shipped (which mints the buyer's handover code). "Request a
+   payment" starts a seller-initiated deal. */
 
-import { useEffect, useRef, useState } from "react";
-import ScreenHtml from "@/app/_lib/screen-html";
-import { html } from "@/app/_screens/selling";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import AppShell from "@/app/_lib/AppShell";
 import { getCurrentUser } from "@/lib/auth";
-import { getSellerProfile, listMySales, loadSellerProfile, naira, shipDeal } from "@/lib/client";
+import { getSellerProfile, listMySales, loadSellerProfile, naira, setCurrentDealId, shipDeal } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
-function esc(s: string): string {
-  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
-}
-function emoji(t: string): string {
-  if (/iphone|phone|pixel|samsung/i.test(t)) return "📱";
-  if (/mac|laptop|book|pc/i.test(t)) return "💻";
-  if (/airpod|pod|headphone|buds|sony/i.test(t)) return "🎧";
-  if (/ps5|playstation|xbox|console|game/i.test(t)) return "🎮";
-  if (/jordan|sneaker|shoe|kick|nike|air ?force/i.test(t)) return "👟";
-  if (/hair|bundle|wig/i.test(t)) return "💇🏽‍♀️";
-  return "📦";
-}
-
-const PILL: Record<DealStatus, { label: string; bg: string; fg: string }> = {
-  created: { label: "Awaiting payment", bg: "#1e1e22", fg: "#c9c9cf" },
-  funded: { label: "Ready to ship", bg: "rgba(224,162,60,.16)", fg: "#E0A23C" },
-  shipped: { label: "Shipped", bg: "rgba(52,208,126,.15)", fg: "#34D07E" },
-  completed: { label: "Paid out", bg: "rgba(52,208,126,.15)", fg: "#34D07E" },
-  disputed: { label: "Disputed", bg: "rgba(255,77,77,.16)", fg: "#FF4D4D" },
-  refunded: { label: "Refunded", bg: "#1e1e22", fg: "#c9c9cf" },
-  resolved: { label: "Resolved", bg: "rgba(124,58,237,.18)", fg: "#c093f5" },
+const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: string }> = {
+  created: { label: "Awaiting payment", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
+  funded: { label: "Ready to ship", bg: "#FEF3C7", fg: "#A16207", dot: "#E89914" },
+  shipped: { label: "Shipped", bg: "#ECFDF5", fg: "#047857", dot: "#10B981" },
+  completed: { label: "Paid out", bg: "#ECFDF5", fg: "#047857", dot: "#10B981" },
+  disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C", dot: "#DC2626" },
+  refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
+  resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3", dot: "#6366F1" },
 };
 
-function saleCard(d: Deal): string {
-  const p = PILL[d.status];
-  const buyer = d.buyerEmail || "a buyer";
-  const action =
-    d.status === "funded"
-      ? `<div class="navbtn" data-action="ship" data-id="${d.id}" style="margin-top:12px; height:44px; border-radius:12px; background:#E4144F; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; font-size:14px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg>Mark as shipped</div>`
-      : d.status === "shipped"
-        ? `<div style="margin-top:10px; font-size:12px; color:#9A9AA0;">Shipped. Waiting for the buyer to confirm; you'll be paid on release.</div>`
-        : d.status === "completed"
-          ? `<div style="margin-top:10px; font-size:12px; color:#34D07E; font-weight:600;">Released to your account.</div>`
-          : "";
-  return `<div style="border-radius:18px; background:#141416; border:1px solid #202024; padding:15px 16px;">
-      <div style="display:flex; align-items:center; gap:13px;">
-        <div style="width:46px; height:46px; border-radius:13px; background:#1e1e22; display:flex; align-items:center; justify-content:center; font-size:20px;">${emoji(d.item.title)}</div>
-        <div style="flex:1; min-width:0;"><div style="font-size:14.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(d.item.title)}</div><div style="font-size:12.5px; color:#9A9AA0; margin-top:2px;">${naira(d.item.amount)} · ${esc(buyer)}</div></div>
-        <span style="padding:5px 10px; border-radius:999px; background:${p.bg}; color:${p.fg}; font-size:11px; font-weight:700; white-space:nowrap;">${p.label}</span>
-      </div>
-      ${action}
-    </div>`;
+function itemIcon(t: string): React.ReactNode {
+  let d: string;
+  if (/iphone|phone|pixel|samsung|tecno|infinix/i.test(t)) d = "M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2ZM10 18.5h4";
+  else if (/mac|laptop|book|pc|dell|hp/i.test(t)) d = "M3 5h18v12H3zM2 20h20";
+  else if (/airpod|pod|headphone|buds|sony|earbud/i.test(t)) d = "M4 14v-2a8 8 0 0 1 16 0v2M4 15h3v6H5a1 1 0 0 1-1-1zM20 15h-3v6h2a1 1 0 0 0 1-1z";
+  else if (/ps5|playstation|xbox|console|game|nintendo|switch/i.test(t)) d = "M2 8h20v8H2zM7 12h3M8.5 10.5v3";
+  else if (/jordan|sneaker|shoe|kick|air ?force|nike|adidas/i.test(t)) d = "M2 16h13l5 2h2v2H2zM2 16v-4l4-2 2 3 4-1";
+  else d = "m3 8 9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8";
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
 
-function verifyBannerHtml(verified: boolean): string {
-  if (verified) return "";
-  return `<div class="navbtn" data-nav="seller" style="border-radius:16px; padding:14px 15px; background:rgba(228,20,79,.09); border:1px solid rgba(228,20,79,.3); display:flex; gap:11px; align-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff8fa8" stroke-width="1.9" style="flex-shrink:0;"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg><div style="flex:1;"><div style="font-size:13px; font-weight:800; color:#fff;">Verify to receive payouts</div><div style="font-size:12px; color:#ffc7d3; margin-top:2px;">Sellers must be verified before money can be released to them.</div></div><svg width="18" height="18" viewBox="0 0 24 24" stroke="#ff8fa8" stroke-width="2" fill="none"><path d="M9 18l6-6-6-6"/></svg></div>`;
-}
-
-export default function Page() {
-  const [data, setData] = useState<Record<string, string | number>>();
+export default function SellingPage() {
+  const router = useRouter();
+  const [sales, setSales] = useState<Deal[] | null>(null);
+  const [verified, setVerified] = useState(true);
+  const [shipping, setShipping] = useState<string | null>(null);
+  const [shell, setShell] = useState({ name: "You", initials: "" });
   const contactsRef = useRef<string[]>([]);
 
-  async function load() {
-    const sales = await listMySales(contactsRef.current).catch(() => [] as Deal[]);
-    setData((p) => ({
-      ...p,
-      verifyBanner: verifyBannerHtml(getSellerProfile()?.verified === true),
-      sales: sales.length
-        ? sales.map(saleCard).join("")
-        : `<div style="padding:18px; text-align:center; color:#6d6d74; font-size:13px;">No sales yet. Tap “Request a payment”, or share your email so a buyer can pay you through escrow.</div>`,
-    }));
-  }
+  const load = useCallback(async () => {
+    const list = await listMySales(contactsRef.current).catch(() => [] as Deal[]);
+    setSales(list);
+    setVerified(getSellerProfile()?.verified === true);
+  }, []);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       const user = await getCurrentUser().catch(() => null);
-      // Refresh the seller profile from the server (source of truth) into the cache.
+      const nm = user?.name || (user?.email ? user.email.split("@")[0] : "You");
       const profile = await loadSellerProfile(user?.email);
       contactsRef.current = [user?.email, profile?.phone].filter(Boolean) as string[];
-      if (alive) await load();
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const actions = {
-    ship: async (_fields: Record<string, string>, el: HTMLElement) => {
-      const id = el.getAttribute("data-id");
-      if (!id) return;
-      const payout = getSellerProfile()?.payout;
-      const sellerPayout = payout ? { accountNumber: payout.accountNumber, accountName: payout.accountName, verified: true } : undefined;
-      try {
-        await shipDeal(id, sellerPayout);
-      } catch {
-        /* ignore; reload reflects the truth */
-      }
+      if (!alive) return;
+      setShell({ name: nm, initials: nm.trim().split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?" });
       await load();
-    },
-  };
+    })();
+    return () => { alive = false; };
+  }, [load]);
 
-  return <ScreenHtml html={html} data={data} actions={actions} />;
+  async function ship(id: string) {
+    setShipping(id);
+    const payout = getSellerProfile()?.payout;
+    const sellerPayout = payout ? { accountNumber: payout.accountNumber, accountName: payout.accountName, verified: true } : undefined;
+    try { await shipDeal(id, sellerPayout); } catch { /* reload reflects truth */ }
+    await load();
+    setShipping(null);
+  }
+
+  const open = (id: string) => { setCurrentDealId(id); router.push("/timeline"); };
+
+  return (
+    <AppShell current="new" user={{ name: shell.name, initials: shell.initials }}>
+      <style>{css}</style>
+
+      <div className="tf-ph-head sg-head">
+        <div><div className="tf-eyebrow">Selling</div><h1>My sales</h1></div>
+        <Link href="/request" className="tf-btn tf-btn--verify"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>Request a payment</Link>
+      </div>
+
+      <div className="sg-wrap">
+        {!verified && (
+          <Link href="/seller" className="sg-verify">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z" /></svg>
+            <div className="sg-verify-txt"><div className="sg-verify-t">Verify to receive payouts</div><div className="sg-verify-s">Sellers must be verified before money can be released to them.</div></div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+          </Link>
+        )}
+
+        <Link href="/request" className="sg-request">
+          <span className="sg-request-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></span>
+          Request a payment
+        </Link>
+
+        <div className="sg-label">Your sales</div>
+        <div className="sg-list">
+          {sales == null ? (
+            <div className="sg-empty">Loading your sales…</div>
+          ) : sales.length ? (
+            sales.map((d) => {
+              const p = PILL[d.status];
+              return (
+                <div key={d.id} className="tf-card sg-card">
+                  <button className="sg-card-top" onClick={() => open(d.id)}>
+                    <span className="sg-ic">{itemIcon(d.item.title)}</span>
+                    <span className="sg-main"><span className="sg-title">{d.item.title}</span><span className="sg-sub tf-mono">{naira(d.item.amount)} · {d.buyerEmail || "a buyer"}</span></span>
+                    <span className="tf-pill" style={{ background: p.bg, color: p.fg }}>{p.label}</span>
+                  </button>
+                  {d.status === "funded" && (
+                    <button className="tf-btn tf-btn--primary sg-ship" disabled={shipping === d.id} onClick={() => void ship(d.id)}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"><path d="M3 21h18M5 21V10l7-5 7 5v11" /></svg>
+                      {shipping === d.id ? "Marking…" : "Mark as shipped"}
+                    </button>
+                  )}
+                  {d.status === "shipped" && <div className="sg-note">Shipped. Waiting for the buyer to confirm; you&apos;ll be paid on release.</div>}
+                  {d.status === "completed" && <div className="sg-note sg-note-ok">Released to your account.</div>}
+                </div>
+              );
+            })
+          ) : (
+            <div className="sg-empty">No sales yet. Request a payment, or share your email so a buyer can pay you through escrow.</div>
+          )}
+        </div>
+      </div>
+    </AppShell>
+  );
 }
+
+const css = `
+.sg-head{ display:none }
+.sg-wrap{ display:flex; flex-direction:column; gap:14px; max-width:760px }
+
+.sg-verify{ display:flex; align-items:center; gap:11px; border-radius:16px; padding:14px 15px; background:var(--safe-tint); border:1px solid #C7F0DE; color:inherit }
+.sg-verify svg:first-child{ flex-shrink:0 }
+.sg-verify-txt{ flex:1; min-width:0 }
+.sg-verify-t{ font-size:13px; font-weight:700; color:#064E3B }
+.sg-verify-s{ font-size:12px; color:#047857; margin-top:2px; line-height:1.4 }
+
+.sg-request{ display:flex; align-items:center; gap:11px; height:58px; border-radius:16px; background:var(--safe); padding:0 16px; font-weight:600; font-size:15px; color:#fff; box-shadow:0 14px 26px -12px rgba(5,150,105,.55) }
+.sg-request-ic{ width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center }
+
+.sg-label{ margin-top:8px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--faint) }
+.sg-list{ display:flex; flex-direction:column; gap:10px }
+.sg-empty{ padding:26px 18px; text-align:center; color:var(--faint); font-size:13.5px; line-height:1.5; background:#fff; border:1px dashed var(--line); border-radius:16px }
+
+.sg-card{ padding:14px 15px }
+.sg-card-top{ width:100%; text-align:left; cursor:pointer; font-family:inherit; background:none; border:none; padding:0; display:flex; align-items:center; gap:13px }
+.sg-ic{ width:46px; height:46px; border-radius:13px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+.sg-main{ flex:1; min-width:0; display:flex; flex-direction:column }
+.sg-title{ font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.sg-sub{ font-size:12px; color:var(--faint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.sg-ship{ margin-top:12px; width:100%; height:46px; font-size:14px }
+.sg-ship:disabled{ opacity:.6; cursor:not-allowed }
+.sg-note{ margin-top:10px; font-size:12px; color:var(--muted); line-height:1.5 }
+.sg-note-ok{ color:var(--safe); font-weight:600 }
+
+@media (min-width:1024px){
+  .sg-head{ display:flex }
+  .sg-request{ display:none }
+}
+`;

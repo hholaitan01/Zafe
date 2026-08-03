@@ -7,10 +7,14 @@
    ========================================================================== */
 
 import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
+import { authorizeDeal } from "@/lib/deals/access";
 import { openAndJudgeDispute, type DisputeInput } from "@/lib/deals/store";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
+  // Only a party to the deal may open a dispute on it (guards against IDOR).
+  const access = await authorizeDeal(id);
+  if (!access.ok) return jsonError(access.status === 401 ? "Sign in to dispute this deal." : "Deal not found", access.status);
   const body = await readJson<DisputeInput>(req);
   if (!body) return jsonError("Invalid JSON body");
   if (!body.buyer || !isNonEmptyString(body.buyer.claim)) return jsonError("buyer.claim is required.");

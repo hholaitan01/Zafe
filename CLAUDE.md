@@ -3,6 +3,13 @@
 AI-powered escrow for peer-to-peer trades (Wema Hackaholics). Next.js 15 (App
 Router) · React 19 · TypeScript · Supabase · deployed on Vercel.
 
+**Visual language (redesign in progress):** moving to a premium light "trust
+fintech" look — navy ink `#0F172A`, emerald `#059669` for the "money held safe"
+story, gold `#A16207` sparingly, IBM Plex Sans, soft depth on a `#F8FAFC` canvas.
+Reference: the landing page (`app/page.tsx`) + `docs/design-system.md` §v2. The
+in-app screens are being torn down and rebuilt against this; until then they
+still use the legacy dark/pink tokens.
+
 ## Architecture (how the app is wired)
 
 - Screens are the Figma design markup rendered by **`app/_lib/screen-html.tsx`**

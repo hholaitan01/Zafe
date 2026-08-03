@@ -1,5 +1,6 @@
 /* ---- TrustFlow AI · global styles ---------------------------------------- */
 /* Shared reset, fonts and animations. Each screen sets its own background.    */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 * {
   box-sizing: border-box;
@@ -8,12 +9,41 @@
   -webkit-font-smoothing: antialiased;
 }
 
+:root {
+  /* The one motion easing for the whole app (docs/design-system.md). A strong
+     ease-out: fast start, gentle settle. Referenced everywhere instead of
+     re-typing the curve, so motion stays consistent. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* v2 "trust fintech" tokens (docs/design-system.md §v2). Rebuilt screens
+     reference these; legacy dark screens set their own inline colors. */
+  --ink: #0f172a;
+  --ink-2: #334155;
+  --muted: #64748b;
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --line: #e6eaf0;
+  --safe: #059669;
+  --safe-2: #10b981;
+  --safe-tint: #ecfdf5;
+  --blue: #1e3a8a;
+  --gold: #a16207;
+  --danger: #dc2626;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow: 0 12px 30px -14px rgba(15, 23, 42, 0.22), 0 4px 10px -6px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 30px 60px -24px rgba(15, 23, 42, 0.3), 0 10px 24px -14px rgba(15, 23, 42, 0.12);
+  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
 html,
 body {
   min-height: 100%;
-  background: #050506;
-  color: #fff;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  /* Light shell: a soft neutral frames the phone column on desktop; the app
+     canvas itself is the lighter --bg. (Legacy dark screens still paint their
+     own dark root until they're rebuilt.) */
+  background: #e9edf3;
+  color: var(--ink);
+  font-family: var(--font);
 }
 
 /* the app is a phone screen: it fills the device width on mobile, and sits as a
@@ -28,7 +58,7 @@ body {
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  background: #0b0b0d;
+  background: var(--bg);
   padding-top: max(env(safe-area-inset-top), 12px);
 }
 
@@ -39,15 +69,19 @@ body {
   display: none;
 }
 
-/* buttons behave like buttons */
+/* buttons behave like buttons. Same press feel as .navbtn (scale 0.98 / 90ms)
+   so taps feel identical across the app. */
 .tap {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.08s ease, filter 0.15s ease;
+  transition: transform 0.09s ease, filter 0.15s ease;
 }
-.tap:hover { filter: brightness(1.06); }
-.tap:active { transform: scale(0.985); }
+/* Hover only on real pointers — touch fires a false hover on tap. */
+@media (hover: hover) and (pointer: fine) {
+  .tap:hover { filter: brightness(1.06); }
+}
+.tap:active { transform: scale(0.98); }
 
 :focus-visible { outline: 2px solid #ff7aa0; outline-offset: 2px; }
 
@@ -73,7 +107,7 @@ body {
   border-radius: 0 !important;
   overflow: visible !important;
   padding-top: max(env(safe-area-inset-top), 12px);
-  animation: screenIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: screenIn 0.24s var(--ease) both;
 }
 
 /* Smooth page transition when a new screen mounts (route change). */
@@ -97,13 +131,16 @@ body {
 }
 .screenhost input:focus,
 .screenhost textarea:focus {
-  border-color: #e4144f !important;
-  box-shadow: 0 0 0 3px rgba(228, 20, 79, 0.15);
+  border-color: var(--safe) !important;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.16);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .screenhost > div { animation: none; }
-  .navbtn { transition: none; }
+  .navbtn, .tap { transition: none; }
+  /* Stop the continuous ambient loops (success orbs float, the waiting dot
+     pings, the danger ring breathes). These use inline `animation:` styles. */
+  [style*="floaty"], [style*="pulseGlow"], [style*="tfGlow"] { animation: none !important; }
 }
 
 /* animated Trust Score dial */
@@ -119,8 +156,8 @@ body {
   to { opacity: 1; transform: none; }
 }
 .ring { --p: 0; }
-.ring.in-view.low { animation: fillLow 1.5s cubic-bezier(.22, 1, .36, 1) forwards; }
-.ring.in-view.high { animation: fillHigh 1.5s cubic-bezier(.22, 1, .36, 1) forwards; }
+.ring.in-view.low { animation: fillLow 1.5s var(--ease) forwards; }
+.ring.in-view.high { animation: fillHigh 1.5s var(--ease) forwards; }
 .flag.in-view { animation: flagIn .5s ease both; }
 .flag:nth-child(2) { animation-delay: .12s; }
 .flag:nth-child(3) { animation-delay: .24s; }
@@ -132,6 +169,50 @@ body {
   .ring.low { --p: 88; }
   .ring.high { --p: 21; }
   .flag { opacity: 1; }
+}
+
+/* A data list settling in after its async load — bridges the "Loading…" ->
+   list swap so it doesn't teleport. Applied by ScreenHtml to injected lists
+   marked .js-fade-in. `both` fill keeps the final state visible even if the
+   class is never added (no-JS / reduced-motion fall back to fully shown). */
+@keyframes tfListIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.tf-faded { animation: tfListIn 0.24s var(--ease) both; }
+
+/* The red "pay anyway" gate arriving on the payment screen. Motion here has a
+   job: make sure a buyer paying a flagged seller notices the gate rather than
+   finding it already sitting there. Plays once, on first reveal. */
+@keyframes tfRiskIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.tf-risk-enter { animation: tfRiskIn 0.22s var(--ease) both; }
+/* the checkbox confirming the risk — a quick pop when it's ticked */
+@keyframes tfPop {
+  from { transform: scale(0.6); }
+  to { transform: scale(1); }
+}
+.tf-pop { animation: tfPop 0.15s var(--ease) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-faded, .tf-risk-enter, .tf-pop { animation: none !important; }
+}
+
+/* Two ambient loops the design references by name but never defined, so they
+   silently did nothing. Both are transform/opacity only (GPU-friendly).
+   • pulseGlow — a radar "ping": a ring that expands out of the live-status dot
+     and fades, signalling "we're watching for your transfer" (expiry screen).
+   • tfGlow — a slow breathe for the scam-warning danger ring, so the alert
+     reads as urgent (trust-score-high screen). */
+@keyframes pulseGlow {
+  from { transform: scale(1); opacity: 0.5; }
+  to { transform: scale(2.6); opacity: 0; }
+}
+@keyframes tfGlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 /* real form fields, styled to match the design */

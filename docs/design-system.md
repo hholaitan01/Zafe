@@ -4,6 +4,50 @@ The single source of truth for spacing, color, radius, type, and motion. Every
 new screen or component **references these tokens** — don't invent one-off
 values. Inconsistency is the main tell of vibe-coded UI.
 
+---
+
+## v2 — "Trust fintech" language (active redesign)
+
+The product is moving from the dark/pink look to a premium, light **trust
+fintech** language (grounded in the ui-ux-pro-max fintech dataset). The landing
+page (`app/page.tsx`) is the reference implementation. App screens are being
+rebuilt against these tokens; the legacy dark tokens below still describe the
+not-yet-migrated screens.
+
+**Color (v2)**
+
+| Token | Value | Use |
+| ----- | ----- | --- |
+| `ink` | `#0F172A` | primary text, primary buttons, the navy "trust" anchor |
+| `ink-2` | `#334155` | secondary text |
+| `muted` | `#64748B` | tertiary text, captions |
+| `bg` | `#F8FAFC` | page background |
+| `card` | `#FFFFFF` | cards / surfaces |
+| `border` | `#E6EAF0` | hairline borders |
+| `safe` | `#059669` (deep) / `#10B981` (bright) | the "money held safe" story: success, escrow, verified |
+| `safe-tint` | `#ECFDF5` | safe backgrounds, badges, icon wells |
+| `blue` | `#1E3A8A` | secondary info accents |
+| `gold` | `#A16207` | premium seal, used **sparingly** (one accent per view) |
+| `danger` | `#DC2626` | risk / disputes / errors |
+
+Navy is the trust anchor; emerald carries the core "your money is safe"
+message; gold is a rare premium accent. Primary CTAs are navy; the highest-intent
+"safe" CTA (Get started) may be emerald.
+
+**Type (v2):** IBM Plex Sans (400/500/600/700) — financial, trustworthy. Headings
+600–700 with tight tracking (`-0.03em`); body 400 at 1.5–1.6 line-height. Tabular
+figures for money and IDs.
+
+**Depth (v2):** soft, layered shadows on a light canvas (no skeuomorphism / neumorphism).
+`--shadow-sm` hairline lift, `--shadow` for cards, `--shadow-lg` for hero/CTA. Radius 11–24.
+
+**Motion (v2):** same easing token `cubic-bezier(.22,1,.36,1)`; fade-up reveals
+(opacity + ≤14px), ≤2px hover lift, all reduced-motion guarded.
+
+---
+
+## Legacy (dark) tokens — screens not yet migrated
+
 ## Color
 
 | Token | Value | Use |
