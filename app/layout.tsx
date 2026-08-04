@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   applicationName: "TrustFlow",
   title: { default: "TrustFlow: AI Escrow", template: "%s · TrustFlow" },
   description:
-    "AI-powered escrow for peer-to-peer trades. Money held safe until you confirm. Built for Wema Hackaholics 7.0.",
+    "AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.",
   appleWebApp: {
     capable: true,
     title: "TrustFlow",

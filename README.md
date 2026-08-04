@@ -8,7 +8,7 @@ Pay a seller you have never met. Your money stays locked until you confirm the i
 is exactly what you paid for. Before you send a naira, an AI reads your chat for scam signs. If a
 deal goes wrong, an AI settles it. And every trader carries a reputation they actually earned.
 
-Built on Wema's ALAT rails for **Wema Hackaholics 7.0**.
+Built on Wema's ALAT rails.
 
 [**View the design in Figma**](https://www.figma.com/design/Us0oRlytOQwSacJoGawZQV/WEMA-BANK-HACKATOBN)
 
@@ -16,7 +16,6 @@ Built on Wema's ALAT rails for **Wema Hackaholics 7.0**.
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
 ![AI](https://img.shields.io/badge/AI-Claude-8A63D2)
-![Hackaholics 7.0](https://img.shields.io/badge/Hackaholics%207.0-Hackathon-059669)
 
 </div>
 

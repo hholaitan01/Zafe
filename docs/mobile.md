@@ -109,7 +109,7 @@ Wire at least push + biometric unlock before submitting to iOS.
 
 ## Which one to use
 
-- **Demo / hackathon / fastest reach:** the PWA. It is installable on both
+- **Demo / fastest reach:** the PWA. It is installable on both
   platforms right now.
 - **App Store + Play Store presence:** Capacitor. Do the Play Store first (no
   Mac needed for Android), then iOS from a Mac.

@@ -1,6 +1,6 @@
 # TrustFlow — project memory
 
-AI-powered escrow for peer-to-peer trades (Wema Hackaholics). Next.js 15 (App
+AI-powered escrow for peer-to-peer trades. Next.js 15 (App
 Router) · React 19 · TypeScript · Supabase · deployed on Vercel.
 
 **Visual language (redesign in progress):** moving to a premium light "trust

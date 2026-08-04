@@ -241,7 +241,7 @@ export default function Landing() {
       <footer className="lp-footer">
         <div className="lp-wrap lp-footrow">
           <a className="lp-brand" href="#top" aria-label="TrustFlow home"><Mark size={24} /><span>TrustFlow</span></a>
-          <p className="lp-footnote">AI-powered escrow for peer-to-peer trades. Built for Wema Hackaholics 7.0.</p>
+          <p className="lp-footnote">AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.</p>
         </div>
       </footer>
     </div>
