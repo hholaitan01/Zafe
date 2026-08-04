@@ -71,12 +71,55 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   return { ok: true, mode: "live", redirectUrl: data.url };
 }
 
-/** Read the current user, or null if signed out. */
+/** Read the current user, or null if signed out. The display name prefers the
+    name the user set in their Profile (which the greeting and avatar read) over
+    the email-prefix fallback baked into the auth record. */
 export async function getCurrentUser(): Promise<TrustUser | null> {
   const supabase = getBrowserClient();
-  if (!supabase) return getDemoSession();
+  if (!supabase) return withProfileName(getDemoSession());
   const { data } = await supabase.auth.getUser();
-  return data.user ? toUser(data.user) : null;
+  return data.user ? withProfileName(toUser(data.user)) : null;
+}
+
+/** Persist the user's chosen display name onto the auth record so it follows
+    them across devices (Profile saves the name parts to the profiles table; this
+    keeps the auth record's name in sync so every screen's greeting matches).
+    Best-effort — never throws, so a failed sync can't block saving a profile. */
+export async function syncDisplayName(fullName: string): Promise<void> {
+  const name = (fullName || "").trim();
+  if (!name) return;
+  const supabase = getBrowserClient();
+  try {
+    if (supabase) await supabase.auth.updateUser({ data: { full_name: name } });
+    else {
+      const demo = getDemoSession();
+      if (demo) setDemoSession({ ...demo, name });
+    }
+  } catch {
+    /* the profiles table is the source of truth; the local cache still fixes the UI */
+  }
+}
+
+/** Override an auth record's name with the Profile name cached in this browser
+    (written by lib/client/user-profile). Read directly to avoid coupling auth to
+    the client layer. */
+function withProfileName(user: TrustUser | null): TrustUser | null {
+  if (!user) return user;
+  const cached = cachedProfileName();
+  return cached ? { ...user, name: cached } : user;
+}
+
+function cachedProfileName(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = window.localStorage.getItem("trustflow.user-profile");
+    if (!raw) return undefined;
+    const p = JSON.parse(raw) as { firstName?: string; otherNames?: string; lastName?: string };
+    const full = [p.firstName, p.otherNames, p.lastName].map((s) => (s || "").trim()).filter(Boolean).join(" ");
+    return full || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Sign out of both modes. */

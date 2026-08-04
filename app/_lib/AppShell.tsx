@@ -189,6 +189,10 @@ const kit = `
 .tf-btn--verify{ background:var(--safe); color:#fff }
 .tf-btn--verify:hover{ background:#047857 }
 .tf-btn--secondary{ background:#fff; color:var(--ink); border-color:var(--line); box-shadow:var(--sh-1) }
+/* When a button is rendered as a link (empty-state CTAs), the .tf-app a{color:inherit}
+   reset would otherwise hide the label — restore each variant's own text colour. */
+.tf-app a.tf-btn--primary, .tf-app a.tf-btn--verify{ color:#fff }
+.tf-app a.tf-btn--secondary{ color:var(--ink) }
 .tf-btn--secondary:hover{ border-color:#CBD5E1 }
 .tf-ph-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px }
 .tf-ph-head h1{ margin:6px 0 0; font-size:26px; font-weight:700; letter-spacing:-.02em }
