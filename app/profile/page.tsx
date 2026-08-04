@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
-import { getCurrentUser, signOut } from "@/lib/auth";
+import { getCurrentUser, signOut, syncDisplayName } from "@/lib/auth";
 import {
   ApiError,
   getMyReputation,
@@ -292,6 +292,10 @@ export default function ProfilePage() {
       );
       setProf({ ...saved, hasRecord: true, otherLocked: !!saved.otherNames });
       setFirstName(saved.firstName); setOtherNames(saved.otherNames); setLastName(saved.lastName); setUsername(saved.username || "");
+      // Keep the auth record's name in step so the greeting on every screen
+      // matches the name just saved, not the email prefix.
+      const full = [saved.firstName, saved.otherNames, saved.lastName].map((s) => (s || "").trim()).filter(Boolean).join(" ");
+      if (full) { setName(full); void syncDisplayName(full); }
       setDirty(false);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 1600);

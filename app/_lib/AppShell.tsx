@@ -130,7 +130,8 @@ const kit = `
   --sh-1:0 1px 2px rgba(15,23,42,.05); --sh-2:0 12px 30px -14px rgba(15,23,42,.18);
   --ease:cubic-bezier(.22,1,.36,1);
   font-family:var(--font,'IBM Plex Sans',system-ui,sans-serif); color:var(--ink); background:var(--bg);
-  min-height:100dvh; -webkit-font-smoothing:antialiased; }
+  min-height:100dvh; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  font-optical-sizing:auto; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
 .tf-app *{ box-sizing:border-box }
 .tf-app a{ text-decoration:none; color:inherit }
 
@@ -141,16 +142,22 @@ const kit = `
 .tf-side{ display:none }
 .tf-topbar{ display:none }
 .tf-main{ min-height:100dvh; display:flex; flex-direction:column }
-.tf-content{ flex:1; padding:20px 20px 108px; width:100%; max-width:640px; margin:0 auto }
+.tf-content{ flex:1; padding:20px 20px 108px; width:100%; max-width:640px; margin:0 auto; animation:tfContentIn .28s var(--ease) both }
+@keyframes tfContentIn{ from{ opacity:0; transform:translateY(6px) } to{ opacity:1; transform:none } }
 
 .tf-avatar{ width:40px; height:40px; border-radius:50%; background:#0F172A; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; overflow:hidden; flex-shrink:0 }
 .tf-avatar-sm{ width:42px; height:42px }
-.tf-icon-btn{ width:40px; height:40px; border-radius:12px; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); display:flex; align-items:center; justify-content:center; color:var(--ink-2) }
-.tf-icon-btn:hover{ border-color:#CBD5E1 }
+.tf-icon-btn{ width:40px; height:40px; border-radius:12px; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); display:flex; align-items:center; justify-content:center; color:var(--ink-2);
+  transition:transform .14s var(--ease), border-color .18s var(--ease) }
+.tf-icon-btn:active{ transform:scale(.92) }
+@media (hover:hover) and (pointer:fine){ .tf-icon-btn:hover{ border-color:#CBD5E1 } }
 .tf-eyebrow{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--faint) }
 
 /* ---- mobile top bar ---- */
-.tf-mtop{ display:flex; align-items:center; justify-content:space-between; padding:14px 20px 4px }
+/* A translucent floating layer: content scrolls under it and blurs through,
+   rather than an opaque strip that eats a fixed band of the screen (§materials). */
+.tf-mtop{ position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:14px 20px 10px;
+  background:rgba(248,250,252,.72); backdrop-filter:blur(18px) saturate(180%); -webkit-backdrop-filter:blur(18px) saturate(180%) }
 .tf-mtop-user{ display:flex; align-items:center; gap:12px; min-width:0 }
 .tf-mtop-hi{ font-size:12.5px; color:var(--muted); font-weight:500 }
 .tf-mtop-name{ font-size:16.5px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
@@ -158,10 +165,18 @@ const kit = `
 
 /* ---- mobile bottom nav ---- */
 .tf-bottom{ position:fixed; left:0; right:0; bottom:0; z-index:30; max-width:520px; margin:0 auto; height:76px;
-  background:linear-gradient(180deg,rgba(248,250,252,0),#F8FAFC 38%); display:flex; align-items:center; justify-content:space-around; padding:0 14px 12px; }
-.tf-bnav{ display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-size:10px; font-weight:500; padding:6px 8px }
+  background:linear-gradient(180deg,rgba(248,250,252,0),#F8FAFC 38%);
+  backdrop-filter:blur(16px) saturate(160%); -webkit-backdrop-filter:blur(16px) saturate(160%);
+  display:flex; align-items:center; justify-content:space-around; padding:0 14px 12px; }
+.tf-bnav{ display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-size:10px; font-weight:500; padding:6px 8px;
+  transition:color .2s var(--ease), transform .18s var(--ease) }
+.tf-bnav svg{ transition:transform .24s var(--ease) }
+.tf-bnav:active{ transform:scale(.9) }
 .tf-bnav.is-active{ color:var(--ink) }
-.tf-bnav-orb{ width:56px; height:56px; border-radius:50%; background:var(--safe); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 14px 26px -10px rgba(5,150,105,.6); margin-top:-18px; border:3px solid #F8FAFC }
+.tf-bnav.is-active svg{ transform:scale(1.08) }
+.tf-bnav-orb{ width:56px; height:56px; border-radius:50%; background:var(--safe); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 14px 26px -10px rgba(5,150,105,.6); margin-top:-18px; border:3px solid #F8FAFC;
+  transition:transform .2s var(--ease), box-shadow .2s var(--ease) }
+.tf-bnav-orb:active{ transform:scale(.9); box-shadow:0 8px 18px -10px rgba(5,150,105,.7) }
 
 /* ---- shared content atoms ---- */
 .tf-card{ background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--sh-1) }
@@ -174,6 +189,10 @@ const kit = `
 .tf-btn--verify{ background:var(--safe); color:#fff }
 .tf-btn--verify:hover{ background:#047857 }
 .tf-btn--secondary{ background:#fff; color:var(--ink); border-color:var(--line); box-shadow:var(--sh-1) }
+/* When a button is rendered as a link (empty-state CTAs), the .tf-app a{color:inherit}
+   reset would otherwise hide the label — restore each variant's own text colour. */
+.tf-app a.tf-btn--primary, .tf-app a.tf-btn--verify{ color:#fff }
+.tf-app a.tf-btn--secondary{ color:var(--ink) }
 .tf-btn--secondary:hover{ border-color:#CBD5E1 }
 .tf-ph-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px }
 .tf-ph-head h1{ margin:6px 0 0; font-size:26px; font-weight:700; letter-spacing:-.02em }
@@ -186,12 +205,14 @@ const kit = `
   .tf-side-brand{ display:flex; align-items:center; gap:10px; padding:0 8px 4px; font-size:20px; font-weight:700; letter-spacing:-.01em }
   .tf-side-group{ display:flex; flex-direction:column; gap:2px }
   .tf-side-label{ padding:0 10px 6px; font-size:11px; font-weight:600; color:var(--faint); letter-spacing:.10em; text-transform:uppercase }
-  .tf-side-item{ display:flex; align-items:center; gap:11px; padding:10px; border-radius:10px; color:var(--muted); font-size:14px; font-weight:500; border:1px solid transparent; transition:background .18s var(--ease) }
+  .tf-side-item{ display:flex; align-items:center; gap:11px; padding:10px; border-radius:10px; color:var(--muted); font-size:14px; font-weight:500; border:1px solid transparent; transition:background .18s var(--ease), transform .12s var(--ease) }
   .tf-side-item:hover{ background:var(--bg) }
+  .tf-side-item:active{ transform:scale(.98) }
   .tf-side-item.is-active{ background:var(--bg); color:var(--ink); border-color:var(--line); box-shadow:var(--sh-1); font-weight:600 }
   .tf-side-demo{ margin-top:auto; background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:14px }
   .tf-side-demo p{ font-size:12.5px; line-height:1.45; color:var(--muted); margin:6px 0 0 }
-  .tf-topbar{ display:flex; align-items:center; justify-content:space-between; height:64px; padding:0 32px; background:var(--bg); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10 }
+  .tf-topbar{ display:flex; align-items:center; justify-content:space-between; height:64px; padding:0 32px; position:sticky; top:0; z-index:10;
+    background:rgba(248,250,252,.72); backdrop-filter:blur(18px) saturate(180%); -webkit-backdrop-filter:blur(18px) saturate(180%); border-bottom:1px solid rgba(230,234,240,.7) }
   .tf-search{ display:flex; align-items:center; gap:8px; width:340px; padding:9px 14px; border-radius:999px; background:#fff; border:1px solid var(--line); color:var(--faint); font-size:13px }
   .tf-topbar-right{ display:flex; align-items:center; gap:14px }
   .tf-topbar-meta{ text-align:right; line-height:1.2 }
@@ -199,5 +220,22 @@ const kit = `
   .tf-topbar-role{ font-size:11px; color:var(--faint) }
   .tf-content{ padding:30px 44px 60px; max-width:1180px; margin:0 }
   .tf-ph-head h1{ font-size:30px }
+}
+
+/* Motion off: keep the layout, drop the movement (§reduced motion). */
+@media (prefers-reduced-motion:reduce){
+  .tf-content{ animation:none }
+  .tf-btn, .tf-icon-btn, .tf-bnav, .tf-bnav svg, .tf-bnav-orb, .tf-side-item{ transition:none }
+}
+/* Transparency off: the floating chrome goes solid so text never fights a blur. */
+@media (prefers-reduced-transparency:reduce){
+  .tf-mtop, .tf-topbar{ background:var(--bg); backdrop-filter:none; -webkit-backdrop-filter:none }
+  .tf-bottom{ backdrop-filter:none; -webkit-backdrop-filter:none }
+}
+/* More contrast: firm up the soft borders that carry structure. */
+@media (prefers-contrast:more){
+  .tf-card{ border-color:#CBD5E1 }
+  .tf-topbar{ border-bottom-color:var(--line) }
+  .tf-side-item.is-active{ border-color:#94A3B8 }
 }
 `;
