@@ -23,8 +23,9 @@ import type { Reputation, ReputationFactor, ReputationStats, ReputationTier } fr
 
 const BASE = 60;
 
-/** Read the raw signals off a trader's deals. */
-export function computeStats(deals: Deal[]): ReputationStats {
+/** Read the raw signals off a trader's deals. `now` lets callers compute the
+    stats as of a past moment (for the real score history), defaulting to today. */
+export function computeStats(deals: Deal[], now: number = Date.now()): ReputationStats {
   let completed = 0;
   let disputed = 0;
   let disputesLost = 0;
@@ -57,7 +58,7 @@ export function computeStats(deals: Deal[]): ReputationStats {
   }
 
   const total = deals.length;
-  const tenureDays = earliest === Number.POSITIVE_INFINITY ? 0 : Math.max(0, Math.floor((Date.now() - earliest) / 86_400_000));
+  const tenureDays = earliest === Number.POSITIVE_INFINITY ? 0 : Math.max(0, Math.floor((now - earliest) / 86_400_000));
   const onTimeRate = completed > 0 ? confirmedByBuyer / completed : 0;
 
   return { total, completed, disputed, disputesLost, disputesWon, volume, onTimeRate, tenureDays };
@@ -71,9 +72,11 @@ function tierFor(score: number, total: number): { tier: ReputationTier; label: s
   return { tier: "new", label: "New trader" };
 }
 
-/** Score a trader from their deals. Deterministic and fully attributable. */
-export function scoreReputation(email: string, deals: Deal[]): Reputation {
-  const stats = computeStats(deals);
+/** Score a trader from their deals. Deterministic and fully attributable. Pass
+    `now` to score the trader as of a past moment (used to plot the real Trust
+    Score history). */
+export function scoreReputation(email: string, deals: Deal[], now: number = Date.now()): Reputation {
+  const stats = computeStats(deals, now);
   const factors: ReputationFactor[] = [{ key: "base", label: "Starting standing", detail: "Every trader starts at 60", points: BASE }];
 
   const completedPts = Math.min(30, stats.completed * 6);
