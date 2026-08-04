@@ -81,10 +81,10 @@ alter table public.deals
 ```
 
 - **Seller bank/KYC for payout:** Jerry's `users.bvn_nin_verified` + bank fields
-  are needed to *pay* a seller. For the hackathon we collect the seller's payout
+  are needed to *pay* a seller. For now we collect the seller's payout
   details at release time and store them in `deals.seller_payout` (a jsonb) —
   no separate `users`/KYC table needed. (If a full `users` table is wanted
-  later, that's a post-hackathon call.)
+  later, that's a follow-up call.)
 - We already have `handover_code`, `auto_release_at`, `dispute`, `trust`,
   `timeline`, `reference` — these cover his `release_method`, `tracking_number`,
   `disputes`, `trust_score`/`risk_*`, and `transaction_ref`.

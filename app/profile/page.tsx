@@ -21,12 +21,16 @@ import { getCurrentUser, signOut } from "@/lib/auth";
 import {
   ApiError,
   getMyReputation,
+  listMyDeals,
+  listMySales,
   loadSellerProfile,
   loadUserProfile,
   saveUserProfile,
   splitName,
   type LoadedProfile,
 } from "@/lib/client";
+import { scoreReputation } from "@/lib/reputation/engine";
+import type { Deal, DealStatus } from "@/lib/deals/types";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -40,20 +44,64 @@ function riskBand(score: number): string {
   return "Building trust (0-39)";
 }
 
-/** A rising history that lands on the trader's real current score, labelled
-    with the trailing eight months. Deterministic — same score, same shape. */
-function buildHistory(score: number): { label: string; score: number }[] {
-  const M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const now = new Date();
-  const n = 8;
-  const start = Math.max(8, score - 34);
-  return Array.from({ length: n }, (_, i) => {
-    const t = i / (n - 1);
-    const base = start + (score - start) * t;
-    const wobble = i === 0 || i === n - 1 ? 0 : Math.sin(i * 1.7) * 3;
-    const d = new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1);
-    return { label: M[d.getMonth()], score: Math.max(0, Math.min(100, Math.round(base + wobble))) };
-  });
+const DAY = 86_400_000;
+function monthLabel(t: number): string {
+  return new Date(t).toLocaleDateString("en-NG", { month: "short" });
+}
+
+/** Reconstruct each deal as it stood at time `t`: its status is the latest
+    timeline event at or before `t`, and a deal created after `t` did not exist
+    yet. This lets the reputation engine score the account at a past moment. */
+function snapshotAsOf(deals: Deal[], t: number): Deal[] {
+  const out: Deal[] = [];
+  for (const d of deals) {
+    if (new Date(d.createdAt).getTime() > t) continue;
+    const evs = (d.timeline || []).filter((e) => new Date(e.at).getTime() <= t).sort((a, b) => a.at.localeCompare(b.at));
+    const status = (evs.length ? evs[evs.length - 1].status : d.status) as DealStatus;
+    const disputedByT = !!d.dispute && new Date(d.dispute.openedAt).getTime() <= t;
+    out.push({ ...d, status, timeline: evs, dispute: disputedByT ? d.dispute : undefined });
+  }
+  return out;
+}
+
+/** The trader's REAL Trust Score history: replay their deals and score the
+    account with the same engine at each moment its standing could have changed.
+    A brand-new account with no deals is a flat line at the baseline score. */
+function buildScoreHistory(email: string, deals: Deal[], currentScore: number): { label: string; score: number }[] {
+  const now = Date.now();
+  if (deals.length === 0) {
+    // Nothing has happened yet: a flat line at the current (baseline) score.
+    return [
+      { label: monthLabel(now - 30 * DAY), score: currentScore },
+      { label: monthLabel(now), score: currentScore },
+    ];
+  }
+  let earliest = Number.POSITIVE_INFINITY;
+  const marks = new Set<number>();
+  for (const d of deals) {
+    const c = new Date(d.createdAt).getTime();
+    if (Number.isFinite(c)) earliest = Math.min(earliest, c);
+    for (const e of d.timeline || []) {
+      if (["completed", "resolved", "disputed", "refunded"].includes(e.status)) {
+        const te = new Date(e.at).getTime();
+        if (Number.isFinite(te)) marks.add(te);
+      }
+    }
+  }
+  const checkpoints = [earliest, ...[...marks].filter((t) => t > earliest), now]
+    .filter((t, i, a) => Number.isFinite(t) && a.indexOf(t) === i)
+    .sort((x, y) => x - y);
+
+  let series = checkpoints.map((t) => ({ label: monthLabel(t), score: scoreReputation(email, snapshotAsOf(deals, t), t).score }));
+  // Pin the final point to the authoritative current score.
+  if (series.length) series[series.length - 1] = { ...series[series.length - 1], score: currentScore };
+  // Keep the chart readable: at most 8 points, always keeping the first and last.
+  const MAX = 8;
+  if (series.length > MAX) {
+    const step = (series.length - 1) / (MAX - 1);
+    series = Array.from({ length: MAX }, (_, i) => series[Math.round(i * step)]);
+  }
+  return series;
 }
 
 /** Trust Score history sparkline — grid lines, area fill, month labels. */
@@ -170,6 +218,7 @@ export default function ProfilePage() {
   const [tier, setTier] = useState("");
   const [stats, setStats] = useState<{ total: number; completed: number; disputed: number } | null>(null);
   const [seller, setSeller] = useState<{ verified?: boolean; phone?: string; payout?: Payout } | null>(null);
+  const [deals, setDeals] = useState<Deal[]>([]);
 
   const [toggles, setToggles] = useState<Toggles>({ email: true, whatsapp: false, twofa: true, autoconfirm: false });
 
@@ -182,12 +231,14 @@ export default function ProfilePage() {
       const fullName = user?.name || (em ? em.split("@")[0] : "there");
       if (alive) { setName(fullName); setEmail(em); }
 
-      const [rep, sell, loaded] = await Promise.all([
+      const [rep, sell, loaded, buying, selling] = await Promise.all([
         getMyReputation(em, user?.name).catch(() => null),
         loadSellerProfile(em).catch(() => null),
         loadUserProfile(em).catch(
           () => ({ firstName: "", otherNames: "", lastName: "", username: "", photo: "", hasRecord: false, otherLocked: false }) as LoadedProfile,
         ),
+        listMyDeals(em).catch(() => [] as Deal[]),
+        (em ? listMySales([em]) : Promise.resolve([] as Deal[])).catch(() => [] as Deal[]),
       ]);
       if (!alive) return;
       const base = splitName(fullName);
@@ -199,6 +250,9 @@ export default function ProfilePage() {
       setPhoto(loaded.photo || "");
       if (rep) { setScore(rep.score); setTier(rep.tierLabel); setStats(rep.stats); }
       setSeller(sell);
+      const byId = new Map<string, Deal>();
+      [...buying, ...selling].forEach((d) => byId.set(d.id, d));
+      setDeals([...byId.values()]);
       setLoading(false);
     })();
     return () => { alive = false; };
@@ -208,8 +262,13 @@ export default function ProfilePage() {
   const otherLocked = !!prof?.otherLocked;
   const initials = useMemo(() => initialsOf(name || "?"), [name]);
   const successRate = stats && stats.total ? Math.round((stats.completed / stats.total) * 100) : null;
-  const history = useMemo(() => buildHistory(score ?? 0), [score]);
-  const delta = history.length ? Math.max(0, history[history.length - 1].score - history[0].score) : 0;
+  // A trader with no counted deals has no history: force a flat line so the
+  // graph always agrees with the Total below it.
+  const history = useMemo(
+    () => buildScoreHistory(emailRef.current, stats && stats.total === 0 ? [] : deals, score ?? 0),
+    [deals, score, stats],
+  );
+  const delta = history.length ? history[history.length - 1].score - history[0].score : 0;
 
   function markDirty<T>(setter: (v: T) => void) {
     return (v: T) => { setter(v); if (saveState !== "idle") setSaveState("idle"); setErr(""); setDirty(true); };
@@ -298,7 +357,9 @@ export default function ProfilePage() {
             <div className="pf-chart-head">
               <div><div className="tf-eyebrow">Trust Score history</div><div className="pf-chart-cur">{score ?? "—"}</div></div>
               <div className="pf-chart-side">
-                <div className="pf-chart-delta tf-mono">{score == null ? "—" : `↑ ${delta} since ${history[0].label}`}</div>
+                <div className="pf-chart-delta tf-mono" style={{ color: delta > 0 ? "var(--safe)" : delta < 0 ? "var(--danger)" : "var(--muted)" }}>
+                  {score == null ? "—" : delta > 0 ? `↑ ${delta} since ${history[0].label}` : delta < 0 ? `↓ ${Math.abs(delta)} since ${history[0].label}` : "No change yet"}
+                </div>
                 <div className="pf-chart-band">{score == null ? "Build your history" : riskBand(score)}</div>
               </div>
             </div>

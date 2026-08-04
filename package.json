@@ -2,13 +2,16 @@
   "name": "trustflow-app",
   "version": "0.1.0",
   "private": true,
-  "description": "TrustFlow AI — AI-powered escrow for peer-to-peer trades. Wema Hackaholics 7.0.",
+  "description": "TrustFlow: AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "next lint",
-    "eval:ai": "tsx lib/ai/eval/run.ts"
+    "eval:ai": "tsx lib/ai/eval/run.ts",
+    "mobile:sync": "cap sync",
+    "mobile:ios": "cap sync ios && cap open ios",
+    "mobile:android": "cap sync android && cap open android"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
@@ -19,6 +22,10 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/ios": "^6.2.1",
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",

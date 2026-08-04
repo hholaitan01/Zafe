@@ -89,8 +89,9 @@ export default function LoginScreen() {
             </div>
             <div className="auth-live-rule" />
             <div className="auth-live-row tf-mono"><span>Item</span><span>MacBook Air M2</span></div>
-            <div className="auth-live-row tf-mono"><span>Seller Trust Score</span><span>87 / 100 · low risk</span></div>
+            <div className="auth-live-row tf-mono"><span>Seller Trust Score</span><span>87 / 100, low risk</span></div>
             <div className="auth-live-row tf-mono"><span>Ref</span><span>TF-9X4K2P7N</span></div>
+            <div className="auth-live-verdict"><span className="auth-live-ai">AI</span>No scam signals found in the chat</div>
           </div>
         </div>
 
@@ -185,6 +186,8 @@ const css = `
 .auth-live-amt{ font-size:36px; font-weight:700; letter-spacing:-.03em; line-height:1; margin-top:6px } .auth-live-amt span{ color:rgba(255,255,255,.55); margin-right:2px; font-size:22px }
 .auth-live-rule{ height:1px; background:rgba(255,255,255,.10) }
 .auth-live-row{ display:flex; justify-content:space-between; font-size:12px; color:rgba(255,255,255,.72) } .auth-live-row span:first-child{ color:rgba(255,255,255,.5) }
+.auth-live-verdict{ margin-top:4px; padding-top:11px; border-top:1px solid rgba(255,255,255,.10); display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:rgba(255,255,255,.9) }
+.auth-live-ai{ background:var(--safe); color:#fff; font-size:10px; font-weight:700; letter-spacing:.06em; padding:2px 6px; border-radius:5px }
 .auth-foot{ position:relative; display:none; font-size:12px; color:rgba(255,255,255,.5); letter-spacing:.04em }
 
 /* ---- form panel ---- */
