@@ -9,11 +9,11 @@
    ========================================================================== */
 
 import type { Deal } from "@/lib/deals/types";
-import { generateVirtualAccount, isValidAlatPayCallback, checkTransactionStatus } from "./alatpay";
+import { generateVirtualAccount, isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus } from "./alatpay";
 import { accountNameEnquiry, debitWalletTransfer } from "./wallet";
 import { ALAT_ESCROW_POOL_ACCOUNT, collectionLive, payoutLive } from "./config";
 
-export { isValidAlatPayCallback, checkTransactionStatus };
+export { isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus };
 
 export type PaymentMode = "live" | "mock";
 

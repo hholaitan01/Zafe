@@ -10,24 +10,33 @@
    ========================================================================== */
 
 import { jsonError, readJson } from "@/lib/ai/http";
-import { getServerUser } from "@/lib/auth/server";
+import { requireCaller } from "@/lib/auth/server";
+import { authConfigured } from "@/lib/auth/config";
 import { normalizeContact } from "@/lib/deals/helpers";
-import { getProfile, getProfileByUsername, normalizeUsername, upsertProfile } from "@/lib/profiles/store";
+import { getProfile, getProfileByUsername, normalizeUsername, upsertProfile, type ProfileRecord } from "@/lib/profiles/store";
 
 const MAX_PHOTO = 700_000; // ~700 KB data URL cap
+
+/** Public projection of a profile — never leaks the owner's email. A @username
+    lookup is a public directory read, so it must not deanonymise the account. */
+function publicProfile(p: ProfileRecord | null) {
+  if (!p) return null;
+  return { firstName: p.firstName, otherNames: p.otherNames, lastName: p.lastName, username: p.username, photo: p.photo };
+}
 
 export async function GET(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const username = url.searchParams.get("username")?.trim();
   if (username) {
+    // Public directory lookup — return display fields only, not the email.
     const p = await getProfileByUsername(username);
-    return Response.json({ profile: p });
+    return Response.json({ profile: publicProfile(p) });
   }
+  // Own profile: identity is the session in live mode, the ?email= only in demo.
   const qEmail = url.searchParams.get("email")?.trim() || "";
-  const user = await getServerUser();
-  const email = user?.email || qEmail;
-  if (!email) return Response.json({ profile: null });
-  const profile = await getProfile(email);
+  const caller = await requireCaller({ email: qEmail });
+  if (!caller) return Response.json({ profile: null });
+  const profile = await getProfile(caller.email);
   return Response.json({ profile });
 }
 
@@ -35,9 +44,12 @@ export async function POST(req: Request): Promise<Response> {
   const body = await readJson<{ email?: string; firstName?: string; otherNames?: string; lastName?: string; username?: string; photo?: string }>(req);
   if (!body) return jsonError("Invalid JSON body");
 
-  const user = await getServerUser();
-  const email = user?.email || body.email?.trim() || "";
-  if (!email) return jsonError("A user email is required.");
+  // Identity is the session in live mode; the client-supplied email is honoured
+  // only in demo mode. This stops an unauthenticated request from writing (or
+  // squatting a name/username on) another person's profile.
+  const caller = await requireCaller({ email: body.email });
+  if (!caller) return jsonError(authConfigured() ? "Sign in to update your profile." : "A user email is required.", authConfigured() ? 401 : 400);
+  const email = caller.email;
   if (body.photo && body.photo.length > MAX_PHOTO) return jsonError("That image is too large — please use a smaller photo.", 413);
 
   const existing = await getProfile(email);

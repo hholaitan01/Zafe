@@ -9,6 +9,7 @@
    ========================================================================== */
 
 import { getServerUser } from "@/lib/auth/server";
+import { authConfigured } from "@/lib/auth/config";
 import { scoreReputation } from "@/lib/reputation/engine";
 import { getReputation } from "@/lib/reputation/store";
 
@@ -17,10 +18,20 @@ export async function GET(req: Request): Promise<Response> {
   const qEmail = url.searchParams.get("email")?.trim() || "";
   const qName = url.searchParams.get("name")?.trim() || undefined;
 
-  // Prefer the trusted server session; fall back to the client-supplied email.
-  const user = await getServerUser();
-  const email = user?.email || qEmail;
-  const name = user?.name || qName;
+  // Reputation exposes a trader's stats and history, so it's the CALLER'S own
+  // only. In live mode the identity is the session (the ?email= param is
+  // ignored, blocking `?email=victim` lookups); in demo mode the local client
+  // supplies its own email.
+  let email: string | undefined;
+  let name: string | undefined;
+  if (authConfigured()) {
+    const user = await getServerUser();
+    email = user?.email;
+    name = user?.name;
+  } else {
+    email = qEmail;
+    name = qName;
+  }
 
   // Not signed in anywhere → return an empty "new trader" standing.
   if (!email) {

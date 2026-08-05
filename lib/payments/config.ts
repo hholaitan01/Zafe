@@ -17,6 +17,11 @@ export const ALATPAY_API_KEY = process.env.ALATPAY_API_KEY ?? "";
 export const ALATPAY_BUSINESS_ID = process.env.ALATPAY_BUSINESS_ID ?? "";
 export const ALAT_WALLET_API_KEY = process.env.ALAT_WALLET_API_KEY ?? "";
 export const ALAT_ESCROW_POOL_ACCOUNT = process.env.ALAT_ESCROW_POOL_ACCOUNT ?? "";
+/** Shared secret ALATPay signs webhook callbacks with (HMAC). Set this to
+    authenticate callbacks cryptographically instead of trusting the payload's
+    (non-secret) business id. Confirm ALAT's exact header + scheme, then wire it
+    in isValidAlatPayCallback. */
+export const ALATPAY_WEBHOOK_SECRET = process.env.ALATPAY_WEBHOOK_SECRET ?? "";
 
 /** True when ALATPay collection can run for real. */
 export function collectionLive(): boolean {

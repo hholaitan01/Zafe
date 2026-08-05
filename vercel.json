@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/deals/auto-release", "schedule": "0 3 * * *" }
+  ]
+}
