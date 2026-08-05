@@ -10,6 +10,7 @@
 import { jsonError, readJson } from "@/lib/ai/http";
 import { authConfigured } from "@/lib/auth/config";
 import { getServerUser, requireCaller } from "@/lib/auth/server";
+import { verifySellerIdentity } from "@/lib/sellers/kyc";
 import { getSeller, upsertSeller, type SellerPayout } from "@/lib/sellers/store";
 
 // A seller profile carries the payout account (sensitive), so GET only ever
@@ -42,11 +43,16 @@ export async function POST(req: Request): Promise<Response> {
     return jsonError("A payout account (number + name) is required to get paid.");
   }
 
+  // Identity verification is a real check, not a side effect of saving a payout
+  // account. In demo mode this is true (sandbox); in live mode it's only true
+  // once a KYC provider actually verifies them (see lib/sellers/kyc).
+  const idVerified = await verifySellerIdentity({ email, fullName: body.fullName, phone: body.phone });
+
   const seller = await upsertSeller({
     email,
     fullName: body.fullName,
     phone: body.phone,
-    idVerified: true,
+    idVerified,
     payout: body.payout,
     updatedAt: new Date().toISOString(),
   });
