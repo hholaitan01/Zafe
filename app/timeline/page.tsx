@@ -7,10 +7,11 @@
    Every figure is real: the summary, the stepper, the Trust Score, and the
    action buttons are all driven by the deal's status and timeline. */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
+import { EmptyState, ErrorState, Skeleton } from "@/app/_lib/States";
 import { getCurrentUser } from "@/lib/auth";
 import { confirmReceipt, getCurrentDealId, getDeal, naira } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
@@ -83,21 +84,24 @@ function initialsOf(s: string): string {
 export default function TimelinePage() {
   const router = useRouter();
   const [deal, setDeal] = useState<Deal | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [me, setMe] = useState("You");
   const [confirming, setConfirming] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const id = getCurrentDealId();
-    if (!id) return;
-    let alive = true;
-    Promise.all([getDeal(id), getCurrentUser().catch(() => null)]).then(([d, user]) => {
-      if (!alive) return;
-      setMe(user?.name || (user?.email ? user.email.split("@")[0] : "You"));
-      setDeal(d);
-    }).catch(() => {});
-    return () => { alive = false; };
+    if (!id) { setStatus("missing"); return; }
+    setStatus("loading");
+    Promise.all([getDeal(id), getCurrentUser().catch(() => null)])
+      .then(([d, user]) => {
+        setMe(user?.name || (user?.email ? user.email.split("@")[0] : "You"));
+        if (d) { setDeal(d); setStatus("ready"); } else { setStatus("missing"); }
+      })
+      .catch(() => setStatus("error"));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const steps = useMemo(() => (deal ? buildSteps(deal) : []), [deal]);
 
@@ -113,10 +117,36 @@ export default function TimelinePage() {
     navigator.clipboard?.writeText(n).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {});
   }
 
-  if (!deal) {
+  if (status !== "ready" || !deal) {
     return (
       <AppShell current="activity" user={{ name: me, initials: "" }}>
-        <div className="td-loading">Loading the transaction…</div>
+        {status === "error" ? (
+          <ErrorState onRetry={load}>We couldn&apos;t load this transaction. Check your connection and try again.</ErrorState>
+        ) : status === "missing" ? (
+          <EmptyState
+            icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M8 4v5" /></svg>}
+            title="No transaction selected"
+            action={<Link href="/history" className="tf-btn tf-btn--primary">Go to activity</Link>}
+          >
+            Open a deal from your activity to see its full timeline here.
+          </EmptyState>
+        ) : (
+          <div className="td-skel" aria-hidden>
+            <div className="tf-card" style={{ padding: 20 }}>
+              <Skeleton w={80} h={12} />
+              <Skeleton w="70%" h={22} style={{ marginTop: 12 }} />
+              <Skeleton w={150} h={28} style={{ marginTop: 12 }} />
+            </div>
+            <div className="tf-card" style={{ padding: 20, marginTop: 16 }}>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 0" }}>
+                  <Skeleton circle w={26} h={26} />
+                  <span style={{ flex: 1 }}><Skeleton w="45%" h={12} /><Skeleton w="65%" h={10} style={{ marginTop: 6 }} /></span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </AppShell>
     );
   }

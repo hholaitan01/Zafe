@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
 import { getCurrentUser } from "@/lib/auth";
+import { toast } from "@/app/_lib/Toast";
 import { getSellerProfile, naira, requestPayment } from "@/lib/client";
 
 function fmtMoney(raw: string): string {
@@ -51,9 +52,12 @@ export default function RequestPage() {
         seller: { name: profile?.fullName || me?.name || "Seller", contact: me?.email },
         buyerEmail: buyer.trim(),
       });
+      toast.success("Payment request sent");
       router.push("/selling");
     } catch {
-      setErr("Couldn't send the request. Please try again.");
+      const msg = "Couldn't send the request. Please try again.";
+      setErr(msg);
+      toast.error(msg);
       setBusy(false);
     }
   }
