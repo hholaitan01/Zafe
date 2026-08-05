@@ -32,16 +32,21 @@ export default function SellerPage() {
 
   async function verify() {
     if (busy) return;
-    if (!fullName.trim() || idNumber.trim().length < 10 || !bankName.trim() || accountNumber.trim().length < 10 || !accountName.trim()) {
-      setErr("Fill in your name, a valid BVN/NIN, and your full bank account details.");
+    if (!fullName.trim() || idNumber.trim().length !== 11 || !bankName.trim() || accountNumber.trim().length < 10 || !accountName.trim()) {
+      setErr("Fill in your name, your 11-digit BVN, and your full bank account details.");
       return;
     }
     setErr("");
     setBusy(true);
     try {
       const me = await getCurrentUser().catch(() => null);
-      await saveSellerProfile({ verified: true, fullName: fullName.trim(), payout: { bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountName: accountName.trim() } }, me?.email);
-      toast.success("Payout details saved");
+      const saved = await saveSellerProfile(
+        { fullName: fullName.trim(), payout: { bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountName: accountName.trim() } },
+        me?.email,
+        { idNumber: idNumber.trim(), idType: "bvn" },
+      );
+      if (saved.verified) toast.success("Identity verified. You can receive payouts.");
+      else toast("Details saved. We couldn't verify that BVN, so payouts stay locked until it matches your name.");
       router.push("/selling");
     } catch {
       const msg = "Couldn't save your details. Please try again.";
@@ -51,7 +56,7 @@ export default function SellerPage() {
     }
   }
 
-  const done = !!fullName.trim() && idNumber.trim().length >= 10 && !!bankName.trim() && accountNumber.trim().length >= 10 && !!accountName.trim();
+  const done = !!fullName.trim() && idNumber.trim().length === 11 && !!bankName.trim() && accountNumber.trim().length >= 10 && !!accountName.trim();
 
   return (
     <AppShell current="profile" user={{ name: shell.name, initials: shell.initials }}>
@@ -72,8 +77,8 @@ export default function SellerPage() {
             <div className="sl-sec-title">Your identity</div>
             <label className="sl-label">Full name (as on ID)</label>
             <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Chidi Nwosu" className="sl-input" />
-            <label className="sl-label">BVN or NIN</label>
-            <input value={idNumber} onChange={(e) => setIdNumber(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" maxLength={11} placeholder="11-digit BVN or NIN" className="sl-input sl-mono" />
+            <label className="sl-label">Bank Verification Number (BVN)</label>
+            <input value={idNumber} onChange={(e) => setIdNumber(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" maxLength={11} placeholder="Your 11-digit BVN" className="sl-input sl-mono" />
           </div>
 
           <div className="tf-card sl-sec">

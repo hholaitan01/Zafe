@@ -16,7 +16,8 @@ export interface SellerPayout {
 }
 
 export interface SellerProfileData {
-  verified: boolean;
+  /** Server-determined (the KYC result). Optional on input; always set on reads. */
+  verified?: boolean;
   fullName?: string;
   phone?: string;
   payout?: SellerPayout;
@@ -65,21 +66,28 @@ function toData(r: SellerRecord | null): SellerProfileData | null {
 /** Persist the seller profile server-side (verify) when we can, and always keep
     a local cache so the flow never hard-breaks (e.g. offline, or no session
     email yet — it will sync to the server once signed in). */
-export async function saveSellerProfile(profile: SellerProfileData, email?: string): Promise<SellerProfileData> {
-  const local: SellerProfileData = { ...profile, verified: true };
+export async function saveSellerProfile(
+  profile: SellerProfileData,
+  email?: string,
+  /** The BVN / vNIN to verify. Sent to the server for the KYC check and never cached. */
+  id?: { idNumber?: string; idType?: "bvn" | "vnin" },
+): Promise<SellerProfileData> {
   try {
     const r = await apiFetch<{ seller: SellerRecord }>("/api/seller", {
       method: "POST",
-      body: JSON.stringify({ email, fullName: profile.fullName, phone: profile.phone, payout: profile.payout }),
+      body: JSON.stringify({ email, fullName: profile.fullName, phone: profile.phone, payout: profile.payout, idNumber: id?.idNumber, idType: id?.idType }),
     });
     const server = toData(r.seller);
     if (server) {
+      // The server decides `verified` via the real KYC check — trust it, not the form.
       cache(server);
       return server;
     }
   } catch {
-    /* server rejected (e.g. no email) or offline — keep the local cache */
+    /* server rejected (e.g. no email) or offline — keep a local cache, unverified */
   }
+  // Offline / no-session fallback: cache the details but never claim verified.
+  const local: SellerProfileData = { ...profile, verified: false };
   cache(local);
   return local;
 }
