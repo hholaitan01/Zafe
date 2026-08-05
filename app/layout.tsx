@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import PwaRegister from "./_lib/PwaRegister";
+import { ToastHost } from "./_lib/Toast";
 
 export const metadata: Metadata = {
   applicationName: "TrustFlow",
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         {children}
+        <ToastHost />
         <PwaRegister />
       </body>
     </html>

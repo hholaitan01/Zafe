@@ -177,7 +177,7 @@ const css = `
 .ne-cta:disabled{ opacity:.45; cursor:not-allowed }
 
 .ne-summary{ padding:20px; display:flex; flex-direction:column; gap:12px }
-.ne-sum-total{ font-size:30px; font-weight:700; letter-spacing:-.03em; line-height:1 } .ne-sum-total span{ color:var(--faint); font-size:20px; margin-right:1px }
+.ne-sum-total{ font-size:30px; font-weight:700; letter-spacing:-.03em; line-height:1 } .ne-sum-total span{ color:var(--faint); font-size:20px; margin-right:4px }
 .ne-sum-rule{ height:1px; background:var(--line) }
 .ne-sum-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:13px; padding:2px 0 }
 .ne-sum-row span:first-child{ color:var(--muted); flex-shrink:0 }

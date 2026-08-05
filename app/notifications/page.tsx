@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/app/_lib/AppShell";
+import { EmptyState, Skeleton } from "@/app/_lib/States";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyReputation, listMyDeals, listMySales, setCurrentDealId } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
@@ -69,21 +70,34 @@ export default function NotificationsPage() {
         <div><div className="tf-eyebrow">Activity</div><h1>Notifications</h1></div>
       </div>
 
-      <div className="nt-list">
-        {notes == null ? (
-          <div className="nt-empty">Loading…</div>
-        ) : notes.length ? (
-          notes.map((n, i) => (
+      {notes == null ? (
+        <div className="nt-list" aria-hidden>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="nt-row" style={{ cursor: "default" }}>
+              <span className="nt-dot" style={{ background: "#E2E8F0" }} />
+              <span className="nt-main"><Skeleton w="45%" h={12} /><Skeleton w="80%" h={11} style={{ marginTop: 8 }} /></span>
+              <Skeleton w={34} h={10} />
+            </div>
+          ))}
+        </div>
+      ) : notes.length ? (
+        <div className="nt-list">
+          {notes.map((n, i) => (
             <button key={i} className="nt-row" onClick={() => open(n.dealId)}>
               <span className="nt-dot" style={{ background: n.color }} />
               <span className="nt-main"><span className="nt-title">{n.title}</span><span className="nt-text">{n.text}</span></span>
               <span className="nt-time">{ago(n.at)}</span>
             </button>
-          ))
-        ) : (
-          <div className="nt-empty">No notifications yet. Activity on your deals shows up here.</div>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>}
+          title="No notifications yet"
+        >
+          Activity on your deals — payments, delivery, disputes — will show up here.
+        </EmptyState>
+      )}
     </AppShell>
   );
 }

@@ -9,6 +9,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
+import { EmptyState, ErrorState, Skeleton, Spinner } from "@/app/_lib/States";
+import { toast } from "@/app/_lib/Toast";
 import { getCurrentUser } from "@/lib/auth";
 import { getSellerProfile, listMySales, loadSellerProfile, naira, setCurrentDealId, shipDeal } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
@@ -42,11 +44,23 @@ export default function SellingPage() {
   const [shell, setShell] = useState({ name: "You", initials: "" });
   const contactsRef = useRef<string[]>([]);
 
-  const load = useCallback(async () => {
-    const list = await listMySales(contactsRef.current).catch(() => [] as Deal[]);
-    setSales(list);
-    setVerified(getSellerProfile()?.verified === true);
+  const [error, setError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+
+  const load = useCallback(async (isRetry = false) => {
+    if (isRetry) setRetrying(true);
+    setError(false);
+    try {
+      const list = await listMySales(contactsRef.current);
+      setSales(list);
+      setVerified(getSellerProfile()?.verified === true);
+    } catch {
+      setError(true);
+    } finally {
+      if (isRetry) setRetrying(false);
+    }
   }, []);
+  const retry = () => { setSales(null); void load(true); };
 
   useEffect(() => {
     let alive = true;
@@ -66,7 +80,12 @@ export default function SellingPage() {
     setShipping(id);
     const payout = getSellerProfile()?.payout;
     const sellerPayout = payout ? { accountNumber: payout.accountNumber, accountName: payout.accountName, verified: true } : undefined;
-    try { await shipDeal(id, sellerPayout); } catch { /* reload reflects truth */ }
+    try {
+      await shipDeal(id, sellerPayout);
+      toast.success("Marked as shipped. Handover code sent to the buyer.");
+    } catch {
+      toast.error("Couldn't mark as shipped. Please try again.");
+    }
     await load();
     setShipping(null);
   }
@@ -98,8 +117,18 @@ export default function SellingPage() {
 
         <div className="sg-label">Your sales</div>
         <div className="sg-list">
-          {sales == null ? (
-            <div className="sg-empty">Loading your sales…</div>
+          {error ? (
+            <ErrorState onRetry={retry} retrying={retrying}>We couldn&apos;t load your sales. Check your connection and try again.</ErrorState>
+          ) : sales == null ? (
+            [0, 1].map((i) => (
+              <div key={i} className="tf-card sg-card" aria-hidden>
+                <div className="sg-card-top" style={{ cursor: "default" }}>
+                  <span className="sg-ic"><Skeleton circle w={40} h={40} /></span>
+                  <span className="sg-main"><Skeleton w="55%" h={13} /><Skeleton w="72%" h={11} style={{ marginTop: 7 }} /></span>
+                  <Skeleton w={60} h={17} radius={8} />
+                </div>
+              </div>
+            ))
           ) : sales.length ? (
             sales.map((d) => {
               const p = PILL[d.status];
@@ -113,7 +142,7 @@ export default function SellingPage() {
                   {d.status === "funded" && (
                     <button className="tf-btn tf-btn--primary sg-ship" disabled={shipping === d.id} onClick={() => void ship(d.id)}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"><path d="M3 21h18M5 21V10l7-5 7 5v11" /></svg>
-                      {shipping === d.id ? "Marking…" : "Mark as shipped"}
+                      {shipping === d.id ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Spinner light size={14} />Marking…</span> : "Mark as shipped"}
                     </button>
                   )}
                   {d.status === "shipped" && <div className="sg-note">Shipped. Waiting for the buyer to confirm; you&apos;ll be paid on release.</div>}
@@ -122,7 +151,13 @@ export default function SellingPage() {
               );
             })
           ) : (
-            <div className="sg-empty">No sales yet. Request a payment, or share your email so a buyer can pay you through escrow.</div>
+            <EmptyState
+              icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V10l7-5 7 5v11" /><path d="M9 21v-6h6v6" /></svg>}
+              title="No sales yet"
+              action={<Link href="/request" className="tf-btn tf-btn--verify">Request a payment</Link>}
+            >
+              Request a payment, or share your email so a buyer can pay you through escrow.
+            </EmptyState>
           )}
         </div>
       </div>

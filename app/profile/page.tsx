@@ -17,6 +17,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
+import { Skeleton, Spinner } from "@/app/_lib/States";
+import { toast } from "@/app/_lib/Toast";
 import { getCurrentUser, signOut, syncDisplayName } from "@/lib/auth";
 import {
   ApiError,
@@ -298,9 +300,12 @@ export default function ProfilePage() {
       if (full) { setName(full); void syncDisplayName(full); }
       setDirty(false);
       setSaveState("saved");
+      toast.success("Profile updated");
       setTimeout(() => setSaveState("idle"), 1600);
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : "Couldn't save. Please try again.");
+      const msg = e instanceof ApiError ? e.message : "Couldn't save. Please try again.";
+      setErr(msg);
+      toast.error(msg);
       setSaveState("idle");
     }
   }
@@ -349,7 +354,7 @@ export default function ProfilePage() {
         </div>
         <div className="pf-hero-since">
           <div className="tf-eyebrow">Trust Score</div>
-          <div className="pf-hero-score">{score ?? "—"}<span>/100</span></div>
+          <div className="pf-hero-score">{loading ? <Skeleton w={44} h={22} /> : <>{score ?? "—"}<span>/100</span></>}</div>
         </div>
       </div>
 
@@ -359,7 +364,7 @@ export default function ProfilePage() {
           {/* Trust Score history */}
           <div className="tf-card pf-pad">
             <div className="pf-chart-head">
-              <div><div className="tf-eyebrow">Trust Score history</div><div className="pf-chart-cur">{score ?? "—"}</div></div>
+              <div><div className="tf-eyebrow">Trust Score history</div><div className="pf-chart-cur">{loading ? <Skeleton w={30} h={20} /> : (score ?? "—")}</div></div>
               <div className="pf-chart-side">
                 <div className="pf-chart-delta tf-mono" style={{ color: delta > 0 ? "var(--safe)" : delta < 0 ? "var(--danger)" : "var(--muted)" }}>
                   {score == null ? "—" : delta > 0 ? `↑ ${delta} since ${history[0].label}` : delta < 0 ? `↓ ${Math.abs(delta)} since ${history[0].label}` : "No change yet"}
@@ -367,7 +372,7 @@ export default function ProfilePage() {
                 <div className="pf-chart-band">{score == null ? "Build your history" : riskBand(score)}</div>
               </div>
             </div>
-            <TrustScoreChart data={history} />
+            {loading ? <Skeleton w="100%" h={140} radius={12} style={{ marginTop: 12 }} /> : <TrustScoreChart data={history} />}
             <div className="pf-stat-strip">
               <div className="pf-stat"><div className="pf-stat-label">Total</div><div className="pf-stat-val">{stats?.total ?? 0}</div></div>
               <div className="pf-stat"><div className="pf-stat-label">Successful</div><div className="pf-stat-val">{stats?.completed ?? 0}{successRate != null && <span className="pf-stat-sub"> · {successRate}%</span>}</div></div>
@@ -401,7 +406,7 @@ export default function ProfilePage() {
             {err && <p className="pf-err">{err}</p>}
             <p className="pf-lock">{lockNote}</p>
             <button className="tf-btn tf-btn--primary pf-save" disabled={!dirty || saveState === "saving"} onClick={() => void saveNames()}>
-              {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved ✓" : dirty ? "Save changes" : "Save"}
+              {saveState === "saving" ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Spinner light size={15} />Saving…</span> : saveState === "saved" ? "Saved ✓" : dirty ? "Save changes" : "Save"}
             </button>
           </div>
 

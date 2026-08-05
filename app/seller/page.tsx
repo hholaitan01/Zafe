@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/app/_lib/AppShell";
 import { getCurrentUser } from "@/lib/auth";
+import { toast } from "@/app/_lib/Toast";
 import { saveSellerProfile } from "@/lib/client";
 
 export default function SellerPage() {
@@ -40,9 +41,12 @@ export default function SellerPage() {
     try {
       const me = await getCurrentUser().catch(() => null);
       await saveSellerProfile({ verified: true, fullName: fullName.trim(), payout: { bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountName: accountName.trim() } }, me?.email);
+      toast.success("Payout details saved");
       router.push("/selling");
     } catch {
-      setErr("Couldn't save your details. Please try again.");
+      const msg = "Couldn't save your details. Please try again.";
+      setErr(msg);
+      toast.error(msg);
       setBusy(false);
     }
   }

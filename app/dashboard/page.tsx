@@ -6,6 +6,7 @@
    system. All figures come from real deals + reputation. */
 
 import { useEffect, useMemo, useState } from "react";
+import { Skeleton } from "@/app/_lib/States";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
@@ -58,6 +59,17 @@ function TxRow({ tx, onOpen }: { tx: Deal; onOpen: (id: string) => void }) {
   );
 }
 
+/** A skeleton placeholder shaped like a transaction row, shown while deals load. */
+function SkelRow() {
+  return (
+    <div className="dsh-row" style={{ cursor: "default" }} aria-hidden>
+      <span className="dsh-row-ic"><Skeleton circle w={38} h={38} /></span>
+      <span className="dsh-row-main"><Skeleton w="55%" h={13} /><Skeleton w="38%" h={11} style={{ marginTop: 7 }} /></span>
+      <Skeleton w={62} h={13} />
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState({ name: "", first: "there", initials: "", photo: "" });
@@ -102,6 +114,7 @@ export default function DashboardPage() {
   const active = (deals || []).filter((d) => ["created", "funded", "shipped", "disputed"].includes(d.status));
   const riskLabel = score == null ? "" : score >= 70 ? "low risk" : score >= 40 ? "medium risk" : "building trust";
   const open = (id: string) => { setCurrentDealId(id); router.push("/timeline"); };
+  const loading = deals == null;
 
   return (
     <AppShell current="dashboard" user={{ name: user.name || "You", initials: user.initials, photo: user.photo, score: score ?? undefined }}>
@@ -123,22 +136,22 @@ export default function DashboardPage() {
       <div className="dsh-kpis">
         <div className="tf-card dsh-kpi dsh-kpi-hero">
           <div className="tf-eyebrow">Held in escrow</div>
-          <div className="dsh-kpi-val tf-mono"><span className="dsh-naira">₦</span>{naira(kpis.heldTotal).replace("₦", "")}</div>
+          <div className="dsh-kpi-val tf-mono">{loading ? <Skeleton w={132} h={26} style={{ marginTop: 6 }} /> : <><span className="dsh-naira">₦</span>{naira(kpis.heldTotal).replace("₦", "")}</>}</div>
           <div className="dsh-kpi-sub">{kpis.held ? `Across ${kpis.held} active deal${kpis.held === 1 ? "" : "s"}` : "Nothing in escrow yet"}</div>
         </div>
         <div className="tf-card dsh-kpi">
           <div className="tf-eyebrow">Trust Score</div>
-          <div className="dsh-kpi-val" style={{ color: "var(--safe)" }}>{score ?? "—"}</div>
+          <div className="dsh-kpi-val" style={{ color: "var(--safe)" }}>{loading ? <Skeleton w={52} h={26} style={{ marginTop: 6 }} /> : (score ?? "—")}</div>
           <div className="dsh-kpi-sub">{score == null ? "Build your history" : `Out of 100 · ${riskLabel}`}</div>
         </div>
         <div className="tf-card dsh-kpi">
           <div className="tf-eyebrow">Successful</div>
-          <div className="dsh-kpi-val">{kpis.completed} <span className="dsh-kpi-slash">/ {kpis.total}</span></div>
+          <div className="dsh-kpi-val">{loading ? <Skeleton w={52} h={26} style={{ marginTop: 6 }} /> : <>{kpis.completed} <span className="dsh-kpi-slash">/ {kpis.total}</span></>}</div>
           <div className="dsh-kpi-sub">{kpis.disputed ? `${kpis.disputed} in dispute` : tier || "No disputes"}</div>
         </div>
         <div className="tf-card dsh-kpi">
           <div className="tf-eyebrow">Active</div>
-          <div className="dsh-kpi-val">{kpis.active}</div>
+          <div className="dsh-kpi-val">{loading ? <Skeleton w={38} h={26} style={{ marginTop: 6 }} /> : kpis.active}</div>
           <div className="dsh-kpi-sub">{kpis.funded} funded · {kpis.delivered} delivered</div>
         </div>
       </div>
@@ -148,8 +161,8 @@ export default function DashboardPage() {
         <Link href="/history" className="dsh-sec-link">View all</Link>
       </div>
       <div className="dsh-list">
-        {deals == null ? (
-          <div className="dsh-empty">Loading your transactions…</div>
+        {loading ? (
+          [0, 1, 2].map((i) => <SkelRow key={i} />)
         ) : active.length ? (
           active.map((tx) => <TxRow key={tx.id} tx={tx} onOpen={open} />)
         ) : (
