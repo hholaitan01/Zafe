@@ -6,9 +6,11 @@
    status pill (no leading dot). Filters and search run client-side. Desktop and
    mobile share the layout inside AppShell; a row opens that deal's timeline. */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/app/_lib/AppShell";
+import { EmptyState, ErrorState, Skeleton } from "@/app/_lib/States";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyReputation, listMyDeals, listMySales, naira, setCurrentDealId } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
@@ -61,23 +63,26 @@ function rowDate(iso: string): string {
 export default function ActivityPage() {
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [error, setError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [shell, setShell] = useState({ name: "", initials: "", photo: "", score: undefined as number | undefined });
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      const user = await getCurrentUser().catch(() => null);
-      const email = user?.email;
-      const name = user?.name || (email ? email.split("@")[0] : "there");
-      const initials = name.trim().split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
-      const [buying, selling, rep] = await Promise.all([
-        listMyDeals(email).catch(() => [] as Deal[]),
-        (email ? listMySales([email]) : Promise.resolve([] as Deal[])).catch(() => [] as Deal[]),
-        getMyReputation(email, user?.name).catch(() => null),
+  const load = useCallback(async (isRetry = false) => {
+    if (isRetry) setRetrying(true);
+    setError(false);
+    const user = await getCurrentUser().catch(() => null);
+    const email = user?.email;
+    const name = user?.name || (email ? email.split("@")[0] : "there");
+    const initials = name.trim().split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+    try {
+      // The deal lists are the critical load — surface a retry if they fail.
+      const [buying, selling] = await Promise.all([
+        listMyDeals(email),
+        email ? listMySales([email]) : Promise.resolve([] as Deal[]),
       ]);
-      if (!alive) return;
+      const rep = await getMyReputation(email, user?.name).catch(() => null);
       const sellerIds = new Set(selling.map((d) => d.id));
       const byId = new Map<string, Deal>();
       [...buying, ...selling].forEach((d) => byId.set(d.id, d));
@@ -89,9 +94,15 @@ export default function ActivityPage() {
         });
       setRows(all);
       setShell({ name, initials, photo: "", score: rep?.score });
-    })();
-    return () => { alive = false; };
+    } catch {
+      setError(true);
+    } finally {
+      if (isRetry) setRetrying(false);
+    }
   }, []);
+
+  useEffect(() => { void load(); }, [load]);
+  const retry = () => { setRows(null); void load(true); };
 
   const shown = useMemo(() => {
     const f = FILTERS.find((x) => x.id === filter) || FILTERS[0];
@@ -139,8 +150,23 @@ export default function ActivityPage() {
         </div>
       </div>
 
-      {rows == null ? (
-        <div className="ac-empty">Loading your transactions…</div>
+      {error ? (
+        <ErrorState onRetry={retry} retrying={retrying}>We couldn&apos;t load your transactions. Check your connection and try again.</ErrorState>
+      ) : rows == null ? (
+        <div className="ac-groups" aria-hidden>
+          <section className="tf-card ac-group">
+            <header className="ac-group-head"><Skeleton w={96} h={13} /><Skeleton w={130} h={11} /></header>
+            <div className="ac-rows">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="ac-row" style={{ cursor: "default" }}>
+                  <span className="ac-ic"><Skeleton circle w={38} h={38} /></span>
+                  <span className="ac-main"><Skeleton w="60%" h={13} /><Skeleton w="40%" h={11} style={{ marginTop: 7 }} /></span>
+                  <span className="ac-right" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}><Skeleton w={80} h={13} /><Skeleton w={58} h={17} radius={8} /></span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       ) : groups.length ? (
         <div className="ac-groups">
           {groups.map((g) => (
@@ -173,8 +199,21 @@ export default function ActivityPage() {
             </section>
           ))}
         </div>
+      ) : query || filter !== "all" ? (
+        <EmptyState
+          icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>}
+          title="No matches"
+        >
+          No transactions match this view. Clear the filter or search to see everything.
+        </EmptyState>
       ) : (
-        <div className="ac-empty">{query || filter !== "all" ? "No transactions match this view." : "No deals yet. Your escrows, as buyer or seller, appear here."}</div>
+        <EmptyState
+          icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6h11M8 12h11M8 18h11" /><circle cx="3.5" cy="6" r="1.2" /><circle cx="3.5" cy="12" r="1.2" /><circle cx="3.5" cy="18" r="1.2" /></svg>}
+          title="No transactions yet"
+          action={<Link href="/new-escrow" className="tf-btn tf-btn--primary">Start a protected deal</Link>}
+        >
+          Your escrows, as buyer or seller, will show up here.
+        </EmptyState>
       )}
     </AppShell>
   );

@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
+import { Spinner } from "@/app/_lib/States";
 import { getCurrentUser, signOut, syncDisplayName } from "@/lib/auth";
 import {
   ApiError,
@@ -401,7 +402,7 @@ export default function ProfilePage() {
             {err && <p className="pf-err">{err}</p>}
             <p className="pf-lock">{lockNote}</p>
             <button className="tf-btn tf-btn--primary pf-save" disabled={!dirty || saveState === "saving"} onClick={() => void saveNames()}>
-              {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved ✓" : dirty ? "Save changes" : "Save"}
+              {saveState === "saving" ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Spinner light size={15} />Saving…</span> : saveState === "saved" ? "Saved ✓" : dirty ? "Save changes" : "Save"}
             </button>
           </div>
 

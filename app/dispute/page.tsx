@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
+import { Skeleton, Spinner } from "@/app/_lib/States";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentDealId, getMyReputation, judgeDispute, listMyDeals, listMySales, naira } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
@@ -124,7 +125,10 @@ export default function DisputePage() {
       </div>
 
       {deals == null ? (
-        <div className="dp-loading">Loading your transactions…</div>
+        <div className="dp-selector" aria-hidden>
+          <div className="dp-sel-label">Which transaction is this about?</div>
+          <Skeleton w="100%" h={52} radius={14} />
+        </div>
       ) : deals.length === 0 ? (
         <div className="dp-empty">
           <div className="dp-empty-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v18M5 7l-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0zM7 7h10" /></svg></div>
@@ -185,7 +189,7 @@ export default function DisputePage() {
                   </div>
 
                   <button className="tf-btn tf-btn--primary dp-analyze" disabled={busy || !statement.trim()} onClick={() => void analyze()}>
-                    {busy ? "Analysing the case…" : reco ? "Re-run recommendation" : "Get AI recommendation"}
+                    {busy ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Spinner light size={15} />Analysing the case…</span> : reco ? "Re-run recommendation" : "Get AI recommendation"}
                   </button>
                 </div>
 

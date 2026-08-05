@@ -11,7 +11,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Spinner } from "@/app/_lib/States";
 import { sendMagicLink, signInWithGoogle, type AuthResult } from "@/lib/auth";
+
+/** Button label with a leading spinner while an async action runs. */
+function Busy({ children, light = true }: { children: React.ReactNode; light?: boolean }) {
+  return <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Spinner light={light} size={15} />{children}</span>;
+}
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -111,7 +117,7 @@ export default function LoginScreen() {
               </div>
               <h2 className="auth-title">Check your inbox</h2>
               <p className="auth-sub">We sent a login link to <b>{sentTo}</b>. Tap it on this device to sign in. It expires shortly and works once.</p>
-              <button className="auth-btn auth-btn-primary" onClick={handleLink} disabled={loading}>{loading ? "Sending…" : "Send another link"}</button>
+              <button className="auth-btn auth-btn-primary" onClick={handleLink} disabled={loading}>{loading ? <Busy>Sending…</Busy> : "Send another link"}</button>
               <button className="auth-btn auth-btn-ghost" onClick={() => { setSentTo(null); setError(null); }}>Use a different email</button>
               {error && <p className="auth-error" role="alert">{error}</p>}
               <p className="auth-hint">No email after a minute? Check spam, or send a new link.</p>
@@ -128,7 +134,7 @@ export default function LoginScreen() {
                   <path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.9-6.1z" />
                   <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.3-5.7c-2 1.4-4.6 2.2-7.9 2.2-6.4 0-11.8-4.1-13.6-9.9l-7.9 6.1C6.4 42.6 14.6 48 24 48z" />
                 </svg>
-                {loading ? "Please wait…" : "Continue with Google"}
+                {loading ? <Busy light={false}>Please wait…</Busy> : "Continue with Google"}
               </button>
 
               <div className="auth-divider"><span>or with your email</span></div>
@@ -145,7 +151,7 @@ export default function LoginScreen() {
                 autoComplete="email"
                 enterKeyHint="go"
               />
-              <button className="auth-btn auth-btn-primary" onClick={handleLink} disabled={loading || !email.trim()}>{loading ? "Sending…" : "Email me a login link"}</button>
+              <button className="auth-btn auth-btn-primary" onClick={handleLink} disabled={loading || !email.trim()}>{loading ? <Busy>Sending…</Busy> : "Email me a login link"}</button>
               {error && <p className="auth-error" role="alert">{error}</p>}
             </>
           )}
