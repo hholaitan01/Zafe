@@ -8,7 +8,8 @@
    hosts differ and this hasn't been tested against a live sandbox yet.
    ========================================================================== */
 
-import { ALATPAY_API_KEY, ALATPAY_BUSINESS_ID } from "./config";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { ALATPAY_API_KEY, ALATPAY_BUSINESS_ID, ALATPAY_WEBHOOK_SECRET } from "./config";
 
 const ALATPAY_BASE_URL = "https://apibox.alatpay.ng/bank-transfer/api/v1"; // verify in ALATPay dashboard docs
 
@@ -53,9 +54,31 @@ export async function checkTransactionStatus(alatTransactionId: string) {
   return res.json();
 }
 
-/** ALATPay callback verification. Confirm with the dashboard whether they sign
-    callbacks (HMAC); if so, verify that signature here too. */
+/** ALATPay callback SHAPE check. This only confirms the payload looks like an
+    ALATPay event for our business — the businessId is an identifier, NOT a
+    secret, so this alone does not authenticate the sender. Authentication is
+    the HMAC signature (below) in mock-collection deployments, or the live
+    re-query in live-collection deployments. */
 export function isValidAlatPayCallback(payload: unknown): boolean {
   const p = payload as { data?: { businessId?: string; status?: unknown } } | null;
   return Boolean(p && p.data && p.data.businessId === ALATPAY_BUSINESS_ID && typeof p.data.status === "string");
+}
+
+/**
+ * Verify an ALATPay webhook's HMAC signature against the RAW request body.
+ * Returns false when no secret is configured (caller must then fall back to the
+ * live re-query, or refuse to fund). Confirm ALAT's exact header name and
+ * digest scheme in the merchant dashboard; this uses HMAC-SHA256(hex).
+ */
+export function isAlatPayCallbackSignatureValid(rawBody: string, signatureHeader: string | null): boolean {
+  if (!ALATPAY_WEBHOOK_SECRET || !signatureHeader) return false;
+  const expected = createHmac("sha256", ALATPAY_WEBHOOK_SECRET).update(rawBody, "utf8").digest("hex");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(signatureHeader.trim());
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/** True when a webhook secret is configured, so signatures can be verified. */
+export function alatPayWebhookSecretConfigured(): boolean {
+  return Boolean(ALATPAY_WEBHOOK_SECRET);
 }

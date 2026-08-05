@@ -9,7 +9,7 @@
 
 import { jsonError, readJson } from "@/lib/ai/http";
 import { authConfigured } from "@/lib/auth/config";
-import { getServerUser } from "@/lib/auth/server";
+import { getServerUser, requireCaller } from "@/lib/auth/server";
 import { getSeller, upsertSeller, type SellerPayout } from "@/lib/sellers/store";
 
 // A seller profile carries the payout account (sensitive), so GET only ever
@@ -31,9 +31,13 @@ export async function POST(req: Request): Promise<Response> {
   const body = await readJson<{ email?: string; fullName?: string; phone?: string; payout?: SellerPayout }>(req);
   if (!body) return jsonError("Invalid JSON body");
 
-  const user = await getServerUser();
-  const email = user?.email || body.email?.trim() || "";
-  if (!email) return jsonError("A seller email is required.");
+  // The payout account is where escrow money lands, so the identity here MUST be
+  // trusted: the session in live mode, the client email only in demo. Otherwise
+  // an unauthenticated request could overwrite another seller's payout account
+  // and redirect their payouts.
+  const caller = await requireCaller({ email: body.email });
+  if (!caller) return jsonError(authConfigured() ? "Sign in to save your seller details." : "A seller email is required.", authConfigured() ? 401 : 400);
+  const email = caller.email;
   if (!body.payout?.accountNumber || !body.payout?.accountName) {
     return jsonError("A payout account (number + name) is required to get paid.");
   }

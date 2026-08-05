@@ -51,3 +51,21 @@ export async function authorizeDeal(id: string): Promise<DealAccess> {
   if (!isPartyToDeal(deal, user.email)) return { ok: false, status: 404 };
   return { ok: true, deal };
 }
+
+export type DealRole = "buyer" | "seller" | "other" | "demo";
+
+/**
+ * The caller's role on a specific deal, from the trusted session.
+ * Used to stop a party from taking the OTHER party's action — e.g. a seller
+ * self-releasing escrow (a buyer-only "confirm receipt"), or a buyer refunding
+ * themselves after delivery. Demo mode has one local session, so → "demo".
+ */
+export async function callerRoleOnDeal(deal: Deal): Promise<DealRole> {
+  if (!authConfigured()) return "demo";
+  const user = await getServerUser();
+  if (!user?.email) return "other";
+  const me = normalizeContact(user.email);
+  if (deal.buyerEmail && normalizeContact(deal.buyerEmail) === me) return "buyer";
+  if (deal.seller?.contact && normalizeContact(deal.seller.contact) === me) return "seller";
+  return "other";
+}

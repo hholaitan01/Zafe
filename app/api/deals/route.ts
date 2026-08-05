@@ -7,17 +7,25 @@
 
 import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
 import { getServerUser } from "@/lib/auth/server";
+import { authConfigured } from "@/lib/auth/config";
 import { createDeal, listDeals, listDealsForUser } from "@/lib/deals/store";
 import type { CreateDealInput } from "@/lib/deals/types";
 import { resolveContact } from "@/lib/profiles/store";
 
 export async function GET(req: Request): Promise<Response> {
-  // Scope to the signed-in trader: the session cookie (live) wins, else the
-  // client-supplied ?buyer= (demo). With no identity at all, list everything.
   const buyer = new URL(req.url).searchParams.get("buyer")?.trim() || "";
-  const user = await getServerUser();
-  const email = user?.email || buyer;
-  const deals = email ? await listDealsForUser(email) : await listDeals();
+
+  // LIVE: scope strictly to the session. The ?buyer= param is ignored and an
+  // unauthenticated request is rejected — so nobody can read another trader's
+  // deals (or the whole table) by passing an arbitrary email or none at all.
+  if (authConfigured()) {
+    const user = await getServerUser();
+    if (!user?.email) return jsonError("Sign in to view your deals.", 401);
+    return Response.json({ deals: await listDealsForUser(user.email) });
+  }
+
+  // DEMO: single local sandbox, no cross-tenant data to protect.
+  const deals = buyer ? await listDealsForUser(buyer) : await listDeals();
   return Response.json({ deals });
 }
 
