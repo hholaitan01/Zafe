@@ -24,6 +24,21 @@ export function SelfieCapture({ value, onChange }: { value?: string; onChange: (
   };
   useEffect(() => stop, []); // stop the camera if the component unmounts
 
+  // Attach the stream once the <video> is actually in the DOM. The element only
+  // renders when `active` is true, so we can't set srcObject inside start() —
+  // videoRef would still be null. Running here (post-render) also lets us mute +
+  // play in a way iOS Safari accepts (muted + playsinline autoplay).
+  useEffect(() => {
+    if (!active) return;
+    const v = videoRef.current;
+    const stream = streamRef.current;
+    if (!v || !stream) return;
+    v.srcObject = stream;
+    v.muted = true;
+    v.setAttribute("playsinline", "true");
+    v.play().catch(() => {});
+  }, [active]);
+
   async function start() {
     setErr("");
     setStarting(true);
@@ -33,11 +48,7 @@ export function SelfieCapture({ value, onChange }: { value?: string; onChange: (
         audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
-      }
-      setActive(true);
+      setActive(true); // renders the <video>; the effect above attaches the stream
     } catch {
       setErr("Camera access is needed to verify. Allow it in your browser, or continue without a selfie.");
     } finally {
@@ -77,7 +88,7 @@ export function SelfieCapture({ value, onChange }: { value?: string; onChange: (
         </>
       ) : active ? (
         <>
-          <div className="sf-video-wrap"><video ref={videoRef} playsInline muted className="sf-video" /></div>
+          <div className="sf-video-wrap"><video ref={videoRef} autoPlay playsInline muted className="sf-video" /></div>
           <div className="sf-actions">
             <button type="button" className="sf-btn" onClick={capture}>Capture</button>
             <button type="button" className="sf-btn sf-btn-ghost" onClick={stop}>Cancel</button>
