@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/app/_lib/AppShell";
+import { SelfieCapture } from "@/app/_lib/SelfieCapture";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "@/app/_lib/Toast";
 import { saveSellerProfile } from "@/lib/client";
@@ -16,6 +17,7 @@ export default function SellerPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [idNumber, setIdNumber] = useState("");
+  const [selfie, setSelfie] = useState<string | undefined>(undefined);
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -32,16 +34,21 @@ export default function SellerPage() {
 
   async function verify() {
     if (busy) return;
-    if (!fullName.trim() || idNumber.trim().length < 10 || !bankName.trim() || accountNumber.trim().length < 10 || !accountName.trim()) {
-      setErr("Fill in your name, a valid BVN/NIN, and your full bank account details.");
+    if (!fullName.trim() || idNumber.trim().length !== 11 || !bankName.trim() || accountNumber.trim().length < 10 || !accountName.trim()) {
+      setErr("Fill in your name, your 11-digit BVN, and your full bank account details.");
       return;
     }
     setErr("");
     setBusy(true);
     try {
       const me = await getCurrentUser().catch(() => null);
-      await saveSellerProfile({ verified: true, fullName: fullName.trim(), payout: { bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountName: accountName.trim() } }, me?.email);
-      toast.success("Payout details saved");
+      const saved = await saveSellerProfile(
+        { fullName: fullName.trim(), payout: { bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountName: accountName.trim() } },
+        me?.email,
+        { idNumber: idNumber.trim(), idType: "bvn", selfie },
+      );
+      if (saved.verified) toast.success("Identity verified. You can receive payouts.");
+      else toast("Details saved. We couldn't verify you, so payouts stay locked until your BVN and selfie match.");
       router.push("/selling");
     } catch {
       const msg = "Couldn't save your details. Please try again.";
@@ -51,7 +58,7 @@ export default function SellerPage() {
     }
   }
 
-  const done = !!fullName.trim() && idNumber.trim().length >= 10 && !!bankName.trim() && accountNumber.trim().length >= 10 && !!accountName.trim();
+  const done = !!fullName.trim() && idNumber.trim().length === 11 && !!bankName.trim() && accountNumber.trim().length >= 10 && !!accountName.trim();
 
   return (
     <AppShell current="profile" user={{ name: shell.name, initials: shell.initials }}>
@@ -72,19 +79,14 @@ export default function SellerPage() {
             <div className="sl-sec-title">Your identity</div>
             <label className="sl-label">Full name (as on ID)</label>
             <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Chidi Nwosu" className="sl-input" />
-            <label className="sl-label">BVN or NIN</label>
-            <input value={idNumber} onChange={(e) => setIdNumber(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" maxLength={11} placeholder="11-digit BVN or NIN" className="sl-input sl-mono" />
+            <label className="sl-label">Bank Verification Number (BVN)</label>
+            <input value={idNumber} onChange={(e) => setIdNumber(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" maxLength={11} placeholder="Your 11-digit BVN" className="sl-input sl-mono" />
           </div>
 
           <div className="tf-card sl-sec">
             <div className="sl-sec-title">Liveness check</div>
-            <div className="sl-live">
-              <div className="sl-live-ring">
-                <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.4"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
-              </div>
-              <div className="sl-live-ok"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.4"><path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>Liveness confirmed. Real person.</div>
-              <p className="sl-live-sub">Blink detected · face matches ID photo</p>
-            </div>
+            <p className="sl-sec-sub">Take a quick selfie. We match it to the photo on your BVN to confirm you are a real person, not an impersonator.</p>
+            <SelfieCapture value={selfie} onChange={setSelfie} />
           </div>
 
           <div className="tf-card sl-sec">
