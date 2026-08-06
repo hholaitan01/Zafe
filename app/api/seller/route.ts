@@ -29,7 +29,7 @@ export async function GET(req: Request): Promise<Response> {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const body = await readJson<{ email?: string; fullName?: string; phone?: string; payout?: SellerPayout; idType?: "bvn" | "vnin"; idNumber?: string }>(req);
+  const body = await readJson<{ email?: string; fullName?: string; phone?: string; payout?: SellerPayout; idType?: "bvn" | "vnin"; idNumber?: string; selfie?: string }>(req);
   if (!body) return jsonError("Invalid JSON body");
 
   // The payout account is where escrow money lands, so the identity here MUST be
@@ -47,7 +47,7 @@ export async function POST(req: Request): Promise<Response> {
   // account. In demo mode this is true (sandbox); in live mode it's only true
   // once the KYC provider matches the BVN/vNIN to the name (see lib/sellers/kyc).
   // The id number is used to verify and never stored on the seller record.
-  const idVerified = await verifySellerIdentity({ email, fullName: body.fullName, phone: body.phone, idType: body.idType, idNumber: body.idNumber });
+  const idVerified = await verifySellerIdentity({ email, fullName: body.fullName, phone: body.phone, idType: body.idType, idNumber: body.idNumber, selfie: body.selfie });
 
   const seller = await upsertSeller({
     email,

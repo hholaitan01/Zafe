@@ -69,13 +69,13 @@ function toData(r: SellerRecord | null): SellerProfileData | null {
 export async function saveSellerProfile(
   profile: SellerProfileData,
   email?: string,
-  /** The BVN / vNIN to verify. Sent to the server for the KYC check and never cached. */
-  id?: { idNumber?: string; idType?: "bvn" | "vnin" },
+  /** The BVN / vNIN + selfie to verify. Sent to the server for the KYC check and never cached. */
+  id?: { idNumber?: string; idType?: "bvn" | "vnin"; selfie?: string },
 ): Promise<SellerProfileData> {
   try {
     const r = await apiFetch<{ seller: SellerRecord }>("/api/seller", {
       method: "POST",
-      body: JSON.stringify({ email, fullName: profile.fullName, phone: profile.phone, payout: profile.payout, idNumber: id?.idNumber, idType: id?.idType }),
+      body: JSON.stringify({ email, fullName: profile.fullName, phone: profile.phone, payout: profile.payout, idNumber: id?.idNumber, idType: id?.idType, selfie: id?.selfie }),
     });
     const server = toData(r.seller);
     if (server) {

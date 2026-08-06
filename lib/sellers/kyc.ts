@@ -43,12 +43,22 @@ export interface KycInput {
   idType?: "bvn" | "vnin";
   /** The BVN or vNIN. Used only to verify, never persisted. */
   idNumber?: string;
+  /** A base64 selfie (with or without the data: prefix). When present, we run a
+      liveness/face check against the BVN's government photo, not just a name match. */
+  selfie?: string;
 }
+
+/** Face-match confidence at or above this counts as the same person (Dojah's own
+    guidance: below 90 is treated as no match). */
+const MIN_FACE_CONFIDENCE = 90;
 
 /**
  * Verify a seller's identity. Returns whether they are genuinely verified —
  * never a blanket true just because a form was submitted. Fails closed: any
- * error, misconfiguration, or name mismatch returns false.
+ * error, misconfiguration, name mismatch, or failed face check returns false.
+ *
+ * With a selfie: BVN + selfie-to-government-photo match (the liveness step).
+ * Without one: BVN name-match only (the weaker fallback).
  */
 export async function verifySellerIdentity(input: KycInput): Promise<boolean> {
   // Sandbox: no real identities to check, so keep the flow demoable.
@@ -61,10 +71,37 @@ export async function verifySellerIdentity(input: KycInput): Promise<boolean> {
   if (!id || !name) return false;
 
   try {
+    // A selfie enables the stronger BVN + face check (only supported for BVN).
+    if (input.selfie && input.idType !== "vnin") {
+      return await dojahBvnSelfie(id, name, input.selfie);
+    }
     return await dojahVerify(input.idType === "vnin" ? "vnin" : "bvn", id, name);
   } catch {
     return false; // never mark verified on a network/parse error
   }
+}
+
+/** BVN + selfie: confirm the person is live and their face matches the photo the
+    government holds for that BVN, and that the name matches too. */
+async function dojahBvnSelfie(bvn: string, fullName: string, selfie: string): Promise<boolean> {
+  const selfie_image = selfie.replace(/^data:image\/\w+;base64,/, "");
+  const res = await fetch(`${DOJAH_BASE_URL}/api/v1/kyc/bvn/verify`, {
+    method: "POST",
+    headers: { AppId: DOJAH_APP_ID, Authorization: DOJAH_SECRET_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ bvn, selfie_image }),
+  });
+  if (!res.ok) return false;
+
+  const body = (await res.json().catch(() => null)) as {
+    entity?: { first_name?: string; last_name?: string; selfie_verification?: { match?: boolean; confidence_value?: number } };
+  } | null;
+  const e = body?.entity;
+  if (!e) return false;
+
+  const sv = e.selfie_verification;
+  const faceOk = sv?.match === true && Number(sv?.confidence_value ?? 0) >= MIN_FACE_CONFIDENCE;
+  const nameOk = nameMatches(fullName, String(e.first_name ?? ""), String(e.last_name ?? ""));
+  return faceOk && nameOk;
 }
 
 /** Look the id up with Dojah and confirm the registered name matches. */
