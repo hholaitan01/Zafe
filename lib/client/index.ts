@@ -12,7 +12,7 @@ export { getTrustScore, checkScam, judgeDispute } from "./ai";
 export { listDeals, listMyDeals, listMySales, requestPayment, getDeal, createDeal, createEscrowAccount, setDealStatus, shipDeal, releaseDeal, confirmReceipt, disputeDeal, runAutoRelease } from "./deals";
 export { getSellerProfile, saveSellerProfile, loadSellerProfile, isSellerVerified } from "./seller-profile";
 export type { SellerProfileData, SellerPayout } from "./seller-profile";
-export { getCachedProfile, saveUserProfile, loadUserProfile, splitName } from "./user-profile";
+export { getCachedProfile, saveUserProfile, loadUserProfile, splitName, deleteAccount } from "./user-profile";
 export type { UserProfile, LoadedProfile } from "./user-profile";
 export type { DisputeInput } from "./deals";
 export { getMyReputation } from "./reputation";

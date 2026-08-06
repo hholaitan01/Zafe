@@ -22,6 +22,7 @@ import { toast } from "@/app/_lib/Toast";
 import { getCurrentUser, signOut, syncDisplayName } from "@/lib/auth";
 import {
   ApiError,
+  deleteAccount,
   getMyReputation,
   listMyDeals,
   listMySales,
@@ -315,6 +316,22 @@ export default function ProfilePage() {
     router.push("/login");
   }
 
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [closing, setClosing] = useState(false);
+  async function doCloseAccount() {
+    if (closing) return;
+    setClosing(true);
+    try {
+      await deleteAccount();          // blocks (409) if money is still in escrow
+      await signOut().catch(() => {}); // clear the local session too
+      toast.success("Your account has been closed.");
+      router.push("/login");
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "We couldn't close your account. Please try again.");
+      setClosing(false);
+    }
+  }
+
   const verifyRows = [
     { k: "BVN", v: seller?.verified ? "•••• •••• verified" : "Not linked", ok: !!seller?.verified, mono: true },
     { k: "NIN", v: seller?.verified ? "•••• •••• verified" : "Not linked", ok: !!seller?.verified, mono: true },
@@ -446,14 +463,29 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Account / danger zone */}
+          {/* Account */}
           <div className="tf-card pf-pad">
             <div className="tf-eyebrow">Account</div>
-            <p className="pf-danger-txt">Signing out clears your session and this device&apos;s stored data. Closing your account is permanent and needs any open transactions resolved first.</p>
+            <p className="pf-danger-txt">Signing out just clears this device&apos;s session. Your account, deals, and history stay put, and you can sign back in anytime.</p>
             <button className="tf-btn pf-signout" onClick={() => void doSignout()}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
               Sign out
             </button>
+
+            {!confirmClose ? (
+              <button className="pf-close-link" onClick={() => setConfirmClose(true)}>Close account</button>
+            ) : (
+              <div className="pf-close">
+                <div className="pf-close-t">Close your account permanently?</div>
+                <p className="pf-close-s">This erases your profile, payout details, and verification, and removes your login for good. Settled deals stay on record with the other party. You can&apos;t close while money is still in escrow.</p>
+                <div className="pf-close-actions">
+                  <button className="tf-btn pf-close-go" disabled={closing} onClick={() => void doCloseAccount()}>
+                    {closing ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Spinner light size={15} />Closing…</span> : "Yes, close my account"}
+                  </button>
+                  <button className="tf-btn tf-btn--secondary" disabled={closing} onClick={() => setConfirmClose(false)}>Cancel</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -564,6 +596,16 @@ const css = `
 .pf-danger-txt{ margin:12px 0 0; font-size:13px; color:var(--muted); line-height:1.5 }
 .pf-signout{ margin-top:14px; width:100%; height:50px; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); color:var(--danger) }
 .pf-signout:hover{ border-color:#FCA5A5 }
+/* close account — quiet link until asked, then a clearly destructive confirm */
+.pf-close-link{ display:block; margin:16px auto 2px; background:none; border:none; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--faint); cursor:pointer; text-decoration:underline; text-underline-offset:2px }
+.pf-close-link:hover{ color:var(--danger) }
+.pf-close{ margin-top:16px; border:1px solid #FECACA; background:#FEF2F2; border-radius:14px; padding:16px }
+.pf-close-t{ font-size:14.5px; font-weight:700; color:#B91C1C }
+.pf-close-s{ margin:6px 0 0; font-size:12.5px; line-height:1.55; color:#7F1D1D }
+.pf-close-actions{ margin-top:14px; display:flex; flex-direction:column; gap:8px }
+.pf-close-go{ height:46px; background:var(--danger); color:#fff }
+.pf-close-go:hover{ background:#B91C1C }
+.pf-close-go:disabled{ opacity:.6; cursor:default }
 
 @media (min-width:1024px){
   .pf-head{ display:flex }

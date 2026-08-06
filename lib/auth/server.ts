@@ -10,7 +10,9 @@
    ========================================================================== */
 
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { SERVICE_ROLE_KEY } from "@/lib/deals/config";
 import { authConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "./config";
 import { nameFromEmail } from "./demo";
 import type { TrustUser } from "./types";
@@ -55,4 +57,20 @@ export async function requireCaller(demoFallback?: { email?: string; name?: stri
     return email ? { id: `demo-${email}`, email, name: demoFallback?.name?.trim() } : null;
   }
   return getServerUser();
+}
+
+/**
+ * Permanently delete a Supabase auth user by id (account closure). Uses the
+ * service-role admin API, so it must only ever be called server-side after the
+ * caller has been confirmed to be that user. Returns whether it succeeded.
+ */
+export async function deleteAuthUser(userId: string): Promise<boolean> {
+  if (!authConfigured() || !SERVICE_ROLE_KEY || !userId) return false;
+  try {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    const { error } = await admin.auth.admin.deleteUser(userId);
+    return !error;
+  } catch {
+    return false;
+  }
 }
