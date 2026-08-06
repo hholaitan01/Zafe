@@ -12,6 +12,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SERVICE_ROLE_KEY, SUPABASE_URL } from "@/lib/deals/config";
+import { normalizeContact } from "@/lib/deals/helpers";
 import { listDealsForUser } from "@/lib/deals/store";
 import { scoreReputation } from "./engine";
 import { reputationSummary } from "./insight";
@@ -54,4 +55,13 @@ async function persist(rep: Reputation, name?: string): Promise<void> {
   } catch {
     /* table missing or offline — the computed reputation is still returned */
   }
+}
+
+/** Permanently remove a user's reputation snapshot (account closure). The score
+    is derived from deals, so this just clears the cached row. */
+export async function deleteReputation(email: string): Promise<void> {
+  const supabase = db();
+  if (!supabase) return; // demo: reputation is computed, nothing stored
+  const key = normalizeContact(email) || email.trim().toLowerCase();
+  await supabase.from("reputations").delete().eq("email", key);
 }

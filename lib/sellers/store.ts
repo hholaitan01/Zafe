@@ -83,3 +83,11 @@ export async function upsertSeller(rec: SellerRecord): Promise<SellerRecord> {
   if (error) throw new Error(error.message);
   return fromRow(data);
 }
+
+/** Permanently remove a user's seller record + payout account (account closure). */
+export async function deleteSeller(email: string): Promise<void> {
+  const key = normalizeContact(email);
+  if (!key) return;
+  if (!live()) { mem().delete(key); return; }
+  await db().from("sellers").delete().eq("email", key);
+}

@@ -68,6 +68,12 @@ export function getCachedProfile(): UserProfile | null {
   }
 }
 
+/** Permanently close the signed-in user's account. Throws an ApiError (with a
+    readable message) if it's blocked — e.g. money still in escrow (409). */
+export async function deleteAccount(): Promise<void> {
+  await apiFetch("/api/account", { method: "DELETE" });
+}
+
 /** Save the profile server-side. Throws on a real error (e.g. username taken,
     no session email) so the caller can show it; caches the result on success. */
 export async function saveUserProfile(input: Partial<UserProfile>, email?: string): Promise<UserProfile> {

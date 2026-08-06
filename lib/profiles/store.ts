@@ -116,3 +116,11 @@ export async function upsertProfile(rec: ProfileRecord): Promise<ProfileRecord> 
   if (error) throw new Error(error.message);
   return fromRow(data);
 }
+
+/** Permanently remove a user's profile (account closure). */
+export async function deleteProfile(email: string): Promise<void> {
+  const key = normalizeContact(email);
+  if (!key) return;
+  if (!live()) { mem().delete(key); return; }
+  await db().from("profiles").delete().eq("email", key);
+}
