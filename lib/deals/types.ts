@@ -8,14 +8,15 @@
    can read it straight off the deal.
    ========================================================================== */
 
-import type { DisputeResult, SellerProfile, TrustVerdict } from "@/lib/ai/types";
+import type { DisputeDecision, DisputeResult, SellerProfile, TrustVerdict } from "@/lib/ai/types";
 
 export type DealStatus =
   | "created" // deal made, money not yet paid in
   | "funded" // buyer paid into escrow
   | "shipped" // seller dispatched the item
   | "completed" // buyer confirmed, seller paid out
-  | "disputed" // the two disagree
+  | "disputed" // the two disagree; AI has suggested, awaiting both sides
+  | "under_review" // escalated to a human reviewer; funds stay locked
   | "refunded" // money returned to the buyer
   | "resolved"; // dispute settled (e.g. a split)
 
@@ -33,12 +34,28 @@ export interface DealTrust {
   headline: string;
 }
 
-/** A dispute raised on a deal, and (once judged) its AI resolution. */
+/**
+ * A dispute raised on a deal. The AI proposes a `resolution` (a SUGGESTION, not
+ * a verdict): both parties can accept it, and only when both do is the money
+ * moved. If either party escalates, the deal goes to `under_review` and a human
+ * reviewer settles it — recorded in `reviewedBy` / `reviewNote`.
+ */
 export interface DealDispute {
   openedAt: string;
+  reason?: string;
   buyer: { claim: string; evidence?: string[] };
   seller: { claim: string; evidence?: string[] };
+  /** The AI's suggested resolution. Applied only once both sides accept it. */
   resolution?: DisputeResult;
+  buyerAccepted?: boolean;
+  sellerAccepted?: boolean;
+  escalated?: boolean;
+  escalatedBy?: "buyer" | "seller";
+  /** Set when a human reviewer settles an escalated dispute. */
+  reviewedBy?: string;
+  reviewNote?: string;
+  /** The decision that actually moved the money (accepted suggestion or admin ruling). */
+  settledDecision?: DisputeDecision;
 }
 
 /** A bank account for a payout or refund (ALAT Wallet). */

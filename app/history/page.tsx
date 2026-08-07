@@ -21,6 +21,7 @@ const PILL: Record<DealStatus, { label: string; bg: string; fg: string }> = {
   shipped: { label: "Delivered", bg: "#FEF3C7", fg: "#A16207" },
   completed: { label: "Successful", bg: "#ECFDF5", fg: "#047857" },
   disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C" },
+  under_review: { label: "Under review", bg: "#EDE9FE", fg: "#6D28D9" },
   refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569" },
   resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3" },
 };

@@ -99,8 +99,8 @@ async function sellerSignals(contact: string): Promise<{ completed: number; disp
   const completed = deals.filter((d) => d.status === "completed" || d.status === "resolved").length;
   const disputed = deals.filter((d) => d.status === "disputed" || d.dispute).length;
   const lost = deals.filter((d) => {
-    const dec = d.dispute?.resolution?.decision;
-    return dec === "refund_buyer" || dec === "split"; // resolved against the seller
+    const dec = d.dispute?.settledDecision; // only a *settled* dispute counts against them
+    return dec === "refund_buyer" || dec === "split";
   }).length;
 
   const seed = isSeedFlagged(contact);
@@ -298,19 +298,56 @@ export async function runAutoReleases(): Promise<number> {
   return released;
 }
 
-/** Map an AI dispute decision to the deal status the money move lands in. */
-function statusForDecision(decision: DisputeDecision): DealStatus {
-  switch (decision) {
-    case "release_to_seller":
-      return "completed";
-    case "refund_buyer":
-      return "refunded";
-    default:
-      return "resolved"; // split
+/** Human-readable summary of a decision, for the timeline. */
+function decisionNote(decision: DisputeDecision, splitBuyerPercent = 50): string {
+  return decision === "split"
+    ? `split — ${splitBuyerPercent}% to the buyer, the rest to the seller`
+    : decision === "refund_buyer"
+      ? "full refund to the buyer"
+      : "release the funds to the seller";
+}
+
+interface SettleMoney {
+  ok: boolean;
+  status?: DealStatus;
+  payoutRef?: string;
+  partialRefundAmount?: number;
+  notes?: string[];
+  error?: string;
+}
+
+/**
+ * Move the money for a settled dispute decision (ALAT in live mode, simulated
+ * in demo), the same guarded way releaseToSeller / refundDeal do. Returns the
+ * status the deal should land in and the payout ref — but does NOT patch the
+ * deal, so callers can attach their own dispute bookkeeping. The buyer's share
+ * is always the protective move: if it fails, we abort rather than settle.
+ */
+async function settleByDecision(deal: Deal, decision: DisputeDecision, splitBuyerPercent = 50): Promise<SettleMoney> {
+  if (decision === "refund_buyer") {
+    const r = await refundBuyer(deal);
+    if (!r.ok) return { ok: false, error: r.error ?? "Refund to the buyer failed." };
+    return { ok: true, status: "refunded", payoutRef: r.ref };
   }
+  if (decision === "split") {
+    const buyerShare = Math.round((deal.item.amount * splitBuyerPercent) / 100);
+    const r = await refundBuyer(deal, buyerShare);
+    if (!r.ok) return { ok: false, error: r.error ?? "Refund to the buyer failed." };
+    const notes: string[] = [];
+    const remainder = deal.item.amount - buyerShare;
+    if (remainder > 0) {
+      const p = await payoutSeller(deal, remainder);
+      if (!p.ok) notes.push("Buyer's share refunded; the seller's remainder payout is pending and will retry.");
+    }
+    return { ok: true, status: "resolved", payoutRef: r.ref, partialRefundAmount: buyerShare, notes };
+  }
+  const p = await payoutSeller(deal); // release_to_seller
+  if (!p.ok) return { ok: false, error: p.error ?? "Payout to the seller failed." };
+  return { ok: true, status: "completed", payoutRef: p.ref };
 }
 
 export interface DisputeInput {
+  reason?: string;
   buyer: { claim: string; evidence?: string[] };
   seller: { claim: string; evidence?: string[] };
 }
@@ -323,17 +360,19 @@ export interface DisputeOutcome {
 }
 
 /**
- * The full dispute flow in one call: open the dispute, hand both sides'
- * evidence to the AI judge, apply its decision, and move the money.
- *
- * Crucially, the ruling is only *settled* (deal marked refunded/resolved/
- * completed) if the money actually moved. If a live transfer fails, we record
- * the dispute as opened + judged but leave the deal "disputed" (settlement
- * pending) and return ok:false — a dispute is never closed with money frozen.
+ * Open a dispute: hand both sides' evidence to the AI, which returns a SUGGESTED
+ * resolution. Crucially, no money moves here — the deal is left "disputed" with
+ * the suggestion attached, for both parties to accept (or escalate). A fresh
+ * suggestion resets any prior acceptances.
  */
-export async function openAndJudgeDispute(id: string, input: DisputeInput): Promise<DisputeOutcome> {
+export async function openDispute(id: string, input: DisputeInput): Promise<DisputeOutcome> {
   const deal = await backend().get(id);
   if (!deal) return { ok: false, error: "not_found" };
+  // Only a deal with money still in escrow can be disputed — never reopen a
+  // settled deal (completed / refunded / resolved), which could move money twice.
+  if (!["funded", "shipped", "disputed"].includes(deal.status)) {
+    return { ok: false, error: "Only a funded or delivered deal can be disputed." };
+  }
 
   const openedAt = new Date().toISOString();
   const resolution = await getDisputeDecision({
@@ -343,55 +382,115 @@ export async function openAndJudgeDispute(id: string, input: DisputeInput): Prom
     seller: input.seller,
     chat: deal.chat,
   });
-  const dispute: DealDispute = { openedAt, buyer: input.buyer, seller: input.seller, resolution };
-  const openEv = event("disputed", "Dispute opened — both sides submitted evidence.");
-
-  // Transfer failed → record the dispute but DON'T settle it. Leaves the deal
-  // "disputed" so it can be retried, and never marks it paid without money.
-  const abort = async (error?: string): Promise<DisputeOutcome> => {
-    const note = event("disputed", "AI ruling made, but the transfer failed — settlement pending, will retry.");
-    const updated = await backend().patch(id, { status: "disputed", dispute, timeline: [...deal.timeline, openEv, note], updatedAt: note.at });
-    return { ok: false, deal: updated ?? undefined, resolution, error: error ?? "The dispute payout could not be processed." };
+  const dispute: DealDispute = {
+    openedAt: deal.dispute?.openedAt ?? openedAt,
+    reason: input.reason ?? deal.dispute?.reason,
+    buyer: input.buyer,
+    seller: input.seller,
+    resolution,
+    buyerAccepted: false,
+    sellerAccepted: false,
+    escalated: false,
   };
+  const ev = event("disputed", "Dispute opened — the AI suggested a resolution for both sides to review.");
+  const updated = await backend().patch(id, { status: "disputed", dispute, timeline: [...deal.timeline, ev], updatedAt: ev.at });
+  return { ok: true, deal: updated ?? undefined, resolution };
+}
 
-  // Apply the ruling to the money (ALAT in live mode, simulated in demo),
-  // checking every transfer result the way releaseToSeller / refundDeal do.
-  let payoutRef: string | undefined;
-  let partialRefundAmount: number | undefined;
-  let extraNote: string | undefined;
-  if (resolution.decision === "refund_buyer") {
-    const r = await refundBuyer(deal);
-    if (!r.ok) return abort(r.error);
-    payoutRef = r.ref;
-  } else if (resolution.decision === "split") {
-    const buyerShare = Math.round((deal.item.amount * resolution.splitBuyerPercent) / 100);
-    const r = await refundBuyer(deal, buyerShare);
-    if (!r.ok) return abort(r.error); // buyer's share is the protective move — abort if it fails
-    payoutRef = r.ref;
-    partialRefundAmount = buyerShare;
-    const remainder = deal.item.amount - buyerShare;
-    if (remainder > 0) {
-      const p = await payoutSeller(deal, remainder);
-      // Buyer is already protected; if the seller's remainder fails, settle but flag it.
-      if (!p.ok) extraNote = "Buyer's share refunded; the seller's remainder payout is pending and will retry.";
-    }
-  } else {
-    const p = await payoutSeller(deal);
-    if (!p.ok) return abort(p.error);
-    payoutRef = p.ref;
+export interface AcceptOutcome {
+  ok: boolean;
+  deal?: Deal;
+  settled?: boolean;
+  error?: string;
+}
+
+/**
+ * A party accepts the AI's suggested resolution. Only when BOTH sides accept is
+ * the money actually moved (and the deal settled). If a transfer fails at that
+ * point, the deal stays "disputed" (settlement pending) rather than closing with
+ * money frozen. `party` is "both" in demo mode (one local session stands in for
+ * both sides), so a demo accept settles immediately.
+ */
+export async function acceptDispute(id: string, party: "buyer" | "seller" | "both"): Promise<AcceptOutcome> {
+  const deal = await backend().get(id);
+  if (!deal) return { ok: false, error: "not_found" };
+  if (deal.status !== "disputed" || !deal.dispute?.resolution) {
+    return { ok: false, error: "There's no open AI suggestion to accept on this deal." };
+  }
+  const suggestion = deal.dispute.resolution;
+  const dispute: DealDispute = { ...deal.dispute };
+  if (party === "buyer" || party === "both") dispute.buyerAccepted = true;
+  if (party === "seller" || party === "both") dispute.sellerAccepted = true;
+
+  if (!(dispute.buyerAccepted && dispute.sellerAccepted)) {
+    const ev = event("disputed", `${party === "seller" ? "Seller" : "Buyer"} accepted the AI's suggested resolution. Waiting on the other side.`);
+    const updated = await backend().patch(id, { dispute, timeline: [...deal.timeline, ev], updatedAt: ev.at });
+    return { ok: true, deal: updated ?? undefined, settled: false };
   }
 
-  const status = statusForDecision(resolution.decision);
-  const rulingNote =
-    resolution.decision === "split"
-      ? `AI judge: split — ${resolution.splitBuyerPercent}% to the buyer, the rest to the seller.`
-      : resolution.decision === "refund_buyer"
-        ? "AI judge: refund the buyer."
-        : "AI judge: release the money to the seller.";
-  const timeline = [...deal.timeline, openEv, event(status, rulingNote)];
-  if (extraNote) timeline.push(event(status, extraNote));
-  const updatedAt = timeline[timeline.length - 1].at;
+  // Both accepted → apply the suggestion to the money.
+  const decision = suggestion.decision;
+  const money = await settleByDecision(deal, decision, suggestion.splitBuyerPercent);
+  if (!money.ok) {
+    const note = event("disputed", "Both sides accepted, but the transfer failed — settlement pending, will retry.");
+    const updated = await backend().patch(id, { dispute, timeline: [...deal.timeline, note], updatedAt: note.at });
+    return { ok: false, deal: updated ?? undefined, error: money.error };
+  }
+  dispute.settledDecision = decision;
+  const status = money.status as DealStatus;
+  const timeline = [...deal.timeline, event(status, `Both sides accepted the AI suggestion — ${decisionNote(decision, suggestion.splitBuyerPercent)}.`)];
+  (money.notes ?? []).forEach((n) => timeline.push(event(status, n)));
+  const updated = await backend().patch(id, { status, dispute, payoutRef: money.payoutRef, partialRefundAmount: money.partialRefundAmount, timeline, updatedAt: timeline[timeline.length - 1].at });
+  return { ok: true, deal: updated ?? undefined, settled: true };
+}
 
-  const updated = await backend().patch(id, { status, dispute, payoutRef, partialRefundAmount, timeline, updatedAt });
-  return { ok: true, deal: updated ?? undefined, resolution };
+/**
+ * A party escalates to a human reviewer. The deal moves to "under_review" and
+ * the funds stay locked until a reviewer settles it — no money moves here.
+ */
+export async function escalateDispute(id: string, party: "buyer" | "seller"): Promise<DisputeOutcome> {
+  const deal = await backend().get(id);
+  if (!deal) return { ok: false, error: "not_found" };
+  if (deal.status !== "disputed") return { ok: false, error: "This deal isn't in an open dispute." };
+  const dispute: DealDispute = { ...(deal.dispute as DealDispute), escalated: true, escalatedBy: party };
+  const ev = event("under_review", `${party === "seller" ? "Seller" : "Buyer"} escalated to a human reviewer. Funds stay locked until it's resolved.`);
+  const updated = await backend().patch(id, { status: "under_review", dispute, timeline: [...deal.timeline, ev], updatedAt: ev.at });
+  return { ok: true, deal: updated ?? undefined };
+}
+
+/** Deals waiting on a human reviewer — the admin queue. */
+export async function listUnderReview(): Promise<Deal[]> {
+  const all = await backend().list();
+  return all.filter((d) => d.status === "under_review").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+/**
+ * A human reviewer settles an escalated dispute with a final decision. Moves the
+ * money via the same guarded path and records who ruled and why.
+ */
+export async function adminResolveDispute(
+  id: string,
+  decision: DisputeDecision,
+  opts: { splitBuyerPercent?: number; note?: string; reviewer?: string } = {},
+): Promise<DisputeOutcome> {
+  const deal = await backend().get(id);
+  if (!deal) return { ok: false, error: "not_found" };
+  if (deal.status !== "under_review" && deal.status !== "disputed") {
+    return { ok: false, error: "This deal isn't awaiting review." };
+  }
+  const split = opts.splitBuyerPercent ?? deal.dispute?.resolution?.splitBuyerPercent ?? 50;
+  const money = await settleByDecision(deal, decision, split);
+  if (!money.ok) return { ok: false, deal, error: money.error };
+  const dispute: DealDispute = {
+    ...(deal.dispute as DealDispute),
+    escalated: true,
+    reviewedBy: opts.reviewer ?? "TrustFlow reviewer",
+    reviewNote: opts.note,
+    settledDecision: decision,
+  };
+  const status = money.status as DealStatus;
+  const timeline = [...deal.timeline, event(status, `Human reviewer ruled: ${decisionNote(decision, split)}${opts.note ? ` — ${opts.note}` : ""}.`)];
+  (money.notes ?? []).forEach((n) => timeline.push(event(status, n)));
+  const updated = await backend().patch(id, { status, dispute, payoutRef: money.payoutRef, partialRefundAmount: money.partialRefundAmount, timeline, updatedAt: timeline[timeline.length - 1].at });
+  return { ok: true, deal: updated ?? undefined, resolution: deal.dispute?.resolution };
 }

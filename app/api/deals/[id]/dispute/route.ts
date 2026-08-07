@@ -1,14 +1,14 @@
 /* ==========================================================================
    POST /api/deals/:id/dispute
-   Body: { buyer: { claim, evidence? }, seller: { claim, evidence? } }
-   The full dispute flow: open the dispute, run the AI judge on both sides'
-   evidence, apply the decision, and move the money. Returns the updated deal
-   (with dispute.resolution) so the Dispute screen can show the ruling.
+   Body: { reason?, buyer: { claim, evidence? }, seller: { claim, evidence? } }
+   Open a dispute: the AI SUGGESTS a resolution but no money moves. Both parties
+   then accept it (→ /dispute/accept) or escalate (→ /dispute/escalate). Returns
+   the updated deal (with dispute.resolution) so the Dispute screen can show it.
    ========================================================================== */
 
 import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
 import { authorizeDeal } from "@/lib/deals/access";
-import { openAndJudgeDispute, type DisputeInput } from "@/lib/deals/store";
+import { openDispute, type DisputeInput } from "@/lib/deals/store";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
@@ -20,12 +20,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!body.buyer || !isNonEmptyString(body.buyer.claim)) return jsonError("buyer.claim is required.");
   if (!body.seller || !isNonEmptyString(body.seller.claim)) return jsonError("seller.claim is required.");
 
-  const outcome = await openAndJudgeDispute(id, { buyer: body.buyer, seller: body.seller });
-  if (!outcome.ok) {
-    if (outcome.error === "not_found") return jsonError("Deal not found", 404);
-    // Ruling was made but the money didn't move — the deal is left "disputed"
-    // (settlement pending), not closed. Surface it so the client can retry.
-    return Response.json({ deal: outcome.deal, resolution: outcome.resolution, error: outcome.error }, { status: 502 });
-  }
+  const outcome = await openDispute(id, { reason: body.reason, buyer: body.buyer, seller: body.seller });
+  if (!outcome.ok) return jsonError(outcome.error === "not_found" ? "Deal not found" : (outcome.error ?? "Couldn't open the dispute."), outcome.error === "not_found" ? 404 : 400);
   return Response.json({ deal: outcome.deal, resolution: outcome.resolution });
 }

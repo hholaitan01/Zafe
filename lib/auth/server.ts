@@ -60,6 +60,23 @@ export async function requireCaller(demoFallback?: { email?: string; name?: stri
 }
 
 /**
+ * Whether the caller may act as a TrustFlow reviewer (the dispute review queue).
+ *  - demo mode: allowed (single local sandbox, so the queue is explorable).
+ *  - live mode: the session email must be in ADMIN_EMAILS (comma-separated).
+ * Fails closed: no session or no allowlist in live mode → not an admin.
+ */
+export async function isAdmin(): Promise<boolean> {
+  if (!authConfigured()) return true;
+  const allow = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (!allow.length) return false;
+  const user = await getServerUser();
+  return !!user?.email && allow.includes(user.email.trim().toLowerCase());
+}
+
+/**
  * Permanently delete a Supabase auth user by id (account closure). Uses the
  * service-role admin API, so it must only ever be called server-side after the
  * caller has been confirmed to be that user. Returns whether it succeeded.

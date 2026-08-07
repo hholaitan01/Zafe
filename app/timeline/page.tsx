@@ -27,6 +27,7 @@ const STATUS_PILL: Record<DealStatus, { label: string; fg: string; bg: string; d
   shipped: { label: "Delivered", fg: "#A16207", bg: "#FEF3C7", dot: "#E89914" },
   completed: { label: "Released", fg: "#047857", bg: "#ECFDF5", dot: "#10B981" },
   disputed: { label: "Disputed", fg: "#B91C1C", bg: "#FEE2E2", dot: "#DC2626" },
+  under_review: { label: "Under review", fg: "#6D28D9", bg: "#EDE9FE", dot: "#7C3AED" },
   refunded: { label: "Refunded", fg: "#475569", bg: "#F1F5F9", dot: "#94A3B8" },
   resolved: { label: "Resolved", fg: "#3730A3", bg: "#E0E7FF", dot: "#6366F1" },
 };

@@ -21,7 +21,7 @@ function ago(iso: string): string {
 }
 const DOT: Record<DealStatus, string> = {
   created: "#94A3B8", funded: "#A16207", shipped: "#059669", completed: "#059669",
-  disputed: "#DC2626", refunded: "#64748B", resolved: "#4338CA",
+  disputed: "#DC2626", under_review: "#7C3AED", refunded: "#64748B", resolved: "#4338CA",
 };
 
 interface Note { dealId: string; title: string; text: string; at: string; color: string }
@@ -44,10 +44,17 @@ export default function NotificationsPage() {
         getMyReputation(email, user?.name).catch(() => null),
       ]);
       if (!alive) return;
+      const saleIds = new Set(selling.map((d) => d.id));
       const byId = new Map<string, Deal>();
       [...buying, ...selling].forEach((d) => byId.set(d.id, d));
       const list: Note[] = [];
       for (const d of byId.values()) {
+        // For the seller, surface the incoming escrow itself (buyers see it as
+        // "created" on their side, which we skip). This is the in-app half of
+        // the seller notification; the other half is the email we send them.
+        if (saleIds.has(d.id)) {
+          list.push({ dealId: d.id, title: d.item.title, text: `New escrow — ${d.buyerEmail || "a buyer"} wants to pay you for this. Ship once it's funded.`, at: d.createdAt, color: "#059669" });
+        }
         for (const e of d.timeline || []) {
           if (e.status === "created") continue;
           list.push({ dealId: d.id, title: d.item.title, text: e.note || e.label, at: e.at, color: DOT[e.status] || "#94A3B8" });
