@@ -375,6 +375,27 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Seller entry — become a seller, or jump to the seller dashboard */}
+      {!loading && (
+        (seller?.payout?.accountNumber || seller?.verified) ? (
+          <div className="pf-sellcta pf-sellcta--on">
+            <div className="pf-sellcta-txt">
+              <div className="pf-sellcta-title">You sell on TrustFlow</div>
+              <div className="pf-sellcta-sub">Track your sales, shipments, and payouts in your seller dashboard.</div>
+            </div>
+            <Link href="/selling" className="tf-btn tf-btn--secondary pf-sellcta-btn">Seller dashboard</Link>
+          </div>
+        ) : (
+          <div className="pf-sellcta">
+            <div className="pf-sellcta-txt">
+              <div className="pf-sellcta-title">Start selling on TrustFlow</div>
+              <div className="pf-sellcta-sub">Verify your identity once, then let buyers pay you through protected escrow.</div>
+            </div>
+            <Link href="/seller" className="tf-btn tf-btn--primary pf-sellcta-btn">Become a seller</Link>
+          </div>
+        )
+      )}
+
       {/* two-column grid (stacks on mobile) */}
       <div className="pf-grid">
         <div className="pf-col">
@@ -525,6 +546,13 @@ const css = `
 .pf-hero-score{ font-size:26px; font-weight:700; letter-spacing:-.02em; color:var(--safe); margin-top:6px } .pf-hero-score span{ font-size:14px; color:var(--faint); font-weight:600 }
 
 /* grid + cards */
+.pf-sellcta{ display:flex; align-items:center; gap:16px; padding:16px 18px; margin-bottom:18px; border-radius:16px; border:1px solid var(--border); background:linear-gradient(180deg,#F0FDF8,#FFFFFF) }
+.pf-sellcta--on{ background:#fff }
+.pf-sellcta-txt{ flex:1; min-width:0 }
+.pf-sellcta-title{ font-weight:700; font-size:15px; color:var(--ink) }
+.pf-sellcta-sub{ font-size:13px; color:var(--muted); margin-top:2px; line-height:1.4 }
+.pf-sellcta-btn{ flex-shrink:0; white-space:nowrap }
+@media (max-width:520px){ .pf-sellcta{ flex-direction:column; align-items:stretch } .pf-sellcta-btn{ width:100% } }
 .pf-grid{ display:flex; flex-direction:column; gap:16px }
 .pf-col{ display:flex; flex-direction:column; gap:16px }
 .pf-pad{ padding:18px }

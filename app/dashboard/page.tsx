@@ -122,7 +122,7 @@ export default function DashboardPage() {
 
       <div className="tf-ph-head dsh-head">
         <div><div className="tf-eyebrow">Good day</div><h1>{user.first}&apos;s dashboard</h1></div>
-        <Link href="/new-escrow" className="tf-btn tf-btn--primary"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>New transaction</Link>
+        <Link href="/new-escrow" className="tf-btn tf-btn--primary"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>Start a deal</Link>
       </div>
 
       {needsConfirm && (
@@ -166,7 +166,10 @@ export default function DashboardPage() {
         ) : active.length ? (
           active.map((tx) => <TxRow key={tx.id} tx={tx} onOpen={open} />)
         ) : (
-          <div className="dsh-empty">No active transactions. Start a protected deal to see it here.</div>
+          <div className="dsh-empty">
+            <div className="dsh-empty-txt">No active transactions yet. Start a protected deal and it shows up here.</div>
+            <Link href="/new-escrow" className="tf-btn tf-btn--primary dsh-empty-cta"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>Start a deal</Link>
+          </div>
         )}
       </div>
     </AppShell>
@@ -193,7 +196,9 @@ const css = `
 .dsh-sec-title{ font-size:17px; font-weight:700; letter-spacing:-.01em }
 .dsh-sec-link{ font-size:13.5px; font-weight:600; color:var(--safe) }
 .dsh-list{ display:flex; flex-direction:column; gap:10px }
-.dsh-empty{ padding:26px 18px; text-align:center; color:var(--faint); font-size:13.5px; background:#fff; border:1px dashed var(--line); border-radius:16px }
+.dsh-empty{ padding:34px 18px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center; background:#fff; border:1px dashed var(--line); border-radius:16px }
+.dsh-empty-txt{ color:var(--faint); font-size:13.5px; max-width:34ch }
+.dsh-empty-cta{ align-self:center }
 
 .dsh-row{ width:100%; text-align:left; cursor:pointer; font-family:inherit; display:grid; grid-template-columns:44px 1fr auto; grid-template-areas:'ic main amt' 'ic main pill'; gap:2px 13px; align-items:center; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); border-radius:16px; padding:13px 15px; transition:transform .12s var(--ease), box-shadow .18s var(--ease) }
 @media (hover:hover) and (pointer:fine){ .dsh-row:hover{ transform:translateY(-1px); box-shadow:var(--sh-2) } }

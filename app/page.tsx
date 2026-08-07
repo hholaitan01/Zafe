@@ -76,7 +76,8 @@ export default function Landing() {
             <a href="#faq">FAQ</a>
           </nav>
           <div className="lp-navcta">
-            <Link href="/login" className="lp-link">Log in</Link>
+            <Link href="/seller" className="lp-link lp-link-sell">Become a seller</Link>
+            <Link href="/login" className="lp-link">Sign in</Link>
             <Link href="/login" className="lp-btn lp-btn-primary">Get started</Link>
           </div>
         </div>
@@ -234,6 +235,7 @@ export default function Landing() {
           <h2>Your next deal, protected.</h2>
           <p>Set up your first escrow in under a minute. No password to remember, no bank details until a payout is due.</p>
           <Link href="/login" className="lp-btn lp-btn-safe lp-btn-lg">Start a protected deal<Icon d={I.arrow} color="#fff" size={18} /></Link>
+          <p className="lp-cta-sell">Selling instead? <Link href="/seller">Become a verified seller</Link></p>
         </div>
       </section>
 
@@ -242,6 +244,11 @@ export default function Landing() {
         <div className="lp-wrap lp-footrow">
           <a className="lp-brand" href="#top" aria-label="TrustFlow home"><Mark size={24} /><span>TrustFlow</span></a>
           <p className="lp-footnote">AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.</p>
+          <nav className="lp-footlinks" aria-label="Legal">
+            <Link href="/terms">Terms</Link>
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/seller">Become a seller</Link>
+          </nav>
         </div>
       </footer>
     </div>
@@ -275,7 +282,8 @@ const css = `
 .lp-navlinks{display:flex; gap:26px; margin-left:8px; font-size:14.5px; font-weight:500; color:var(--ink-2)}
 .lp-navlinks a:hover{color:var(--ink)}
 .lp-navcta{margin-left:auto; display:flex; align-items:center; gap:14px}
-.lp-link{font-size:14.5px; font-weight:600; color:var(--ink-2)} .lp-link:hover{color:var(--ink)}
+.lp-link{font-size:14.5px; font-weight:600; color:var(--ink-2); white-space:nowrap} .lp-link:hover{color:var(--ink)}
+.lp-cta-sell{margin-top:18px; font-size:14.5px; color:var(--muted)} .lp-cta-sell a{color:var(--safe); font-weight:700; border-bottom:1px solid transparent; transition:border-color .2s var(--ease)} .lp-cta-sell a:hover{border-color:var(--safe)}
 
 /* buttons — one radius, one accent */
 .lp-btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; height:42px; padding:0 18px; border-radius:var(--r-btn); font-weight:600; font-size:14.5px; cursor:pointer; transition:transform .12s var(--ease), box-shadow .18s var(--ease), background .18s var(--ease); border:1px solid transparent; white-space:nowrap}
@@ -388,6 +396,7 @@ const css = `
 .lp-footer{border-top:1px solid var(--border); padding:32px 0}
 .lp-footrow{display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap}
 .lp-footnote{font-size:13.5px; color:var(--muted)}
+.lp-footlinks{display:flex; gap:20px; font-size:13.5px; font-weight:600} .lp-footlinks a{color:var(--ink-2)} .lp-footlinks a:hover{color:var(--safe)}
 
 /* responsive */
 @media (max-width:900px){
@@ -404,7 +413,7 @@ const css = `
   .lp-band{gap:12px} .lp-band span{font-size:13.5px}
   .lp-flow{grid-template-columns:1fr}
   .lp-head h2,.lp-ctacard h2{font-size:28px} .lp-aicopy h2{font-size:27px}
-  .lp-navcta .lp-link{display:none}
+  .lp-navcta{gap:12px} .lp-navcta .lp-link-sell{display:none}
   .lp-verdict{left:0}
   .lp-ctacard{padding:40px 22px}
 }
