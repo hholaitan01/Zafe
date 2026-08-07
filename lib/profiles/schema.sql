@@ -11,14 +11,18 @@ create table if not exists public.profiles (
   first_name  text,
   other_names text,
   last_name   text,
-  username    text unique,                       -- normalised handle, for @username search
-  photo       text,                              -- small data: URL
-  updated_at  timestamptz not null default now()
+  username      text unique,                     -- normalised handle, for @username search
+  photo         text,                            -- small data: URL
+  deactivated_at timestamptz,                     -- set when the account is closed (retained, inactive)
+  retain_until   timestamptz,                     -- keep the record until this date (CBN/AML ~5y), then purge
+  updated_at    timestamptz not null default now()
 );
 
 alter table public.profiles
-  add column if not exists username text,
-  add column if not exists photo    text;
+  add column if not exists username       text,
+  add column if not exists photo          text,
+  add column if not exists deactivated_at timestamptz,
+  add column if not exists retain_until   timestamptz;
 
 -- Unique handle (a partial index so multiple NULLs are allowed).
 create unique index if not exists profiles_username_key on public.profiles (username) where username is not null;

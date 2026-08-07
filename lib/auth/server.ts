@@ -77,9 +77,29 @@ export async function isAdmin(): Promise<boolean> {
 }
 
 /**
- * Permanently delete a Supabase auth user by id (account closure). Uses the
- * service-role admin API, so it must only ever be called server-side after the
- * caller has been confirmed to be that user. Returns whether it succeeded.
+ * Deactivate a Supabase auth user by id — bans them so they can no longer sign
+ * in, WITHOUT deleting the account. This is how account closure works for a
+ * regulated fintech: KYC and transaction data must be retained (CBN/AML require
+ * ~5 years), so we block access and keep the record rather than erasing it. The
+ * eventual purge (after the retention window) uses deleteAuthUser. Service-role
+ * admin API — call only after confirming the caller is that user.
+ */
+export async function deactivateAuthUser(userId: string): Promise<boolean> {
+  if (!authConfigured() || !SERVICE_ROLE_KEY || !userId) return false;
+  try {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    // A very long ban ( > 100 years ) effectively disables sign-in for good.
+    const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Permanently delete a Supabase auth user by id. Used by the retention purge
+ * once the legal hold period has passed — NOT on account closure (which
+ * deactivates + retains via deactivateAuthUser). Service-role admin API.
  */
 export async function deleteAuthUser(userId: string): Promise<boolean> {
   if (!authConfigured() || !SERVICE_ROLE_KEY || !userId) return false;

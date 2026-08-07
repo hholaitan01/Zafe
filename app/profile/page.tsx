@@ -497,8 +497,8 @@ export default function ProfilePage() {
               <button className="pf-close-link" onClick={() => setConfirmClose(true)}>Close account</button>
             ) : (
               <div className="pf-close">
-                <div className="pf-close-t">Close your account permanently?</div>
-                <p className="pf-close-s">This erases your profile, payout details, and verification, and removes your login for good. Settled deals stay on record with the other party. You can&apos;t close while money is still in escrow.</p>
+                <div className="pf-close-t">Close your account?</div>
+                <p className="pf-close-s">This signs you out for good and deactivates your account. As Nigerian financial rules require (CBN / anti-money-laundering), your identity and transaction records are kept inactive for 5 years, then permanently deleted. You can&apos;t close while money is still in escrow.</p>
                 <div className="pf-close-actions">
                   <button className="tf-btn pf-close-go" disabled={closing} onClick={() => void doCloseAccount()}>
                     {closing ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Spinner light size={15} />Closing…</span> : "Yes, close my account"}

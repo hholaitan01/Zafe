@@ -18,6 +18,10 @@ export interface ProfileRecord {
   lastName?: string;
   username?: string; // normalised (lower-case, no @)
   photo?: string; // small data: URL
+  /** Set when the account is closed. The record is RETAINED (not deleted) until
+      `retainUntil`, per CBN/AML retention, but the account is inactive. */
+  deactivatedAt?: string;
+  retainUntil?: string;
   updatedAt: string;
 }
 
@@ -50,6 +54,8 @@ function fromRow(row: Record<string, unknown>): ProfileRecord {
     lastName: (row.last_name as string) ?? undefined,
     username: (row.username as string) ?? undefined,
     photo: (row.photo as string) ?? undefined,
+    deactivatedAt: (row.deactivated_at as string) ?? undefined,
+    retainUntil: (row.retain_until as string) ?? undefined,
     updatedAt: String(row.updated_at),
   };
 }
@@ -77,17 +83,38 @@ export async function resolveContact(contact: string): Promise<string> {
   return c; // an email, a phone, or an unknown handle — keep as-is
 }
 
-/** Resolve a username to the owning profile (for @username lookup). */
+/** Resolve a username to the owning profile (for @username lookup). A closed
+    (deactivated) account is never resolved, so nobody can start a NEW deal
+    targeting a username whose owner has left. */
 export async function getProfileByUsername(username: string): Promise<ProfileRecord | null> {
   const u = normalizeUsername(username);
   if (!u) return null;
   if (!live()) {
-    for (const p of mem().values()) if (p.username === u) return p;
+    for (const p of mem().values()) if (p.username === u && !p.deactivatedAt) return p;
     return null;
   }
   const { data, error } = await db().from("profiles").select("*").eq("username", u).maybeSingle();
   if (error) return null;
-  return data ? fromRow(data) : null;
+  const rec = data ? fromRow(data) : null;
+  return rec && !rec.deactivatedAt ? rec : null;
+}
+
+/**
+ * Close an account: mark the profile deactivated and set a retention date, but
+ * KEEP the record (CBN/AML require retaining KYC + transaction history). A
+ * targeted best-effort update so it never breaks if the deactivation columns
+ * aren't present yet — the auth ban is the real access block either way.
+ */
+export async function deactivateProfile(email: string, retainUntil: string): Promise<void> {
+  const key = normalizeContact(email);
+  if (!key) return;
+  const at = new Date().toISOString();
+  if (!live()) {
+    const rec = mem().get(key);
+    if (rec) mem().set(key, { ...rec, deactivatedAt: at, retainUntil, updatedAt: at });
+    return;
+  }
+  await db().from("profiles").update({ deactivated_at: at, retain_until: retainUntil, updated_at: at }).eq("email", key);
 }
 
 export async function upsertProfile(rec: ProfileRecord): Promise<ProfileRecord> {

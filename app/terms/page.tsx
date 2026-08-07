@@ -100,7 +100,7 @@ const sections: LegalSection[] = [
     h: "Suspension and closing your account",
     body: [
       <>We may suspend or limit an account we reasonably believe is involved in fraud or a breach of these terms, including holding funds while we investigate.</>,
-      <>You can close your account at any time from your profile. Closing erases your profile, payout details, and verification and removes your login. You cannot close an account while money is still held in escrow, and settled deals remain on record with the other party as required.</>,
+      <>You can close your account at any time from your profile. Closing deactivates the account and blocks sign-in. Because we're a financial service, your identity (KYC) and transaction records are retained inactive for the period Nigerian regulation requires (around 5 years for anti-money-laundering) and then permanently deleted — they aren't erased immediately. You cannot close an account while money is still held in escrow, and settled deals remain on record with the other party.</>,
     ],
   },
   {

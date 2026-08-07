@@ -58,7 +58,7 @@ const sections: LegalSection[] = [
   {
     h: "How long we keep it",
     body: [
-      <>We keep your data while your account is active and for as long as needed to complete deals, resolve disputes, and meet legal or financial-record obligations. When you close your account, we erase your profile, payout details, and verification and remove your login. Records of settled deals remain with the other party and in our financial records as required.</>,
+      <>We keep your data while your account is active and for as long as needed to complete deals, resolve disputes, and meet our legal obligations. When you close your account, we deactivate it and block sign-in, but we <b>retain</b> your identity (KYC) and transaction records for the period Nigerian financial regulation requires — around <b>5 years</b> for anti-money-laundering — after which they are permanently deleted. Records of settled deals also remain with the other party.</>,
     ],
   },
   {
@@ -68,7 +68,7 @@ const sections: LegalSection[] = [
         <ul>
           <li><b>Access</b> the personal data we hold about you.</li>
           <li><b>Correct</b> data that is wrong or out of date — much of it directly in your profile.</li>
-          <li><b>Erase</b> your data by closing your account (subject to records we must keep by law).</li>
+          <li><b>Erase</b> your data by closing your account. We deactivate it immediately; records we're legally required to keep (KYC, transactions) are retained inactive for the mandated period, then deleted.</li>
           <li><b>Object to</b> or restrict certain processing.</li>
           <li><b>Port</b> a copy of the data you gave us.</li>
         </ul>
