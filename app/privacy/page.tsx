@@ -3,7 +3,7 @@ import { LegalDoc, type LegalSection } from "@/app/_lib/LegalDoc";
 
 export const metadata: Metadata = {
   title: "Privacy Policy · TrustFlow",
-  description: "How TrustFlow collects, uses, and protects your data, and your rights under the NDPR.",
+  description: "How TrustFlow collects, uses, and protects your data, and your rights under the Nigeria Data Protection Act 2023.",
 };
 
 const sections: LegalSection[] = [
@@ -62,9 +62,9 @@ const sections: LegalSection[] = [
     ],
   },
   {
-    h: "Your rights under the NDPR",
+    h: "Your rights under the NDPA 2023",
     body: [
-      <>Under the Nigeria Data Protection Regulation, you can:
+      <>TrustFlow is governed by the Nigeria Data Protection Act 2023 and overseen by the Nigeria Data Protection Commission (NDPC). Under it, you can:
         <ul>
           <li><b>Access</b> the personal data we hold about you.</li>
           <li><b>Correct</b> data that is wrong or out of date — much of it directly in your profile.</li>

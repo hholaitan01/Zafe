@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/app/_lib/AppShell";
 import { getCurrentUser } from "@/lib/auth";
 import { createDeal, naira, setCurrentDealId } from "@/lib/client";
+import { feeBreakdown } from "@/lib/fees";
 
 const CATEGORIES = ["Electronics", "Fashion", "Phones & tablets", "Gaming", "Inventory restock", "Services", "Other"];
 
@@ -32,7 +33,7 @@ export default function NewEscrowPage() {
   const [busy, setBusy] = useState(false);
 
   const amountNum = useMemo(() => Number(amount.replace(/[^0-9.]/g, "")) || 0, [amount]);
-  const fee = useMemo(() => (amountNum > 0 ? Math.min(2000, Math.round(amountNum * 0.015)) : 0), [amountNum]);
+  const bill = useMemo(() => feeBreakdown(amountNum), [amountNum]);
 
   async function submit() {
     if (busy) return;
@@ -77,7 +78,7 @@ export default function NewEscrowPage() {
               <span className="ne-naira">₦</span>
               <input inputMode="numeric" placeholder="0" value={amount} onChange={(e) => setAmount(fmtMoney(e.target.value))} className="ne-amount-input tf-mono" />
             </div>
-            <div className="ne-amount-fee">{amountNum > 0 ? `Escrow fee ${naira(fee)} · 1.5% capped at ₦2,000` : "Escrow fee 1.5%, capped at ₦2,000"}</div>
+            <div className="ne-amount-fee">{amountNum > 0 ? `Escrow fee ${naira(bill.fee)}${bill.capped ? " (max)" : ""} + ${naira(bill.vat)} VAT` : "Escrow fee: 1% over ₦100,000 (max ₦5,000), or ₦1,000 flat below"}</div>
           </div>
 
           {/* item */}
@@ -119,7 +120,7 @@ export default function NewEscrowPage() {
 
           <div className="ne-actions">
             <button className="tf-btn tf-btn--primary ne-cta" disabled={!canSubmit} onClick={() => void submit()}>
-              {busy ? "Securing in escrow…" : amountNum > 0 ? `Continue to pay ${naira(amountNum)}` : "Continue to payment"}
+              {busy ? "Securing in escrow…" : amountNum > 0 ? `Continue to pay ${naira(bill.buyerPaysTotal)}` : "Continue to payment"}
               {!busy && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>}
             </button>
           </div>
@@ -133,8 +134,13 @@ export default function NewEscrowPage() {
           <div className="ne-sum-row"><span>Item</span><span>{title.trim() || "—"}</span></div>
           <div className="ne-sum-row"><span>Category</span><span>{category}</span></div>
           <div className="ne-sum-row"><span>Seller</span><span>{seller.trim() || "—"}</span></div>
-          <div className="ne-sum-row"><span>Escrow fee</span><span className="tf-mono">{naira(fee)}</span></div>
-          <div className="ne-sum-row ne-sum-last"><span>Payout to seller</span><span>On your confirm</span></div>
+          <div className="ne-sum-rule" />
+          <div className="ne-sum-row"><span>Amount protected</span><span className="tf-mono">{naira(bill.amount)}</span></div>
+          <div className="ne-sum-row"><span>Escrow fee{bill.capped ? " (capped)" : ""}</span><span className="tf-mono">{naira(bill.fee)}</span></div>
+          <div className="ne-sum-row"><span>VAT (7.5%)</span><span className="tf-mono">{naira(bill.vat)}</span></div>
+          <div className="ne-sum-row"><span>Transfer stamp duty</span><span className="tf-mono">{bill.stampDuty ? naira(bill.stampDuty) : "—"}</span></div>
+          <div className="ne-sum-row ne-sum-pay"><span>You pay</span><span className="tf-mono">{naira(bill.buyerPaysTotal)}</span></div>
+          <div className="ne-sum-row ne-sum-last"><span>Payout to seller</span><span>{naira(bill.amount)} on your confirm</span></div>
           <div className="ne-safe"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z" /><path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" /></svg>Funds sit in a dedicated escrow account until you confirm delivery. We never touch them.</div>
         </aside>
       </div>
@@ -182,6 +188,8 @@ const css = `
 .ne-sum-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:13px; padding:2px 0 }
 .ne-sum-row span:first-child{ color:var(--muted); flex-shrink:0 }
 .ne-sum-row span:last-child{ font-weight:600; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0 }
+.ne-sum-pay{ margin-top:4px; padding-top:8px; border-top:1px solid var(--line) }
+.ne-sum-pay span:first-child{ color:var(--ink); font-weight:700 } .ne-sum-pay span:last-child{ font-size:15px; font-weight:800 }
 .ne-safe{ margin-top:4px; background:var(--bg); border-radius:12px; padding:12px; font-size:12px; line-height:1.5; color:var(--muted); display:flex; align-items:flex-start; gap:7px } .ne-safe svg{ flex-shrink:0; margin-top:1px }
 
 @media (min-width:1024px){
