@@ -156,6 +156,10 @@ export default function LoginScreen() {
             </>
           )}
 
+          <p className="auth-terms">
+            By continuing you agree to TrustFlow&apos;s <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.
+          </p>
+
           <p className="auth-legal">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" aria-hidden="true"><path d="M12 3 20 6v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /></svg>
             No passwords, ever. We never ask for bank details here.
@@ -228,7 +232,10 @@ const css = `
 .auth-error{ margin-top:13px; font-size:13.5px; line-height:1.5; color:var(--danger); font-weight:500 }
 .auth-hint{ margin-top:14px; font-size:13px; line-height:1.55; color:var(--muted) }
 .auth-mailicon{ width:52px; height:52px; border-radius:14px; background:var(--safe-tint); display:flex; align-items:center; justify-content:center; margin-bottom:16px }
-.auth-legal{ display:flex; align-items:flex-start; gap:8px; margin-top:20px; padding-top:18px; border-top:1px solid var(--line); font-size:12.5px; line-height:1.5; color:var(--muted) }
+.auth-terms{ margin-top:16px; font-size:12.5px; line-height:1.55; color:var(--muted); text-align:center }
+.auth-terms a{ color:var(--safe); font-weight:600; border-bottom:1px solid transparent; transition:border-color .15s var(--ease) }
+.auth-terms a:hover{ border-color:var(--safe) }
+.auth-legal{ display:flex; align-items:flex-start; gap:8px; margin-top:16px; padding-top:16px; border-top:1px solid var(--line); font-size:12.5px; line-height:1.5; color:var(--muted) }
 .auth-legal svg{ flex-shrink:0; margin-top:1px }
 
 @media (min-width:1024px){
