@@ -12,6 +12,7 @@ import { authConfigured } from "@/lib/auth/config";
 import { getServerUser, requireCaller } from "@/lib/auth/server";
 import { verifySellerIdentity } from "@/lib/sellers/kyc";
 import { getSeller, upsertSeller, type SellerPayout } from "@/lib/sellers/store";
+import { screenParty } from "@/lib/compliance/screening";
 
 // A seller profile carries the payout account (sensitive), so GET only ever
 // returns the CALLER's own profile. In live mode that's the session email and
@@ -49,13 +50,22 @@ export async function POST(req: Request): Promise<Response> {
   // The id number is used to verify and never stored on the seller record.
   const idVerified = await verifySellerIdentity({ email, fullName: body.fullName, phone: body.phone, idType: body.idType, idNumber: body.idNumber, selfie: body.selfie });
 
+  // AML screening: a sanctions / PEP / watchlist HIT blocks verification (and so
+  // payouts) — fail-closed. A "needs review" (no live provider wired) is
+  // surfaced to the caller but doesn't hard-block, since the compliance
+  // programme flags provider integration as a pre-production requirement.
+  const screening = await screenParty({ name: body.fullName, contact: email, idNumber: body.idNumber });
+  // Verified only when identity checks pass AND no screening hit. A missing live
+  // provider (needsReview, no hits) is a flagged programme gap, not a hard block.
+  const cleared = idVerified && screening.hits.length === 0;
+
   const seller = await upsertSeller({
     email,
     fullName: body.fullName,
     phone: body.phone,
-    idVerified,
+    idVerified: cleared,
     payout: body.payout,
     updatedAt: new Date().toISOString(),
   });
-  return Response.json({ seller });
+  return Response.json({ seller, screening: { clear: screening.clear, needsReview: screening.needsReview, hits: screening.hits } });
 }
