@@ -11,7 +11,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/app/_lib/AppShell";
 import { getCurrentUser } from "@/lib/auth";
-import { createDeal, naira, setCurrentDealId } from "@/lib/client";
+import { cacheDeal, createDeal, naira, setCurrentDealId } from "@/lib/client";
 import { feeBreakdown } from "@/lib/fees";
 
 const CATEGORIES = ["Electronics", "Fashion", "Phones & tablets", "Gaming", "Inventory restock", "Services", "Other"];
@@ -51,6 +51,7 @@ export default function NewEscrowPage() {
         chat: chat.trim() || undefined,
         buyerEmail: me?.email,
       });
+      cacheDeal(deal);
       setCurrentDealId(deal.id);
       router.push("/fund");
     } catch {

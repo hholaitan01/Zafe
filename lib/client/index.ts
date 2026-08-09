@@ -17,4 +17,4 @@ export type { UserProfile, LoadedProfile } from "./user-profile";
 export type { DisputeInput } from "./deals";
 export { getMyReputation } from "./reputation";
 export { getSellerStanding } from "./seller";
-export { setCurrentDealId, getCurrentDealId, naira } from "./session";
+export { setCurrentDealId, getCurrentDealId, cacheDeals, cacheDeal, getCachedDeal, naira } from "./session";

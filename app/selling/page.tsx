@@ -12,7 +12,7 @@ import AppShell from "@/app/_lib/AppShell";
 import { EmptyState, ErrorState, Skeleton, Spinner } from "@/app/_lib/States";
 import { toast } from "@/app/_lib/Toast";
 import { getCurrentUser } from "@/lib/auth";
-import { getSellerProfile, listMySales, loadSellerProfile, naira, setCurrentDealId, shipDeal } from "@/lib/client";
+import { cacheDeals, getSellerProfile, listMySales, loadSellerProfile, naira, setCurrentDealId, shipDeal } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: string }> = {
@@ -54,6 +54,7 @@ export default function SellingPage() {
     try {
       const list = await listMySales(contactsRef.current);
       setSales(list);
+      cacheDeals(list); // warm the cache for instant deal-detail render
       setVerified(getSellerProfile()?.verified === true);
     } catch {
       setError(true);

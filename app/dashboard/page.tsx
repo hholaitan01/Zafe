@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
 import { getCurrentUser } from "@/lib/auth";
-import { getMyReputation, listMyDeals, loadUserProfile, naira, setCurrentDealId } from "@/lib/client";
+import { cacheDeals, getMyReputation, listMyDeals, loadUserProfile, naira, setCurrentDealId } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: string }> = {
@@ -93,6 +93,7 @@ export default function DashboardPage() {
       ]);
       if (!alive) return;
       setDeals(d);
+      cacheDeals(d); // warm the cache so opening any deal renders instantly
       if (rep) { setScore(rep.score); setTier(rep.tierLabel); }
       if (prof?.photo) setUser((p) => ({ ...p, photo: prof.photo }));
     })();

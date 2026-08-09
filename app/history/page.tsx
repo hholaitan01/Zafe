@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/app/_lib/AppShell";
 import { EmptyState, ErrorState, Skeleton } from "@/app/_lib/States";
 import { getCurrentUser } from "@/lib/auth";
-import { getMyReputation, listMyDeals, listMySales, naira, setCurrentDealId } from "@/lib/client";
+import { cacheDeals, getMyReputation, listMyDeals, listMySales, naira, setCurrentDealId } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string }> = {
@@ -87,6 +87,7 @@ export default function ActivityPage() {
       const sellerIds = new Set(selling.map((d) => d.id));
       const byId = new Map<string, Deal>();
       [...buying, ...selling].forEach((d) => byId.set(d.id, d));
+      cacheDeals([...byId.values()]); // warm the cache for instant deal-detail render
       const all: Row[] = [...byId.values()]
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .map((d) => {
