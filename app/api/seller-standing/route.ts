@@ -1,6 +1,6 @@
 /* ==========================================================================
    GET /api/seller-standing?contact=<phone|email>
-   The seller's standing across past TrustFlow deals, for the pre-payment check.
+   The seller's standing across past Zafe deals, for the pre-payment check.
    ========================================================================== */
 
 import { authConfigured } from "@/lib/auth/config";

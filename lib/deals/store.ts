@@ -86,14 +86,14 @@ export async function listDealsBySellerContacts(contacts: string[]): Promise<Dea
 /**
  * Create a deal and store it, snapshotting a Trust Score verdict when we can.
  * The assessment blends three things: the AI read of the pasted chat (if any),
- * the seller's own TrustFlow history, and a hard fraud-watchlist override.
+ * the seller's own Zafe history, and a hard fraud-watchlist override.
  */
 export async function createDeal(input: CreateDealInput): Promise<Deal> {
   const trust = await assessDeal(input);
   return backend().create(input, trust);
 }
 
-/** A seller's fraud signal + history, derived from past TrustFlow deals. */
+/** A seller's fraud signal + history, derived from past Zafe deals. */
 async function sellerSignals(contact: string): Promise<{ completed: number; disputed: number; fraud: FraudFlag }> {
   const deals = await listDealsBySeller(contact);
   const completed = deals.filter((d) => d.status === "completed" || d.status === "resolved").length;
@@ -139,7 +139,7 @@ async function assessDeal(input: CreateDealInput): Promise<DealTrust | undefined
     return {
       score: Math.min(base?.score ?? 100, 12),
       verdict: "risky",
-      headline: `⚠ This seller is on TrustFlow's fraud watchlist (${signals.fraud.reason}). We strongly advise against paying.`,
+      headline: `⚠ This seller is on Zafe's fraud watchlist (${signals.fraud.reason}). We strongly advise against paying.`,
     };
   }
 
@@ -149,7 +149,7 @@ async function assessDeal(input: CreateDealInput): Promise<DealTrust | undefined
     return {
       score: 45,
       verdict: "caution",
-      headline: `Heads up — this seller has ${signals.disputed} past dispute${signals.disputed === 1 ? "" : "s"} on TrustFlow.`,
+      headline: `Heads up — this seller has ${signals.disputed} past dispute${signals.disputed === 1 ? "" : "s"} on Zafe.`,
     };
   }
 
@@ -484,7 +484,7 @@ export async function adminResolveDispute(
   const dispute: DealDispute = {
     ...(deal.dispute as DealDispute),
     escalated: true,
-    reviewedBy: opts.reviewer ?? "TrustFlow reviewer",
+    reviewedBy: opts.reviewer ?? "Zafe reviewer",
     reviewNote: opts.note,
     settledDecision: decision,
   };

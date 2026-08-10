@@ -60,7 +60,7 @@ export async function requireCaller(demoFallback?: { email?: string; name?: stri
 }
 
 /**
- * Whether the caller may act as a TrustFlow reviewer (the dispute review queue).
+ * Whether the caller may act as a Zafe reviewer (the dispute review queue).
  *  - demo mode: allowed (single local sandbox, so the queue is explorable).
  *  - live mode: the session email must be in ADMIN_EMAILS (comma-separated).
  * Fails closed: no session or no allowlist in live mode → not an admin.

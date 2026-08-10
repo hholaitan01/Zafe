@@ -1,5 +1,5 @@
 -- ============================================================================
--- TrustFlow — `deals` table (for Jerry, when wiring up Supabase).
+-- Zafe — `deals` table (for Jerry, when wiring up Supabase).
 --
 -- Run this in the Supabase SQL editor. Once NEXT_PUBLIC_SUPABASE_URL and the
 -- server-only SUPABASE_SERVICE_ROLE_KEY are set, the deal store switches from

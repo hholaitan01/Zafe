@@ -11,7 +11,7 @@ paying.
 1. **Seed list** (`blocklist.ts`) — contacts reported for fraud, matched by a
    normalised phone/email so formatting doesn't matter. In production this is a
    shared bank / platform fraud feed; here a small curated seed.
-2. **Derived from TrustFlow's own history** (computed in `lib/deals/store.ts`,
+2. **Derived from Zafe's own history** (computed in `lib/deals/store.ts`,
    next to the deal data) — a seller with a **dispute resolved against them**
    (`refund_buyer` / `split`), or **≥2 disputes** on record, is auto-flagged.
    Self-reinforcing: bad outcomes make the next buyer's warning stronger.

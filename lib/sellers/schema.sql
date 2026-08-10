@@ -1,5 +1,5 @@
 -- ============================================================================
--- TrustFlow — `sellers` table (per-seller verification + payout account).
+-- Zafe — `sellers` table (per-seller verification + payout account).
 --
 -- Run in the Supabase SQL editor, alongside deals + reputations. Persists a
 -- seller's verification status and payout bank account, keyed by their email,

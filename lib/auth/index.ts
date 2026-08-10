@@ -1,7 +1,7 @@
 /* ==========================================================================
    The auth API the Login screen calls.
 
-   TrustFlow is passwordless — there are no passwords to phish, leak, or brute
+   Zafe is passwordless — there are no passwords to phish, leak, or brute
    force. Two ways in:
      • Continue with Google (OAuth), and
      • a one-time email login link (Supabase magic link): type your email,
@@ -57,7 +57,7 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   const supabase = getBrowserClient();
 
   if (!supabase) {
-    const user: TrustUser = { id: "demo-google", email: "demo@trustflow.app", name: "Demo User" };
+    const user: TrustUser = { id: "demo-google", email: "demo@zafe.ng", name: "Demo User" };
     setDemoSession(user);
     return { ok: true, mode: "demo", user };
   }

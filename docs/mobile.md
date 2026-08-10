@@ -1,6 +1,6 @@
-# TrustFlow on mobile
+# Zafe on mobile
 
-TrustFlow ships to phones two ways. Both work from the same codebase.
+Zafe ships to phones two ways. Both work from the same codebase.
 
 1. **Installable PWA** — works today, on both iOS and Android, no store account or Mac needed.
 2. **Native App Store / Play Store apps** — via Capacitor, built on a Mac.
@@ -17,7 +17,7 @@ display, a launch splash, and an offline fallback. Nothing to build.
 - **Android (Chrome):** open the site, then the browser shows "Install app", or use the menu → **Install app / Add to Home screen**.
 - **iOS (Safari):** open the site, tap **Share**, then **Add to Home Screen**.
 
-Once installed it launches full-screen with the TrustFlow icon and its own
+Once installed it launches full-screen with the Zafe icon and its own
 splash, and behaves like a native app. A service worker (`public/sw.js`) caches
 static assets and shows an offline page when there is no network. It **never**
 caches API or authenticated responses, so it can never serve stale deal or
@@ -40,7 +40,7 @@ PWA-to-store path, so for the App Store use Capacitor below.)
 ## 2. Native apps with Capacitor
 
 Capacitor wraps the **deployed** web app in native iOS and Android shells. Since
-TrustFlow is server-rendered (API routes, SSR, auth middleware, ALAT webhooks),
+Zafe is server-rendered (API routes, SSR, auth middleware, ALAT webhooks),
 the shell loads the live site over `server.url` rather than a static bundle.
 
 ### Prerequisites

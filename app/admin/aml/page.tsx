@@ -49,8 +49,8 @@ export default function AmlQueuePage() {
       <header className="ml-top">
         <div className="ml-wrap ml-toprow">
           <Link href="/dashboard" className="ml-brand">
-            <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#059669"/><path d="M11 16.2 14.6 20 21.5 12.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>TrustFlow</span>
+            <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8.5 10.5H23.5" stroke="#059669" stroke-width="4.2" stroke-linecap="round"/><path d="M8.5 21.5H23.5" stroke="#059669" stroke-width="4.2" stroke-linecap="round"/><path d="M23.5 10.5L8.5 21.5" stroke="#0F172A" stroke-width="4.2" stroke-linecap="round"/></svg>
+            <span>Zafe</span>
           </Link>
           <span className="ml-role">AML monitoring</span>
         </div>

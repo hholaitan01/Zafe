@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Offline heuristic engine — TrustFlow's "demo mode".
+   Offline heuristic engine — Zafe's "demo mode".
 
    When no ANTHROPIC_API_KEY is set (or a live call fails), the AI features
    fall back to these deterministic functions so the app still demos on stage
@@ -27,7 +27,7 @@ import type {
 /** Scam phrases → the tactic they signal. Matched case-insensitively. */
 const SCAM_SIGNALS: { pattern: RegExp; tactic: string; weight: number }[] = [
   { pattern: /\b(personal account|my own account|different account|another account)\b/i, tactic: "Payment steered to a personal account", weight: 22 },
-  { pattern: /\b(outside|off) (the )?(app|escrow|platform|trustflow)\b/i, tactic: "Trying to move the deal outside escrow", weight: 25 },
+  { pattern: /\b(outside|off) (the )?(app|escrow|platform|trustflow|zafe)\b/i, tactic: "Trying to move the deal outside escrow", weight: 25 },
   { pattern: /\b(gift ?card|steam card|itunes|amazon card)\b/i, tactic: "Asking for gift cards", weight: 28 },
   { pattern: /\b(crypto|bitcoin|btc|usdt|binance)\b/i, tactic: "Pushing crypto payment", weight: 18 },
   { pattern: /\b(western union|moneygram)\b/i, tactic: "Untraceable money transfer", weight: 24 },
@@ -86,7 +86,7 @@ function sellerAdjustment(seller?: SellerProfile): { delta: number; reasons: Tru
   const deals = seller.completedDeals ?? 0;
   if (deals >= 20) {
     delta += 16;
-    reasons.push({ label: "Strong track record", detail: `${deals} completed deals on TrustFlow.`, weight: "positive" });
+    reasons.push({ label: "Strong track record", detail: `${deals} completed deals on Zafe.`, weight: "positive" });
   } else if (deals >= 5) {
     delta += 8;
     reasons.push({ label: "Some track record", detail: `${deals} completed deals so far.`, weight: "positive" });
@@ -152,9 +152,9 @@ export function mockTrustScore(req: TrustScoreRequest): TrustScoreResult {
 
   const recommendation =
     verdict === "safe"
-      ? "Go ahead, but still pay through TrustFlow escrow so your money is protected until you confirm."
+      ? "Go ahead, but still pay through Zafe escrow so your money is protected until you confirm."
       : verdict === "caution"
-        ? "Only proceed inside TrustFlow escrow, and don't pay any 'fees' to release your item."
+        ? "Only proceed inside Zafe escrow, and don't pay any 'fees' to release your item."
         : "Do not pay this seller directly. If you continue at all, use escrow only, and be ready to walk away.";
 
   return {
@@ -175,7 +175,7 @@ export function mockScamCheck(req: ScamCheckRequest): ScamCheckResult {
   const isScam = pressure >= 18;
 
   const advice = isScam
-    ? "Don't pay outside TrustFlow escrow, and never send money to 'release' an item — that's the scam."
+    ? "Don't pay outside Zafe escrow, and never send money to 'release' an item — that's the scam."
     : "Nothing obviously wrong, but still pay through escrow so you're covered either way.";
 
   return { isScam, riskLevel, confidence, tactics, advice, mode: "mock" };

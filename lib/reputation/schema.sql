@@ -1,5 +1,5 @@
 -- ============================================================================
--- TrustFlow — `reputations` table (per-user trader standing).
+-- Zafe — `reputations` table (per-user trader standing).
 --
 -- Run this in the Supabase SQL editor, alongside deals (schema.sql). The
 -- reputation is always recomputed from the `deals` table on read; this table

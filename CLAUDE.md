@@ -1,4 +1,4 @@
-# TrustFlow — project memory
+# Zafe — project memory
 
 AI-powered escrow for peer-to-peer trades. Next.js 15 (App
 Router) · React 19 · TypeScript · Supabase · deployed on Vercel.

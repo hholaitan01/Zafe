@@ -1,6 +1,6 @@
 <div align="center">
 
-# TrustFlow
+# Zafe
 
 ### Escrow that makes buying from strangers safe.
 
@@ -28,7 +28,7 @@ day. But there is no trust layer under any of it. You pay first and hope the sel
 seller ships first and hopes you pay. Someone always carries the risk, and someone always gets
 burned.
 
-TrustFlow puts a neutral middle between the two sides. The money is held, not handed over, until
+Zafe puts a neutral middle between the two sides. The money is held, not handed over, until
 the buyer confirms. And it does one thing no escrow service here does: it checks the deal for fraud
 *before* the buyer pays, not after they have already lost the money.
 
@@ -37,7 +37,7 @@ the buyer confirms. And it does one thing no escrow service here does: it checks
 1. **Score the deal.** Paste your chat with the seller and the AI returns a Trust Score from 0 to
    100. If it smells like a scam, a red banner says so right on the payment screen, and a risky deal
    cannot be funded until you tick *"I understand the risk, pay anyway."*
-2. **Check the seller.** Enter their phone or email and TrustFlow looks them up across past deals:
+2. **Check the seller.** Enter their phone or email and Zafe looks them up across past deals:
    new, reliable, or caution, with a verified badge if they passed KYC.
 3. **Fund escrow.** The buyer pays into a dedicated account. The money is held. The seller sees that
    it is funded and ships.
@@ -81,7 +81,7 @@ Three features, each a live API route powered by Claude. Every one calls the mod
 `ANTHROPIC_API_KEY` is set and falls back to a deterministic offline heuristic otherwise, so the app
 always works on stage with no key.
 
-- **Trust Score.** A 0-100 pre-deal risk score that blends the chat, the seller's TrustFlow history,
+- **Trust Score.** A 0-100 pre-deal risk score that blends the chat, the seller's Zafe history,
   and a fraud watchlist (`lib/fraud/`) that hard-overrides a listed seller to risky even when no
   chat was pasted.
 - **Scam detector.** Names the specific tactics in a message: pressure to pay now, moving off
@@ -114,7 +114,7 @@ Money is the whole product, so the guardrails are not optional.
 
 ## On your phone
 
-TrustFlow installs as an app on both platforms. It is a full **PWA**: brand
+Zafe installs as an app on both platforms. It is a full **PWA**: brand
 icon, standalone launch, splash, and an offline page, with a service worker that
 caches static assets but never API or authenticated data. On Android use Chrome
 "Install app"; on iOS use Safari "Add to Home Screen". For real App Store and

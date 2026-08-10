@@ -6,7 +6,7 @@
    A seller is flagged two ways:
      1. Seed list — contacts reported for fraud (in production, a shared bank /
         platform fraud feed; here a small curated seed so the path is demoable).
-     2. Derived from TrustFlow's own history — computed in the deal store from
+     2. Derived from Zafe's own history — computed in the deal store from
         past deals with this seller (disputes resolved against them). That lives
         next to the deal data to avoid a circular import; this module owns the
         pure seed check.

@@ -25,7 +25,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (body.decision === "split") {
     if (typeof split !== "number" || split < 0 || split > 100) return jsonError("splitBuyerPercent must be between 0 and 100.");
   }
-  const reviewer = (await getServerUser())?.email ?? "TrustFlow reviewer";
+  const reviewer = (await getServerUser())?.email ?? "Zafe reviewer";
   const out = await adminResolveDispute(id, body.decision as DisputeDecision, { splitBuyerPercent: split, note: body.note, reviewer });
   if (!out.ok) return jsonError(out.error ?? "Couldn't resolve the dispute.", out.error === "not_found" ? 404 : 409);
   return Response.json({ deal: out.deal });

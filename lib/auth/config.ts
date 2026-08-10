@@ -1,7 +1,7 @@
 /* ==========================================================================
    Auth configuration seam (H2O).
 
-   TrustFlow uses Supabase for email/Google sign-in. Just like the AI layer,
+   Zafe uses Supabase for email/Google sign-in. Just like the AI layer,
    auth has two modes:
 
    - LIVE  — NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY are set,

@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 
-/* Web app manifest — makes TrustFlow installable on Android and iOS (Add to
+/* Web app manifest — makes Zafe installable on Android and iOS (Add to
    Home Screen) and drives the launch splash. Served at /manifest.webmanifest. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "TrustFlow: AI Escrow",
-    short_name: "TrustFlow",
+    name: "Zafe: AI Escrow",
+    short_name: "Zafe",
     description: "AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.",
     id: "/",
     start_url: "/dashboard",

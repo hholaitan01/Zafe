@@ -45,7 +45,7 @@ export function buildReceipt(deal: Deal): ReceiptData {
 /** Plain-text version for sharing over WhatsApp/SMS where no UI renders. */
 export function receiptToText(r: ReceiptData): string {
   return [
-    `TrustFlow Receipt — ${r.reference}`,
+    `Zafe Receipt — ${r.reference}`,
     `Item: ${r.item}`,
     `Amount: ₦${r.amount.toLocaleString("en-NG")}`,
     `Status: ${r.status}`,

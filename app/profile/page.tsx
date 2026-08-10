@@ -380,7 +380,7 @@ export default function ProfilePage() {
         (seller?.payout?.accountNumber || seller?.verified) ? (
           <div className="pf-sellcta pf-sellcta--on">
             <div className="pf-sellcta-txt">
-              <div className="pf-sellcta-title">You sell on TrustFlow</div>
+              <div className="pf-sellcta-title">You sell on Zafe</div>
               <div className="pf-sellcta-sub">Track your sales, shipments, and payouts in your seller dashboard.</div>
             </div>
             <Link href="/selling" className="tf-btn tf-btn--secondary pf-sellcta-btn">Seller dashboard</Link>
@@ -388,7 +388,7 @@ export default function ProfilePage() {
         ) : (
           <div className="pf-sellcta">
             <div className="pf-sellcta-txt">
-              <div className="pf-sellcta-title">Start selling on TrustFlow</div>
+              <div className="pf-sellcta-title">Start selling on Zafe</div>
               <div className="pf-sellcta-sub">Verify your identity once, then let buyers pay you through protected escrow.</div>
             </div>
             <Link href="/seller" className="tf-btn tf-btn--primary pf-sellcta-btn">Become a seller</Link>

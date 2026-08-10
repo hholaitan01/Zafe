@@ -66,7 +66,7 @@ created → funded → shipped → completed          (happy path)
 curl -s localhost:3000/api/deals -H 'content-type: application/json' -d '{
   "item":   { "title": "iPhone 13", "amount": 240000, "currency": "NGN" },
   "seller": { "name": "Ada Electronics", "verified": true, "completedDeals": 42, "disputes": 0, "accountAgeDays": 420, "rating": 4.9 },
-  "chat":   "Seller: happy to use TrustFlow escrow, here are extra photos and the serial."
+  "chat":   "Seller: happy to use Zafe escrow, here are extra photos and the serial."
 }'
 # → { "deal": { …, "trust": { "score": …, "verdict": "safe" } } }
 ```

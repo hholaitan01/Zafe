@@ -1,5 +1,5 @@
 -- ============================================================================
--- TrustFlow — `profiles` table (name parts, username, photo).
+-- Zafe — `profiles` table (name parts, username, photo).
 --
 -- Run in the Supabase SQL editor, alongside deals + reputations + sellers.
 -- Safe to run more than once. If you already created `profiles`, the ALTERs

@@ -50,9 +50,9 @@ export async function createCollectionAccount(deal: Deal): Promise<CollectionAcc
   const res = await generateVirtualAccount({
     amount: deal.item.amount,
     transactionRef: deal.reference,
-    buyerEmail: deal.buyerEmail || "buyer@trustflow.app",
+    buyerEmail: deal.buyerEmail || "buyer@zafe.ng",
     buyerPhone: "",
-    buyerName: deal.buyerEmail?.split("@")[0] || "TrustFlow buyer",
+    buyerName: deal.buyerEmail?.split("@")[0] || "Zafe buyer",
   });
   return {
     accountNumber: res.data?.virtualBankAccountNumber ?? "",
@@ -86,7 +86,7 @@ export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promi
       destinationBankCode: payout.bankCode,
       amount,
       transactionReference: ref("payout", deal.id),
-      narration: `TrustFlow payout for ${deal.item.title}`,
+      narration: `Zafe payout for ${deal.item.title}`,
       securityInfo: "", // TODO: populate once the encryption scheme is confirmed with the bank contact
     });
     return { ok: true, ref: res.data?.reference ?? ref("payout", deal.id), mode: "live" };
@@ -112,7 +112,7 @@ export async function refundBuyer(deal: Deal, amount = deal.item.amount): Promis
       destinationBankCode: acct.bankCode,
       amount,
       transactionReference: ref("refund", deal.id),
-      narration: `TrustFlow refund for ${deal.item.title}`,
+      narration: `Zafe refund for ${deal.item.title}`,
       securityInfo: "",
     });
     return { ok: true, ref: res.data?.reference ?? ref("refund", deal.id), mode: "live" };

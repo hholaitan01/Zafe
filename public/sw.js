@@ -1,11 +1,11 @@
-/* TrustFlow service worker.
+/* Zafe service worker.
 
    Deliberately conservative for a money app: it NEVER caches API responses or
    authenticated HTML, so it can never serve stale deal, balance, or session
    data. It caches only versioned static assets and a small offline shell, and
    falls back to an offline page when a navigation fails with no network. */
 
-const VERSION = "trustflow-v1";
+const VERSION = "zafe-v1";
 const STATIC_CACHE = `${VERSION}-static`;
 const PRECACHE = ["/offline.html", "/icons/icon-192.png", "/icons/icon-512.png"];
 

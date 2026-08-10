@@ -68,7 +68,7 @@ export async function screenParty(input: { name?: string; contact?: string; idNu
   if (name && DEMO_PEP.some((n) => name.includes(n))) hits.push({ list: "demo-pep", category: "pep", detail: `Name matched the demo PEP list ("${input.name}").` });
   if (input.contact) {
     const f = isSeedFlagged(input.contact);
-    if (f.flagged) hits.push({ list: "fraud-watchlist", category: "watchlist", detail: f.reason || "On the TrustFlow fraud watchlist." });
+    if (f.flagged) hits.push({ list: "fraud-watchlist", category: "watchlist", detail: f.reason || "On the Zafe fraud watchlist." });
   }
   return { clear: hits.length === 0, needsReview: false, hits, mode: "demo" };
 }

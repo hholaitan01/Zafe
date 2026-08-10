@@ -1,6 +1,6 @@
 import path from "node:path";
 
-/* Security headers applied to every response. Tuned to what TrustFlow actually
+/* Security headers applied to every response. Tuned to what Zafe actually
    loads so nothing breaks:
    - The font (IBM Plex Sans) is self-hosted under /fonts, so font-src is 'self'
      only and no external font hosts are allowed.

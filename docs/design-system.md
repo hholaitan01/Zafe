@@ -1,4 +1,4 @@
-# TrustFlow — design system
+# Zafe — design system
 
 The single source of truth for spacing, color, radius, type, and motion. Every
 new screen or component **references these tokens** — don't invent one-off

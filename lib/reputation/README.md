@@ -1,7 +1,7 @@
 # Reputation — per-user trader standing (H2O)
 
 A **real, per-user reputation model**: a trader's accumulated standing across
-every escrow they've run on TrustFlow. Settle deals cleanly and it rises; rack
+every escrow they've run on Zafe. Settle deals cleanly and it rises; rack
 up disputes and it falls.
 
 > This is **not** the per-deal **Trust Score** (that scores a *counterparty*

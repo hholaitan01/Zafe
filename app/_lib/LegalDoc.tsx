@@ -24,12 +24,13 @@ export function LegalDoc({
 
       <header className="lg-top">
         <div className="lg-wrap lg-toprow">
-          <Link href="/" className="lg-brand" aria-label="TrustFlow home">
+          <Link href="/" className="lg-brand" aria-label="Zafe home">
             <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-              <path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#059669" />
-              <path d="M11 16.2 14.6 20 21.5 12.5" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M8.5 10.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" />
+              <path d="M8.5 21.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" />
+              <path d="M23.5 10.5L8.5 21.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" />
             </svg>
-            <span>TrustFlow</span>
+            <span>Zafe</span>
           </Link>
           <Link href="/" className="lg-back">← Back to home</Link>
         </div>
@@ -41,7 +42,7 @@ export function LegalDoc({
         <p className="lg-updated">Last updated {updated}</p>
 
         <div className="lg-note">
-          <b>Beta notice.</b> TrustFlow is in active development. This document is a plain-language
+          <b>Beta notice.</b> Zafe is in active development. This document is a plain-language
           draft to describe how the product works. It is not legal advice, and it should be reviewed
           by a qualified lawyer before any commercial launch.
         </div>
@@ -58,7 +59,7 @@ export function LegalDoc({
         ))}
 
         <footer className="lg-foot">
-          <p>Questions about this document? Reach the team from your profile, or reply to any TrustFlow email.</p>
+          <p>Questions about this document? Reach the team from your profile, or reply to any Zafe email.</p>
           <p className="lg-foot-links">
             <Link href="/terms">Terms of Service</Link>
             <span aria-hidden="true">·</span>
