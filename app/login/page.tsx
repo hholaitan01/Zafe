@@ -12,7 +12,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Spinner } from "@/app/_lib/States";
-import { sendMagicLink, signInWithGoogle, type AuthResult } from "@/lib/auth";
+import { safeNext, sendMagicLink, signInWithGoogle, type AuthResult } from "@/lib/auth";
 
 /** Button label with a leading spinner while an async action runs. */
 function Busy({ children, light = true }: { children: React.ReactNode; light?: boolean }) {
@@ -26,16 +26,20 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
+  // Where to land after signing in. Set when a gated page (e.g. /seller) sent
+  // the user here with ?next=…; empty means the default dashboard.
+  const [next, setNext] = useState<string | undefined>(undefined);
 
-  // Arrived here from the idle auto-logout? Show why, once. Read from the URL
-  // (not useSearchParams) so no Suspense boundary is needed, then strip it so a
-  // refresh doesn't keep the notice up.
+  // Read one-time URL params: `next` (post-login destination) and `reason`
+  // (the idle-logout notice). Done from window.location — not useSearchParams —
+  // so no Suspense boundary is needed. `next` is captured into state first, so
+  // stripping the query to clean the address bar can't lose it.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("reason") === "timeout") {
-      setTimedOut(true);
-      window.history.replaceState(null, "", window.location.pathname);
-    }
+    const nx = safeNext(params.get("next"));
+    if (nx) setNext(nx);
+    if (params.get("reason") === "timeout") setTimedOut(true);
+    if (nx || params.get("reason")) window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
   function applyResult(result: AuthResult, failMessage: string): boolean {
@@ -46,7 +50,7 @@ export default function LoginScreen() {
     if (result.ok && result.magicLinkSent) {
       setSentTo(email.trim());
     } else if (result.ok) {
-      router.push("/dashboard"); // demo mode signs in directly
+      router.push(next || "/dashboard"); // demo mode signs in directly
       return true;
     } else {
       setError(result.error ?? failMessage);
@@ -59,7 +63,7 @@ export default function LoginScreen() {
     setError(null);
     setLoading(true);
     try {
-      const keepLoading = applyResult(await signInWithGoogle(), "Google sign-in failed. Please try again.");
+      const keepLoading = applyResult(await signInWithGoogle(next), "Google sign-in failed. Please try again.");
       if (!keepLoading) setLoading(false);
     } catch {
       setError("Couldn't start Google sign-in. Please try again.");
@@ -72,7 +76,7 @@ export default function LoginScreen() {
     setError(null);
     setLoading(true);
     try {
-      const keepLoading = applyResult(await sendMagicLink(email), "Couldn't send the link. Please try again.");
+      const keepLoading = applyResult(await sendMagicLink(email, next), "Couldn't send the link. Please try again.");
       if (!keepLoading) setLoading(false);
     } catch {
       setError("Couldn't reach the server. Please try again.");
@@ -145,7 +149,9 @@ export default function LoginScreen() {
           ) : (
             <>
               <h2 className="auth-title">Sign in</h2>
-              <p className="auth-sub">Sign in to protect a deal, release funds, confirm receipt, or open a dispute.</p>
+              <p className="auth-sub">{next === "/seller"
+                ? "Sign in to continue. We'll take you straight to seller verification."
+                : "Sign in to protect a deal, release funds, confirm receipt, or open a dispute."}</p>
 
               <button className="auth-btn auth-btn-google" onClick={handleGoogle} disabled={loading}>
                 <svg width="19" height="19" viewBox="0 0 48 48" aria-hidden="true">

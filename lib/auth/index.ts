@@ -31,7 +31,7 @@ function isValidEmail(email: string): boolean {
  * on /auth/callback, which exchanges the code for a session — the same callback
  * OAuth uses. No account? The link creates one on first use.
  */
-export async function sendMagicLink(email: string): Promise<AuthResult> {
+export async function sendMagicLink(email: string, next?: string): Promise<AuthResult> {
   email = email.trim();
   if (!isValidEmail(email)) return { ok: false, mode: authConfigured() ? "live" : "demo", error: "Enter a valid email address." };
 
@@ -45,15 +45,16 @@ export async function sendMagicLink(email: string): Promise<AuthResult> {
     return { ok: true, mode: "demo", user };
   }
 
-  // ---- LIVE mode: send the magic link. ----
-  const emailRedirectTo = `${window.location.origin}/auth/callback`;
+  // ---- LIVE mode: send the magic link. `next` rides along so the callback
+  //      lands the user where they were headed (e.g. /seller), not the default.
+  const emailRedirectTo = callbackUrl(next);
   const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo } });
   if (error) return { ok: false, mode: "live", error: friendly(error.message) };
   return { ok: true, mode: "live", magicLinkSent: true };
 }
 
 /** Primary sign-in: Continue with Google (OAuth). Returns a redirectUrl to navigate to. */
-export async function signInWithGoogle(): Promise<AuthResult> {
+export async function signInWithGoogle(next?: string): Promise<AuthResult> {
   const supabase = getBrowserClient();
 
   if (!supabase) {
@@ -62,13 +63,29 @@ export async function signInWithGoogle(): Promise<AuthResult> {
     return { ok: true, mode: "demo", user };
   }
 
-  const redirectTo = `${window.location.origin}/auth/callback`;
+  const redirectTo = callbackUrl(next);
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo, skipBrowserRedirect: true },
   });
   if (error || !data.url) return { ok: false, mode: "live", error: friendly(error?.message) };
   return { ok: true, mode: "live", redirectUrl: data.url };
+}
+
+/** Build the OAuth/magic-link callback URL, carrying a post-login destination.
+    Only same-origin relative paths are forwarded (open-redirect safe). */
+function callbackUrl(next?: string): string {
+  const base = `${window.location.origin}/auth/callback`;
+  const dest = safeNext(next);
+  return dest ? `${base}?next=${encodeURIComponent(dest)}` : base;
+}
+
+/** Accept a redirect target only if it's an in-app path ("/deals", not
+    "//evil.com" or "https://…"), so a crafted `next` can't bounce users off-site. */
+export function safeNext(next?: string | null): string | undefined {
+  if (!next) return undefined;
+  if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return undefined;
+  return next;
 }
 
 /** Read the current user, or null if signed out. The display name prefers the

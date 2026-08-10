@@ -10,10 +10,17 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { authConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/auth/config";
 
+/** Only forward an in-app path; anything else (absolute URL, protocol-relative
+    "//host") falls back to the dashboard, so `next` can't be an open redirect. */
+function safeNext(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return "/dashboard";
+  return raw;
+}
+
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") ?? "/dashboard";
+  const next = safeNext(url.searchParams.get("next"));
 
   if (authConfigured() && code) {
     const cookieStore = await cookies();

@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/app/_lib/AppShell";
 import { SelfieCapture } from "@/app/_lib/SelfieCapture";
+import { Spinner } from "@/app/_lib/States";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "@/app/_lib/Toast";
 import { saveSellerProfile } from "@/lib/client";
@@ -24,13 +25,22 @@ export default function SellerPage() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [shell, setShell] = useState({ name: "You", initials: "" });
+  // Becoming a seller means saving a payout identity, so it needs a signed-in
+  // user. `ready` gates the form until we've confirmed one; a signed-out visitor
+  // is sent to sign in and returned straight here afterwards (?next=/seller).
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let alive = true;
     getCurrentUser().then((u) => {
-      const nm = u?.name || (u?.email ? u.email.split("@")[0] : "You");
+      if (!alive) return;
+      if (!u) { router.replace("/login?next=/seller"); return; }
+      const nm = u.name || (u.email ? u.email.split("@")[0] : "You");
       setShell({ name: nm, initials: nm.trim().split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?" });
-    }).catch(() => {});
-  }, []);
+      setReady(true);
+    }).catch(() => { if (alive) setReady(true); }); // transient read error: don't trap the user
+    return () => { alive = false; };
+  }, [router]);
 
   async function verify() {
     if (busy) return;
@@ -59,6 +69,16 @@ export default function SellerPage() {
   }
 
   const done = !!fullName.trim() && idNumber.trim().length === 11 && !!bankName.trim() && accountNumber.trim().length >= 10 && !!accountName.trim();
+
+  // Still confirming the session (or bouncing a signed-out visitor to sign in):
+  // hold a centred spinner rather than flash a form they can't submit.
+  if (!ready) {
+    return (
+      <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Spinner size={28} />
+      </div>
+    );
+  }
 
   return (
     <AppShell current="profile" user={{ name: shell.name, initials: shell.initials }}>
