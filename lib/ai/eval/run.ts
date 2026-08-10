@@ -38,7 +38,7 @@ function printSection(title: string, lines: Line[]): number {
 }
 
 async function run(): Promise<void> {
-  console.log(`Zafe AI accuracy — mode: ${aiEnabled() ? "LIVE (Claude)" : "MOCK (offline heuristic)"}`);
+  console.log(`Zafe accuracy — mode: ${aiEnabled() ? "LIVE (Claude)" : "MOCK (offline heuristic)"}`);
 
   // ---- Scam detector (binary) ----
   const scamLines: Line[] = [];

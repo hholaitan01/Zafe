@@ -1,4 +1,4 @@
-# Zafe AI backend (H2O)
+# Zafe — AI backend (H2O)
 
 The three AI features that power Zafe, as real API routes. Each one calls
 **Claude** (`claude-opus-5` by default) using the official Anthropic SDK with

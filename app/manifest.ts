@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
    Home Screen) and drives the launch splash. Served at /manifest.webmanifest. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Zafe: AI Escrow",
+    name: "Zafe",
     short_name: "Zafe",
     description: "AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.",
     id: "/",

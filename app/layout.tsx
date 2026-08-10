@@ -5,7 +5,7 @@ import { ToastHost } from "./_lib/Toast";
 
 export const metadata: Metadata = {
   applicationName: "Zafe",
-  title: { default: "Zafe: AI Escrow", template: "%s · Zafe" },
+  title: { default: "Zafe", template: "%s · Zafe" },
   description:
     "AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.",
   appleWebApp: {
