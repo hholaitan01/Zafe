@@ -10,7 +10,7 @@
    ========================================================================== */
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Spinner } from "@/app/_lib/States";
 import { sendMagicLink, signInWithGoogle, type AuthResult } from "@/lib/auth";
 
@@ -25,6 +25,18 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Arrived here from the idle auto-logout? Show why, once. Read from the URL
+  // (not useSearchParams) so no Suspense boundary is needed, then strip it so a
+  // refresh doesn't keep the notice up.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reason") === "timeout") {
+      setTimedOut(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   function applyResult(result: AuthResult, failMessage: string): boolean {
     if (result.redirectUrl) {
@@ -107,6 +119,14 @@ export default function LoginScreen() {
       {/* ---- RIGHT / form ---- */}
       <section className="auth-form">
         <div className="auth-card auth-enter">
+          {timedOut && !sentTo && (
+            <div className="auth-notice" role="status">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+              </svg>
+              <span>You were signed out after 5 minutes of inactivity. Sign in to continue.</span>
+            </div>
+          )}
           {sentTo ? (
             <>
               <div className="auth-mailicon" aria-hidden="true">
@@ -180,11 +200,19 @@ const css = `
 .tf-mono{ font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums }
 
 /* ---- aside (mobile: a navy header band) ---- */
+/* A real photograph of a buyer paying a seller sits behind the panel, under a
+   deep navy scrim so it reads as brand-navy with photographic warmth (not a
+   flat block) while keeping the white text fully legible. */
 .auth-aside{ position:relative; overflow:hidden; padding:26px 24px 64px; color:#fff;
-  background:radial-gradient(120% 130% at 88% 0%, #14304A 0%, #0F172A 58%);
+  background-color:#0F172A;
   display:flex; flex-direction:column }
-.auth-aside::after{ content:""; position:absolute; top:-50px; right:-30px; width:170px; height:170px; border-radius:50%;
+.auth-aside::before{ content:""; position:absolute; inset:0; z-index:0;
+  background:
+    linear-gradient(180deg, rgba(15,23,42,.82) 0%, rgba(15,23,42,.90) 55%, rgba(15,23,42,.96) 100%),
+    url("/images/commerce.jpg") center 22% / cover no-repeat; }
+.auth-aside::after{ content:""; position:absolute; top:-50px; right:-30px; z-index:0; width:170px; height:170px; border-radius:50%;
   background:radial-gradient(circle at 40% 40%, rgba(16,185,129,.30), transparent 70%) }
+.auth-aside > *{ position:relative; z-index:1 }
 .auth-mark{ position:relative; display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:17px; letter-spacing:-.02em; color:#fff }
 .auth-aside-mid{ position:relative }
 .auth-eyebrow{ font-size:11px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; color:rgba(255,255,255,.55) }
@@ -206,6 +234,10 @@ const css = `
 .auth-enter{ animation:authIn .5s var(--ease) both }
 @keyframes authIn{ from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
 @media (prefers-reduced-motion:reduce){ .auth-enter{ animation:none } }
+
+.auth-notice{ display:flex; align-items:flex-start; gap:9px; margin-bottom:18px; padding:12px 14px; border-radius:12px;
+  background:var(--safe-tint); border:1px solid rgba(5,150,105,.22); color:#065F46; font-size:13.5px; line-height:1.5; font-weight:500 }
+.auth-notice svg{ flex-shrink:0; margin-top:1px; color:var(--safe) }
 
 .auth-title{ font-size:24px; font-weight:700; letter-spacing:-.02em }
 .auth-sub{ margin-top:6px; font-size:14.5px; line-height:1.55; color:var(--muted) } .auth-sub b{ color:var(--ink); font-weight:600 }

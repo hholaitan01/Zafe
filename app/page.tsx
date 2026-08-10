@@ -368,7 +368,12 @@ const css = `
 .lp-risk-foot{margin-top:16px; padding-top:14px; border-top:1px solid var(--line-2); font-size:13.5px; font-weight:600; color:var(--danger)}
 
 /* safety */
-.lp-safety{background:var(--navy); color:#fff}
+.lp-safety{position:relative;
+  background:
+    linear-gradient(180deg, rgba(15,23,42,.90) 0%, rgba(15,23,42,.94) 100%),
+    url("/images/money.jpg") center 30% / cover no-repeat,
+    var(--navy);
+  color:#fff}
 .lp-safety-h{color:#fff} .lp-safety-p{color:#9FB0C7}
 .lp-features{margin-top:46px; display:grid; grid-template-columns:1fr 1fr; gap:16px}
 .lp-feature{display:flex; gap:14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); border-radius:16px; padding:18px}
@@ -388,7 +393,12 @@ const css = `
 
 /* final cta */
 .lp-cta{padding:24px 0 84px}
-.lp-ctacard{text-align:center; background:linear-gradient(160deg,#0F172A 0%, #14233F 100%); border-radius:24px; padding:56px 32px; box-shadow:var(--sh-lg)}
+.lp-ctacard{text-align:center; position:relative; overflow:hidden;
+  background:
+    linear-gradient(160deg, rgba(15,23,42,.86) 0%, rgba(20,35,63,.90) 100%),
+    url("/images/commerce.jpg") center / cover no-repeat,
+    #0F172A;
+  border-radius:24px; padding:56px 32px; box-shadow:var(--sh-lg)}
 .lp-ctacard h2{font-size:34px; letter-spacing:-.03em; font-weight:700; color:#fff}
 .lp-ctacard p{margin:14px auto 26px; font-size:17px; color:#9FB0C7; max-width:46ch; line-height:1.6}
 

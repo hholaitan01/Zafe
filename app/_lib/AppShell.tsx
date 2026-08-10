@@ -15,6 +15,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import IdleLogout from "./IdleLogout";
 
 type NavId = "dashboard" | "new" | "activity" | "disputes" | "profile";
 
@@ -65,6 +66,8 @@ export default function AppShell({
   return (
     <div className="tf-app">
       <style>{kit}</style>
+      <IdleLogout />
+
 
       {/* ---- Desktop side nav ---- */}
       <aside className="tf-side">
