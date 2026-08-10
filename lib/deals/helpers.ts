@@ -22,6 +22,7 @@ const STATUS_LABEL: Record<DealStatus, string> = {
   shipped: "Item shipped",
   completed: "Completed — seller paid",
   disputed: "Dispute opened",
+  under_review: "Under human review",
   refunded: "Refunded to buyer",
   resolved: "Dispute resolved",
 };

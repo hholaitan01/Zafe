@@ -15,7 +15,8 @@ import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
 import { Skeleton, Spinner } from "@/app/_lib/States";
 import { getCurrentUser } from "@/lib/auth";
-import { getCurrentDealId, getMyReputation, judgeDispute, listMyDeals, listMySales, naira } from "@/lib/client";
+import { toast } from "@/app/_lib/Toast";
+import { acceptDisputeResolution, disputeDeal, escalateDispute, getCurrentDealId, getMyReputation, listMyDeals, listMySales, naira } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 import type { DisputeResult } from "@/lib/ai/types";
 
@@ -29,7 +30,7 @@ const REASONS = [
 const LABEL: Record<string, string> = { release_to_seller: "Pay the seller", refund_buyer: "Full refund", split: "Partial refund" };
 const STATUS: Record<DealStatus, string> = {
   created: "Awaiting payment", funded: "Funded", shipped: "Delivered", completed: "Released",
-  disputed: "In dispute", refunded: "Refunded", resolved: "Resolved",
+  disputed: "In dispute", under_review: "Under review", refunded: "Refunded", resolved: "Resolved",
 };
 
 interface Reco { label: string; toBuyer: string; toSeller: string; rationale: string }
@@ -48,7 +49,11 @@ export default function DisputePage() {
   const [statement, setStatement] = useState("");
   const [reco, setReco] = useState<Reco | null>(null);
   const [busy, setBusy] = useState(false);
+  const [acting, setActing] = useState<"accept" | "escalate" | null>(null);
   const ddRef = useRef<HTMLDivElement>(null);
+
+  // Replace one deal in local state after an action changes it (status, dispute).
+  const patchDeal = (updated: Deal) => setDeals((ds) => (ds ? ds.map((d) => (d.id === updated.id ? updated : d)) : ds));
 
   useEffect(() => {
     let alive = true;
@@ -65,9 +70,11 @@ export default function DisputePage() {
       if (!alive) return;
       const byId = new Map<string, Deal>();
       [...buying, ...selling].forEach((d) => byId.set(d.id, d));
-      // Only deals where money is actually in play can be disputed.
+      // Only deals with money still in escrow can be disputed (a settled deal
+      // can't be reopened). This mirrors the server-side guard in openDispute.
+      const disputable = new Set<DealStatus>(["funded", "shipped", "disputed", "under_review"]);
       const list = [...byId.values()]
-        .filter((d) => d.status !== "created")
+        .filter((d) => disputable.has(d.status))
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setDeals(list);
       setShell({ name, initials, score: rep?.score });
@@ -95,26 +102,62 @@ export default function DisputePage() {
     setReco(dp?.resolution ? recoFrom(selected.item.amount, dp.resolution) : null);
   }, [selId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // File the dispute: the AI SUGGESTS a resolution (no money moves yet) and the
+  // suggestion is recorded on the deal for both sides to accept or escalate.
   async function analyze() {
     if (!selected || busy || !statement.trim()) return;
     setBusy(true);
     try {
       const sellerClaim = selected.dispute?.seller?.claim || "No response provided yet.";
-      const r = await judgeDispute({
-        item: { title: selected.item.title, amount: selected.item.amount, currency: "NGN" },
-        amount: selected.item.amount,
+      const reasonLabel = REASONS.find((r) => r.v === reason)?.label;
+      const { deal, resolution } = await disputeDeal(selected.id, {
+        reason: reasonLabel,
         buyer: { claim: statement, evidence: ["Photo", "Chat log"] },
         seller: { claim: sellerClaim, evidence: selected.dispute?.seller?.evidence },
       });
-      setReco(recoFrom(selected.item.amount, r));
+      patchDeal(deal);
+      setReco(resolution ? recoFrom(selected.item.amount, resolution) : null);
     } catch {
       setReco(null);
+      toast.error("Couldn't file the dispute. Please try again.");
     } finally {
       setBusy(false);
     }
   }
 
+  async function accept() {
+    if (!selected || acting) return;
+    setActing("accept");
+    try {
+      const { deal, settled } = await acceptDisputeResolution(selected.id);
+      patchDeal(deal);
+      toast.success(settled ? "Resolution applied. The funds have been settled." : "You accepted. Waiting on the other side to accept too.");
+    } catch {
+      toast.error("Couldn't record your acceptance. Please try again.");
+    } finally {
+      setActing(null);
+    }
+  }
+
+  async function escalate() {
+    if (!selected || acting) return;
+    setActing("escalate");
+    try {
+      const { deal } = await escalateDispute(selected.id);
+      patchDeal(deal);
+      toast("Escalated to a human reviewer. Funds stay locked until it's resolved.");
+    } catch {
+      toast.error("Couldn't escalate the dispute. Please try again.");
+    } finally {
+      setActing(null);
+    }
+  }
+
   const sellerResponse = selected?.dispute?.seller?.claim || null;
+  const st = selected?.status;
+  const underReview = st === "under_review";
+  const settled = !!selected?.dispute?.settledDecision && (st === "completed" || st === "refunded" || st === "resolved");
+  const someoneAccepted = !!(selected?.dispute?.buyerAccepted || selected?.dispute?.sellerAccepted);
 
   return (
     <AppShell current="disputes" user={{ name: shell.name, initials: shell.initials, score: shell.score }}>
@@ -188,8 +231,8 @@ export default function DisputePage() {
                     <div className="dp-drop-s">PNG / JPG / PDF up to 8MB each</div>
                   </div>
 
-                  <button className="tf-btn tf-btn--primary dp-analyze" disabled={busy || !statement.trim()} onClick={() => void analyze()}>
-                    {busy ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Spinner light size={15} />Analysing the case…</span> : reco ? "Re-run recommendation" : "Get AI recommendation"}
+                  <button className="tf-btn tf-btn--primary dp-analyze" disabled={busy || !statement.trim() || underReview || settled} onClick={() => void analyze()}>
+                    {busy ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Spinner light size={15} />Analysing the case…</span> : underReview ? "Under human review" : settled ? "Dispute settled" : reco ? "Re-run recommendation" : "File dispute & get AI suggestion"}
                   </button>
                 </div>
 
@@ -223,10 +266,27 @@ export default function DisputePage() {
                         <div><div className="dp-reco-k">To seller</div><div className="dp-reco-num tf-mono">{reco.toSeller}</div></div>
                       </div>
                       <div className="dp-reco-why">{reco.rationale}</div>
-                      <div className="dp-reco-actions">
-                        <button className="tf-btn tf-btn--verify dp-accept"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>Accept</button>
-                        <button className="tf-btn dp-escalate">Escalate to human</button>
-                      </div>
+                      {underReview ? (
+                        <div className="dp-reco-state dp-reco-review">
+                          <b>Escalated to a human reviewer.</b> A TrustFlow reviewer will settle this within 24 hours. The funds stay locked until then.
+                        </div>
+                      ) : settled ? (
+                        <div className="dp-reco-state dp-reco-settled">
+                          <b>Settled — {reco.label.toLowerCase()}.</b> The money has moved accordingly.
+                        </div>
+                      ) : (
+                        <>
+                          {someoneAccepted && <div className="dp-reco-wait">One side has accepted. This settles automatically once both sides accept.</div>}
+                          <div className="dp-reco-actions">
+                            <button className="tf-btn tf-btn--verify dp-accept" disabled={!!acting} onClick={() => void accept()}>
+                              {acting === "accept" ? <Spinner light size={15} /> : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}Accept
+                            </button>
+                            <button className="tf-btn dp-escalate" disabled={!!acting} onClick={() => void escalate()}>
+                              {acting === "escalate" ? "Escalating…" : "Escalate to human"}
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </>
                   ) : (
                     <div className="dp-reco-empty">Describe what happened, then get the AI&apos;s read on how the money should be split.</div>
@@ -324,8 +384,14 @@ const css = `
 .dp-reco-loading{ display:flex; align-items:center; gap:10px; font-size:14px; color:rgba(255,255,255,.75); padding:6px 0 }
 .dp-spinner{ width:16px; height:16px; border-radius:50%; border:2px solid rgba(255,255,255,.25); border-top-color:#fff; animation:dpspin .7s linear infinite }
 @keyframes dpspin{ to{ transform:rotate(360deg) } }
+.dp-reco-wait{ font-size:12.5px; line-height:1.5; color:rgba(255,255,255,.72); background:rgba(255,255,255,.05); border-radius:10px; padding:9px 11px }
+.dp-reco-state{ font-size:13px; line-height:1.55; border-radius:12px; padding:12px 14px }
+.dp-reco-state b{ color:#fff; font-weight:700 }
+.dp-reco-review{ background:rgba(124,58,237,.18); border:1px solid rgba(167,139,250,.4); color:rgba(255,255,255,.86) }
+.dp-reco-settled{ background:rgba(16,185,129,.16); border:1px solid rgba(52,211,153,.4); color:rgba(255,255,255,.9) }
 .dp-reco-actions{ display:flex; gap:10px }
 .dp-accept{ flex:1; height:46px }
+.dp-accept:disabled, .dp-escalate:disabled{ opacity:.55; cursor:not-allowed }
 .dp-escalate{ height:46px; background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.18) }
 .dp-escalate:hover{ background:rgba(255,255,255,.14) }
 .dp-next{ padding:18px }

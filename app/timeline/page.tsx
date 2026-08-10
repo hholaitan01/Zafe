@@ -13,7 +13,7 @@ import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
 import { EmptyState, ErrorState, Skeleton } from "@/app/_lib/States";
 import { getCurrentUser } from "@/lib/auth";
-import { confirmReceipt, getCurrentDealId, getDeal, naira } from "@/lib/client";
+import { cacheDeal, confirmReceipt, getCachedDeal, getCurrentDealId, getDeal, naira } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
 const VERDICT: Record<string, { label: string; fg: string; bg: string; dot: string }> = {
@@ -27,6 +27,7 @@ const STATUS_PILL: Record<DealStatus, { label: string; fg: string; bg: string; d
   shipped: { label: "Delivered", fg: "#A16207", bg: "#FEF3C7", dot: "#E89914" },
   completed: { label: "Released", fg: "#047857", bg: "#ECFDF5", dot: "#10B981" },
   disputed: { label: "Disputed", fg: "#B91C1C", bg: "#FEE2E2", dot: "#DC2626" },
+  under_review: { label: "Under review", fg: "#6D28D9", bg: "#EDE9FE", dot: "#7C3AED" },
   refunded: { label: "Refunded", fg: "#475569", bg: "#F1F5F9", dot: "#94A3B8" },
   resolved: { label: "Resolved", fg: "#3730A3", bg: "#E0E7FF", dot: "#6366F1" },
 };
@@ -92,13 +93,17 @@ export default function TimelinePage() {
   const load = useCallback(() => {
     const id = getCurrentDealId();
     if (!id) { setStatus("missing"); return; }
-    setStatus("loading");
+    // Opportunistic render: if the list we came from already handed us this deal,
+    // show it instantly and refresh in the background — no skeleton flash.
+    const seed = getCachedDeal(id);
+    if (seed) { setDeal(seed); setStatus("ready"); } else { setStatus("loading"); }
     Promise.all([getDeal(id), getCurrentUser().catch(() => null)])
       .then(([d, user]) => {
         setMe(user?.name || (user?.email ? user.email.split("@")[0] : "You"));
-        if (d) { setDeal(d); setStatus("ready"); } else { setStatus("missing"); }
+        if (d) { setDeal(d); cacheDeal(d); setStatus("ready"); }
+        else if (!seed) { setStatus("missing"); } // only 404 if we had nothing to show
       })
-      .catch(() => setStatus("error"));
+      .catch(() => { if (!seed) setStatus("error"); }); // keep the seed on a network hiccup
   }, []);
 
   useEffect(() => { load(); }, [load]);

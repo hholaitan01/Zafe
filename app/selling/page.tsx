@@ -12,7 +12,7 @@ import AppShell from "@/app/_lib/AppShell";
 import { EmptyState, ErrorState, Skeleton, Spinner } from "@/app/_lib/States";
 import { toast } from "@/app/_lib/Toast";
 import { getCurrentUser } from "@/lib/auth";
-import { getSellerProfile, listMySales, loadSellerProfile, naira, setCurrentDealId, shipDeal } from "@/lib/client";
+import { cacheDeals, getSellerProfile, listMySales, loadSellerProfile, naira, setCurrentDealId, shipDeal } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: string }> = {
@@ -21,6 +21,7 @@ const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: str
   shipped: { label: "Shipped", bg: "#ECFDF5", fg: "#047857", dot: "#10B981" },
   completed: { label: "Paid out", bg: "#ECFDF5", fg: "#047857", dot: "#10B981" },
   disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C", dot: "#DC2626" },
+  under_review: { label: "Under review", bg: "#EDE9FE", fg: "#6D28D9", dot: "#7C3AED" },
   refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
   resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3", dot: "#6366F1" },
 };
@@ -53,6 +54,7 @@ export default function SellingPage() {
     try {
       const list = await listMySales(contactsRef.current);
       setSales(list);
+      cacheDeals(list); // warm the cache for instant deal-detail render
       setVerified(getSellerProfile()?.verified === true);
     } catch {
       setError(true);
@@ -92,16 +94,48 @@ export default function SellingPage() {
 
   const open = (id: string) => { setCurrentDealId(id); router.push("/timeline"); };
 
+  const s = sales || [];
+  const loading = sales == null;
+  const held = s.filter((d) => ["funded", "shipped"].includes(d.status)).reduce((t, d) => t + d.item.amount, 0);
+  const toShip = s.filter((d) => d.status === "funded").length;
+  const inDispute = s.filter((d) => ["disputed", "under_review"].includes(d.status)).length;
+  const earned = s
+    .filter((d) => ["completed", "resolved"].includes(d.status))
+    .reduce((t, d) => t + (d.status === "resolved" ? d.item.amount - (d.partialRefundAmount || 0) : d.item.amount), 0);
+
   return (
     <AppShell current="new" user={{ name: shell.name, initials: shell.initials }}>
       <style>{css}</style>
 
       <div className="tf-ph-head sg-head">
-        <div><div className="tf-eyebrow">Selling</div><h1>My sales</h1></div>
+        <div><div className="tf-eyebrow">Selling</div><h1>Seller dashboard</h1></div>
         <Link href="/request" className="tf-btn tf-btn--verify"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>Request a payment</Link>
       </div>
 
       <div className="sg-wrap">
+        <div className="sg-kpis">
+          <div className="tf-card sg-kpi sg-kpi-hero">
+            <div className="tf-eyebrow">Held for you</div>
+            <div className="sg-kpi-val tf-mono">{loading ? <Skeleton w={120} h={24} style={{ marginTop: 6 }} /> : <><span className="sg-naira">₦</span>{naira(held).replace("₦", "")}</>}</div>
+            <div className="sg-kpi-sub">In escrow across your active sales</div>
+          </div>
+          <div className="tf-card sg-kpi">
+            <div className="tf-eyebrow">To ship</div>
+            <div className="sg-kpi-val" style={{ color: toShip ? "#A16207" : "var(--ink)" }}>{loading ? <Skeleton w={40} h={24} style={{ marginTop: 6 }} /> : toShip}</div>
+            <div className="sg-kpi-sub">{toShip ? "Funded, waiting on you" : "Nothing to ship"}</div>
+          </div>
+          <div className="tf-card sg-kpi">
+            <div className="tf-eyebrow">Earned</div>
+            <div className="sg-kpi-val" style={{ color: "var(--safe)" }}>{loading ? <Skeleton w={90} h={24} style={{ marginTop: 6 }} /> : naira(earned)}</div>
+            <div className="sg-kpi-sub">Paid out to your account</div>
+          </div>
+          <div className="tf-card sg-kpi">
+            <div className="tf-eyebrow">Disputes</div>
+            <div className="sg-kpi-val" style={{ color: inDispute ? "#B91C1C" : "var(--ink)" }}>{loading ? <Skeleton w={40} h={24} style={{ marginTop: 6 }} /> : inDispute}</div>
+            <div className="sg-kpi-sub">{inDispute ? "Need your attention" : "All clear"}</div>
+          </div>
+        </div>
+
         {!verified && (
           <Link href="/seller" className="sg-verify">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z" /></svg>
@@ -169,6 +203,16 @@ const css = `
 .sg-head{ display:none }
 .sg-wrap{ display:flex; flex-direction:column; gap:14px; max-width:760px }
 
+.sg-kpis{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
+.sg-kpi{ padding:15px 16px }
+.sg-kpi-hero{ grid-column:1 / -1; background:radial-gradient(120% 130% at 88% 0%, #14304A 0%, #0F172A 62%); border:none; color:#fff }
+.sg-kpi-hero .tf-eyebrow{ color:rgba(255,255,255,.6) }
+.sg-kpi-val{ font-size:24px; font-weight:800; letter-spacing:-.02em; margin-top:6px; line-height:1.1 }
+.sg-kpi-hero .sg-kpi-val{ font-size:30px }
+.sg-naira{ color:rgba(255,255,255,.55); margin-right:2px; font-weight:700 }
+.sg-kpi-sub{ font-size:12px; color:var(--faint); margin-top:5px; line-height:1.4 }
+.sg-kpi-hero .sg-kpi-sub{ color:rgba(255,255,255,.6) }
+
 .sg-verify{ display:flex; align-items:center; gap:11px; border-radius:16px; padding:14px 15px; background:var(--safe-tint); border:1px solid #C7F0DE; color:inherit }
 .sg-verify svg:first-child{ flex-shrink:0 }
 .sg-verify-txt{ flex:1; min-width:0 }
@@ -196,5 +240,7 @@ const css = `
 @media (min-width:1024px){
   .sg-head{ display:flex }
   .sg-request{ display:none }
+  .sg-kpis{ grid-template-columns:repeat(4,1fr) }
+  .sg-kpi-hero{ grid-column:auto }
 }
 `;

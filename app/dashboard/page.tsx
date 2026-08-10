@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
 import { getCurrentUser } from "@/lib/auth";
-import { getMyReputation, listMyDeals, loadUserProfile, naira, setCurrentDealId } from "@/lib/client";
+import { cacheDeals, getMyReputation, listMyDeals, loadUserProfile, naira, setCurrentDealId } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: string }> = {
@@ -20,6 +20,7 @@ const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: str
   shipped: { label: "Delivered", bg: "#FEF3C7", fg: "#A16207", dot: "#E89914" },
   completed: { label: "Released", bg: "#ECFDF5", fg: "#047857", dot: "#10B981" },
   disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C", dot: "#DC2626" },
+  under_review: { label: "Under review", bg: "#EDE9FE", fg: "#6D28D9", dot: "#7C3AED" },
   refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
   resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3", dot: "#6366F1" },
 };
@@ -92,6 +93,7 @@ export default function DashboardPage() {
       ]);
       if (!alive) return;
       setDeals(d);
+      cacheDeals(d); // warm the cache so opening any deal renders instantly
       if (rep) { setScore(rep.score); setTier(rep.tierLabel); }
       if (prof?.photo) setUser((p) => ({ ...p, photo: prof.photo }));
     })();
@@ -111,7 +113,7 @@ export default function DashboardPage() {
   }, [deals]);
 
   const needsConfirm = (deals || []).find((d) => d.status === "shipped");
-  const active = (deals || []).filter((d) => ["created", "funded", "shipped", "disputed"].includes(d.status));
+  const active = (deals || []).filter((d) => ["created", "funded", "shipped", "disputed", "under_review"].includes(d.status));
   const riskLabel = score == null ? "" : score >= 70 ? "low risk" : score >= 40 ? "medium risk" : "building trust";
   const open = (id: string) => { setCurrentDealId(id); router.push("/timeline"); };
   const loading = deals == null;

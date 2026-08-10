@@ -9,6 +9,7 @@ import { apiFetch } from "./api";
 
 /** Both sides of a dispute, as the Dispute screen collects them. */
 export interface DisputeInput {
+  reason?: string;
   buyer: { claim: string; evidence?: string[] };
   seller: { claim: string; evidence?: string[] };
 }
@@ -74,9 +75,21 @@ export function confirmReceipt(dealId: string): Promise<{ ok: boolean; deal?: De
   return apiFetch<{ ok: boolean; deal?: Deal }>(`/api/payout`, { method: "POST", body: JSON.stringify({ dealId, via: "buyer_confirm" }) });
 }
 
-/** Dispute screen — open a dispute; the AI judge rules and the money moves. */
+/** Dispute screen — open a dispute; the AI SUGGESTS a resolution (no money moves
+    until both sides accept it). */
 export function disputeDeal(id: string, input: DisputeInput): Promise<{ deal: Deal; resolution?: DisputeResult }> {
   return apiFetch<{ deal: Deal; resolution?: DisputeResult }>(`/api/deals/${id}/dispute`, { method: "POST", body: JSON.stringify(input) });
+}
+
+/** Dispute screen — the caller accepts the AI's suggestion. Settles only once
+    both sides have accepted (`settled: true`). */
+export function acceptDisputeResolution(id: string): Promise<{ deal: Deal; settled: boolean }> {
+  return apiFetch<{ deal: Deal; settled: boolean }>(`/api/deals/${id}/dispute/accept`, { method: "POST" });
+}
+
+/** Dispute screen — the caller escalates to a human reviewer (→ under_review). */
+export function escalateDispute(id: string): Promise<{ deal: Deal }> {
+  return apiFetch<{ deal: Deal }>(`/api/deals/${id}/dispute/escalate`, { method: "POST" });
 }
 
 /** Release any deals whose auto-release timer has run out. */

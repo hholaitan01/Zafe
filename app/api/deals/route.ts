@@ -10,7 +10,9 @@ import { getServerUser } from "@/lib/auth/server";
 import { authConfigured } from "@/lib/auth/config";
 import { createDeal, listDeals, listDealsForUser } from "@/lib/deals/store";
 import type { CreateDealInput } from "@/lib/deals/types";
-import { resolveContact } from "@/lib/profiles/store";
+import { getProfile, resolveContact } from "@/lib/profiles/store";
+import { getSeller } from "@/lib/sellers/store";
+import { notifySellerOfEscrow } from "@/lib/notifications";
 
 export async function GET(req: Request): Promise<Response> {
   const buyer = new URL(req.url).searchParams.get("buyer")?.trim() || "";
@@ -59,5 +61,15 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const deal = await createDeal({ item: body.item, seller, chat: body.chat, buyerEmail });
+
+  // Buyer-initiated: tell the seller an escrow is waiting. If they're already a
+  // user they also see it in-app; if not, the email invites them to register and
+  // claim it. Best-effort — never let a notification failure break deal creation.
+  if (body.initiatedBy !== "seller" && deal.seller?.contact) {
+    const contact = deal.seller.contact;
+    const isUser = Boolean((await getProfile(contact).catch(() => null)) || (await getSeller(contact).catch(() => null)));
+    await notifySellerOfEscrow(deal, { isUser }).catch(() => {});
+  }
+
   return Response.json({ deal }, { status: 201 });
 }
