@@ -1,6 +1,6 @@
 # Deploying to Vercel
 
-TrustFlow is a standard **Next.js 15** app, so Vercel needs **zero config**. Thanks
+Zafe is a standard **Next.js 15** app, so Vercel needs **zero config**. Thanks
 to the demo-mode design, it deploys to a live URL **even with no environment
 variables set** — the AI uses offline heuristics, login uses a demo session, and
 deals use the seeded store. Add env vars later to turn each part live.

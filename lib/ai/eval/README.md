@@ -1,6 +1,6 @@
 # AI accuracy harness (H2O — Day-6 "count the mistakes")
 
-A labelled test set + runner that scores TrustFlow's three AI features, so we
+A labelled test set + runner that scores Zafe's three AI features, so we
 **know the number before a judge asks** and can watch it improve as we tune.
 
 ```bash

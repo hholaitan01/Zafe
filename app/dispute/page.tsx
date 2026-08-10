@@ -268,7 +268,7 @@ export default function DisputePage() {
                       <div className="dp-reco-why">{reco.rationale}</div>
                       {underReview ? (
                         <div className="dp-reco-state dp-reco-review">
-                          <b>Escalated to a human reviewer.</b> A TrustFlow reviewer will settle this within 24 hours. The funds stay locked until then.
+                          <b>Escalated to a human reviewer.</b> A Zafe reviewer will settle this within 24 hours. The funds stay locked until then.
                         </div>
                       ) : settled ? (
                         <div className="dp-reco-state dp-reco-settled">
@@ -298,7 +298,7 @@ export default function DisputePage() {
                   <ol className="dp-steps">
                     <li>The seller has 48 hours to respond to the recommendation.</li>
                     <li>If both sides accept, funds move automatically via bank payout.</li>
-                    <li>If either side escalates, a TrustFlow reviewer steps in within 24 hours.</li>
+                    <li>If either side escalates, a Zafe reviewer steps in within 24 hours.</li>
                   </ol>
                 </div>
               </aside>

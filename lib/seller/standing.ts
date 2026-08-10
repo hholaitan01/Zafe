@@ -2,7 +2,7 @@
    Seller standing — "who is this person you're about to pay?"
 
    When a buyer enters a seller's phone/email on the New Escrow screen, we look
-   the seller up across every past TrustFlow deal and summarise how they've
+   the seller up across every past Zafe deal and summarise how they've
    behaved: a first-timer is flagged as new (extra caution), a seller with clean
    completed deals reads as reliable, and any past dispute shows as a warning.
 
@@ -16,7 +16,7 @@ export type StandingTone = "good" | "neutral" | "warn";
 
 export interface SellerStanding {
   contact: string;
-  known: boolean; // has any prior deal on TrustFlow
+  known: boolean; // has any prior deal on Zafe
   priorDeals: number;
   completed: number;
   disputed: number;
@@ -40,7 +40,7 @@ export async function getSellerStanding(contact: string): Promise<SellerStanding
   if (priorDeals === 0) {
     tone = "neutral";
     label = "New seller";
-    detail = "No TrustFlow history yet. Your escrow still protects you, but take extra care.";
+    detail = "No Zafe history yet. Your escrow still protects you, but take extra care.";
   } else if (disputed > 0) {
     tone = "warn";
     label = "Caution";

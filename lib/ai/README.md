@@ -1,6 +1,6 @@
-# TrustFlow AI backend (H2O)
+# Zafe — AI backend (H2O)
 
-The three AI features that power TrustFlow, as real API routes. Each one calls
+The three AI features that power Zafe, as real API routes. Each one calls
 **Claude** (`claude-opus-5` by default) using the official Anthropic SDK with
 JSON-schema structured outputs — and falls back to a deterministic offline
 heuristic so the app still demos on stage with no key and no network.

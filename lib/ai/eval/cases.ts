@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Labelled test cases for TrustFlow's AI (H2O's Day-6 task: "test the AI for
+   Labelled test cases for Zafe's AI (H2O's Day-6 task: "test the AI for
    wrong answers, count the mistakes, know the number before a judge asks").
 
    Each case has a known-right answer. The runner (run.ts) feeds them through
@@ -20,14 +20,14 @@ export interface ScamCase {
 }
 
 export const SCAM_CASES: ScamCase[] = [
-  { name: "personal-account", text: "Pay into my personal account first, then I ship. My TrustFlow isn't working.", expectScam: true },
+  { name: "personal-account", text: "Pay into my personal account first, then I ship. My Zafe isn't working.", expectScam: true },
   { name: "advance-fee", text: "Send a small clearance fee to release your item, then I refund you.", expectScam: true },
   { name: "fake-proof", text: "I've already sent the money, just check again — it's pending on my side.", expectScam: true },
   { name: "off-platform", text: "Let's just do this on WhatsApp outside the app, it's cheaper that way.", expectScam: true },
   { name: "gift-card", text: "Buy me a steam gift card and share the code, I'll ship immediately.", expectScam: true },
   { name: "crypto-first", text: "Send the payment in USDT to my wallet before I can post it out.", expectScam: true },
   { name: "urgency-pressure", text: "URGENT! Last one left, someone else is paying now — send within 5 minutes or you lose it.", expectScam: true },
-  { name: "clean-escrow", text: "Hi, is the iPhone still available? Happy to use TrustFlow escrow so we're both safe.", expectScam: false },
+  { name: "clean-escrow", text: "Hi, is the iPhone still available? Happy to use Zafe escrow so we're both safe.", expectScam: false },
   { name: "clean-serial", text: "Sure, I'll ship once the money is in escrow. Here's the serial number and extra photos.", expectScam: false },
   { name: "clean-meetup", text: "Can we meet at the campus gate tomorrow afternoon to hand it over?", expectScam: false },
   { name: "clean-history", text: "I've been selling here for two years, happy to use buyer protection.", expectScam: false },
@@ -54,7 +54,7 @@ export const TRUST_CASES: TrustCase[] = [
   },
   {
     name: "trusted-seller",
-    chat: "Seller: happy to use TrustFlow escrow. Here's the serial number and extra photos.",
+    chat: "Seller: happy to use Zafe escrow. Here's the serial number and extra photos.",
     seller: { name: "Ada Electronics", verified: true, completedDeals: 42, disputes: 0, accountAgeDays: 420, rating: 4.9 },
     expect: ["safe"],
   },

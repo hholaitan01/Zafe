@@ -1,6 +1,6 @@
 "use client";
 
-/* Registers the service worker so TrustFlow is installable and has an offline
+/* Registers the service worker so Zafe is installable and has an offline
    fallback. The worker itself never caches API or authenticated responses (a
    money app must never serve stale deal data); it only caches static assets and
    an offline page. See public/sw.js. */

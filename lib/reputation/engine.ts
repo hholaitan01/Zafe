@@ -101,7 +101,7 @@ export function scoreReputation(email: string, deals: Deal[], now: number = Date
 
   const tenurePts = Math.min(6, Math.floor(stats.tenureDays / 30));
   if (tenurePts > 0) {
-    factors.push({ key: "tenure", label: "Account tenure", detail: `${stats.tenureDays} days trading on TrustFlow`, points: tenurePts });
+    factors.push({ key: "tenure", label: "Account tenure", detail: `${stats.tenureDays} days trading on Zafe`, points: tenurePts });
   }
 
   if (stats.total > 0 && stats.disputed > 0) {

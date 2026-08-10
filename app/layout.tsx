@@ -4,13 +4,13 @@ import PwaRegister from "./_lib/PwaRegister";
 import { ToastHost } from "./_lib/Toast";
 
 export const metadata: Metadata = {
-  applicationName: "TrustFlow",
-  title: { default: "TrustFlow: AI Escrow", template: "%s · TrustFlow" },
+  applicationName: "Zafe",
+  title: { default: "Zafe", template: "%s · Zafe" },
   description:
     "AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.",
   appleWebApp: {
     capable: true,
-    title: "TrustFlow",
+    title: "Zafe",
     statusBarStyle: "default",
   },
   icons: {

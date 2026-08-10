@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import { LegalDoc, type LegalSection } from "@/app/_lib/LegalDoc";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy · TrustFlow",
-  description: "How TrustFlow collects, uses, and protects your data, and your rights under the Nigeria Data Protection Act 2023.",
+  title: "Privacy Policy · Zafe",
+  description: "How Zafe collects, uses, and protects your data, and your rights under the Nigeria Data Protection Act 2023.",
 };
 
 const sections: LegalSection[] = [
   {
     h: "What we collect",
     body: [
-      <>Depending on how you use TrustFlow, we collect:
+      <>Depending on how you use Zafe, we collect:
         <ul>
           <li><b>Account data</b> — your email address, and a display name and profile photo if you add them.</li>
           <li><b>Seller verification data</b> — your BVN (or NIN), a liveness selfie, and your name, used to confirm your identity before payouts.</li>
@@ -64,7 +64,7 @@ const sections: LegalSection[] = [
   {
     h: "Your rights under the NDPA 2023",
     body: [
-      <>TrustFlow is governed by the Nigeria Data Protection Act 2023 and overseen by the Nigeria Data Protection Commission (NDPC). Under it, you can:
+      <>Zafe is governed by the Nigeria Data Protection Act 2023 and overseen by the Nigeria Data Protection Commission (NDPC). Under it, you can:
         <ul>
           <li><b>Access</b> the personal data we hold about you.</li>
           <li><b>Correct</b> data that is wrong or out of date — much of it directly in your profile.</li>
@@ -85,7 +85,7 @@ const sections: LegalSection[] = [
   {
     h: "Children",
     body: [
-      <>TrustFlow is not for anyone under 18. We do not knowingly collect data from children.</>,
+      <>Zafe is not for anyone under 18. We do not knowingly collect data from children.</>,
     ],
   },
   {
@@ -97,7 +97,7 @@ const sections: LegalSection[] = [
   {
     h: "Contact",
     body: [
-      <>For any privacy question or request, reach the team from your profile or by replying to any TrustFlow email. Before launch, a named data protection contact will be published here.</>,
+      <>For any privacy question or request, reach the team from your profile or by replying to any Zafe email. Before launch, a named data protection contact will be published here.</>,
     ],
   },
 ];
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
       updated="August 2026"
       intro={
         <p>
-          This policy explains what data TrustFlow collects, how we use it to run protected escrow,
+          This policy explains what data Zafe collects, how we use it to run protected escrow,
           who we share it with, and the rights you have over it under Nigerian data-protection law.
         </p>
       }

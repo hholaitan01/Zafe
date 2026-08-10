@@ -92,10 +92,11 @@ export default function LoginScreen() {
       <section className="auth-aside">
         <div className="auth-mark">
           <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-            <path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#fff" fillOpacity="0.1" stroke="#fff" strokeOpacity="0.25" />
-            <path d="M11 16.2 14.6 20 21.5 12.5" stroke="#10B981" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M8.5 10.5H23.5" stroke="#F8FAFC" strokeWidth="4.2" strokeLinecap="round" />
+            <path d="M8.5 21.5H23.5" stroke="#F8FAFC" strokeWidth="4.2" strokeLinecap="round" />
+            <path d="M23.5 10.5L8.5 21.5" stroke="#10B981" strokeWidth="4.2" strokeLinecap="round" />
           </svg>
-          <span>TrustFlow</span>
+          <span>Zafe</span>
         </div>
 
         <div className="auth-aside-mid">
@@ -183,7 +184,7 @@ export default function LoginScreen() {
           )}
 
           <p className="auth-terms">
-            By continuing you agree to TrustFlow&apos;s <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.
+            By continuing you agree to Zafe&apos;s <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.
           </p>
 
           <p className="auth-legal">

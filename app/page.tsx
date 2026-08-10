@@ -18,8 +18,9 @@ import { useEffect } from "react";
 function Mark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#0F172A" />
-      <path d="M11 16.2 14.6 20 21.5 12.5" stroke="#10B981" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8.5 10.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M8.5 21.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M23.5 10.5L8.5 21.5" stroke="#10B981" strokeWidth="4.2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -68,7 +69,7 @@ export default function Landing() {
       {/* ---- Nav ---- */}
       <header className="lp-nav">
         <div className="lp-wrap lp-navrow">
-          <a className="lp-brand" href="#top" aria-label="TrustFlow home"><Mark /><span>TrustFlow</span></a>
+          <a className="lp-brand" href="#top" aria-label="Zafe home"><Mark /><span>Zafe</span></a>
           <nav className="lp-navlinks" aria-label="Primary">
             <a href="#how">How it works</a>
             <a href="#ai">The AI</a>
@@ -159,7 +160,7 @@ export default function Landing() {
           <div className="lp-aicopy lp-reveal">
             <span className="lp-eyebrow">The part no other escrow has</span>
             <h2>An AI reads the deal before your money moves.</h2>
-            <p>Most fraud happens in the chat, long before anyone pays. Paste the conversation and TrustFlow flags the pressure tactics, the off-platform tricks, and the fake urgency. If it is risky, you cannot pay until you have seen exactly why.</p>
+            <p>Most fraud happens in the chat, long before anyone pays. Paste the conversation and Zafe flags the pressure tactics, the off-platform tricks, and the fake urgency. If it is risky, you cannot pay until you have seen exactly why.</p>
             <div className="lp-ailist">
               <div><Icon d={I.check} color="#059669" size={17} />Names the specific scam tactic in the chat</div>
               <div><Icon d={I.check} color="#059669" size={17} />Scores the seller from their past deals</div>
@@ -191,7 +192,7 @@ export default function Landing() {
         <div className="lp-wrap">
           <div className="lp-head lp-reveal">
             <h2 className="lp-safety-h">Safety that works before the money moves.</h2>
-            <p className="lp-safety-p">Peer-to-peer fraud lives in the gap between "send me the money" and "where is my item?" TrustFlow closes that gap on both sides.</p>
+            <p className="lp-safety-p">Peer-to-peer fraud lives in the gap between "send me the money" and "where is my item?" Zafe closes that gap on both sides.</p>
           </div>
           <div className="lp-features">
             {[
@@ -242,7 +243,7 @@ export default function Landing() {
       {/* ---- Footer ---- */}
       <footer className="lp-footer">
         <div className="lp-wrap lp-footrow">
-          <a className="lp-brand" href="#top" aria-label="TrustFlow home"><Mark size={24} /><span>TrustFlow</span></a>
+          <a className="lp-brand" href="#top" aria-label="Zafe home"><Mark size={24} /><span>Zafe</span></a>
           <p className="lp-footnote">AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.</p>
           <nav className="lp-footlinks" aria-label="Legal">
             <Link href="/terms">Terms</Link>

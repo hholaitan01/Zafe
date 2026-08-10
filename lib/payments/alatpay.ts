@@ -34,7 +34,7 @@ export async function generateVirtualAccount(input: {
       amount: input.amount,
       currency: "NGN",
       orderId: input.transactionRef,
-      description: "TrustFlow escrow deposit",
+      description: "Zafe escrow deposit",
       customer: {
         email: input.buyerEmail,
         phone: input.buyerPhone,

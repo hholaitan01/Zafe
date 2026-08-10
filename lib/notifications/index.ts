@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Notifications — composing and sending the messages TrustFlow sends outside a
+   Notifications — composing and sending the messages Zafe sends outside a
    screen. Right now: telling a seller they've been asked to receive an escrow
    payment.
 
@@ -53,25 +53,25 @@ export async function notifySellerOfEscrow(deal: Deal, opts: { isUser: boolean }
 
   const subject = opts.isUser
     ? `New escrow: ${buyer} wants to pay you ${amount}`
-    : `${buyer} wants to pay you ${amount} through TrustFlow escrow`;
+    : `${buyer} wants to pay you ${amount} through Zafe escrow`;
 
   const intro = opts.isUser
-    ? `You have a new protected payment waiting on TrustFlow. It's already in your sales.`
-    : `Someone wants to pay you safely through TrustFlow escrow. The money is held securely and released to you once the buyer confirms delivery. Register with this email address to receive it.`;
+    ? `You have a new protected payment waiting on Zafe. It's already in your sales.`
+    : `Someone wants to pay you safely through Zafe escrow. The money is held securely and released to you once the buyer confirms delivery. Register with this email address to receive it.`;
 
   const text = [
-    `${buyer} wants to pay you ${amount} for "${deal.item.title}" through TrustFlow escrow.`,
+    `${buyer} wants to pay you ${amount} for "${deal.item.title}" through Zafe escrow.`,
     "",
     opts.isUser
       ? "It's waiting in your sales."
-      : "TrustFlow holds the money safely and releases it to you once the buyer confirms delivery. Register with this email address to receive it.",
+      : "Zafe holds the money safely and releases it to you once the buyer confirms delivery. Register with this email address to receive it.",
     "",
     `${cta}: ${link}`,
   ].join("\n");
 
   const html = `
   <div style="font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0F172A">
-    <div style="font-weight:800;font-size:18px;letter-spacing:-.02em;color:#0F172A;margin-bottom:18px">TrustFlow</div>
+    <div style="font-weight:800;font-size:18px;letter-spacing:-.02em;color:#0F172A;margin-bottom:18px">Zafe</div>
     <div style="background:#ECFDF5;border:1px solid #C7EAD9;border-radius:14px;padding:18px 20px">
       <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#059669">Escrow payment</div>
       <div style="font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px">${amount}</div>
@@ -79,7 +79,7 @@ export async function notifySellerOfEscrow(deal: Deal, opts: { isUser: boolean }
     </div>
     <p style="font-size:15px;line-height:1.6;color:#334155;margin:18px 0">${escapeHtml(intro)}</p>
     <a href="${link}" style="display:inline-block;background:#059669;color:#fff;font-weight:700;font-size:15px;text-decoration:none;padding:13px 22px;border-radius:12px">${cta}</a>
-    <p style="font-size:12.5px;line-height:1.6;color:#94A3B8;margin-top:22px">TrustFlow holds the buyer's money in escrow. You're paid once the buyer confirms delivery, or automatically if they go silent past the timer. If you weren't expecting this, you can ignore this email.</p>
+    <p style="font-size:12.5px;line-height:1.6;color:#94A3B8;margin-top:22px">Zafe holds the buyer's money in escrow. You're paid once the buyer confirms delivery, or automatically if they go silent past the timer. If you weren't expecting this, you can ignore this email.</p>
   </div>`;
 
   await sendEmail({ to: to as string, subject, html, text });

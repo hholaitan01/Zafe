@@ -1,4 +1,4 @@
-# TrustFlow — compliance docs
+# Zafe — compliance docs
 
 Working templates for the compliance programme, kept in the repo so the controls
 and the code evolve together. **These are drafts, not legal advice** — a

@@ -127,8 +127,8 @@ export default function AdminDisputesPage() {
       <header className="ad-top">
         <div className="ad-wrap ad-toprow">
           <Link href="/dashboard" className="ad-brand">
-            <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#059669" /><path d="M11 16.2 14.6 20 21.5 12.5" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            <span>TrustFlow</span>
+            <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8.5 10.5H23.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" /><path d="M8.5 21.5H23.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" /><path d="M23.5 10.5L8.5 21.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" /></svg>
+            <span>Zafe</span>
           </Link>
           <span className="ad-role">Review queue</span>
         </div>

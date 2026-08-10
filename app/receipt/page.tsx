@@ -50,8 +50,8 @@ export default function ReceiptPage() {
 
   function share() {
     if (!deal) return;
-    const text = `TrustFlow receipt\n${money(deal.item.amount)} released for ${deal.item.title}\nTo: ${seller}\nRef: ${ref}\n${fmtDateTime(releasedAt)}`;
-    if (navigator.share) { navigator.share({ title: "TrustFlow receipt", text }).catch(() => {}); return; }
+    const text = `Zafe receipt\n${money(deal.item.amount)} released for ${deal.item.title}\nTo: ${seller}\nRef: ${ref}\n${fmtDateTime(releasedAt)}`;
+    if (navigator.share) { navigator.share({ title: "Zafe receipt", text }).catch(() => {}); return; }
     navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {});
   }
 
@@ -62,8 +62,8 @@ export default function ReceiptPage() {
         <div className="rc-card rc-enter">
           {/* logo panel */}
           <div className="rc-logo">
-            <span className="rc-mark"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 2.5 27 7v8.5c0 7-4.6 11.6-11 13.5-6.4-1.9-11-6.5-11-13.5V7z" fill="#0F172A" /><path d="M11 16.2 14.6 20 21.5 12.5" stroke="#10B981" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-            <span className="rc-wordmark">TrustFlow<span>Escrow</span></span>
+            <span className="rc-mark"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8.5 10.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" /><path d="M8.5 21.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" /><path d="M23.5 10.5L8.5 21.5" stroke="#10B981" strokeWidth="4.2" strokeLinecap="round" /></svg></span>
+            <span className="rc-wordmark">Zafe<span>Escrow</span></span>
           </div>
 
           <div className="rc-status">

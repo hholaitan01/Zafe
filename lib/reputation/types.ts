@@ -4,7 +4,7 @@
 
    This is NOT the per-deal Trust Score (that scores a *counterparty* from a
    single chat). Reputation is *your* accumulated standing across every deal
-   you've run on TrustFlow: settle deals cleanly and it rises; rack up disputes
+   you've run on Zafe: settle deals cleanly and it rises; rack up disputes
    and it falls. It's deterministic and fully explainable — every point is
    attributed to a factor — so it can be shown to a counterparty and defended.
    ========================================================================== */

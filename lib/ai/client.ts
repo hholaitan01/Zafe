@@ -1,5 +1,5 @@
 /* ==========================================================================
-   The seam between TrustFlow and Claude.
+   The seam between Zafe and Claude.
 
    - If ANTHROPIC_API_KEY is set, we call Claude for real.
    - If it isn't, callers fall back to the offline heuristic in mock.ts, so the

@@ -1,8 +1,8 @@
 {
-  "name": "trustflow-app",
+  "name": "zafe-app",
   "version": "0.1.0",
   "private": true,
-  "description": "TrustFlow: AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.",
+  "description": "Zafe: escrow for peer-to-peer trades. Money held safe until you confirm.",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",

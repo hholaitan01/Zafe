@@ -100,7 +100,7 @@ export default function NewEscrowPage() {
           {/* seller */}
           <div className="tf-card ne-sec">
             <div className="ne-sec-title">Who are you paying?</div>
-            <p className="ne-sec-sub">We look up their TrustFlow standing and run the Trust Score. You&apos;ll see it before you pay.</p>
+            <p className="ne-sec-sub">We look up their Zafe standing and run the Trust Score. You&apos;ll see it before you pay.</p>
             <label className="ne-label">Seller @username, phone, or email</label>
             <input value={seller} onChange={(e) => setSeller(e.target.value)} placeholder="@username, phone or seller@email.com" className="ne-input" />
           </div>

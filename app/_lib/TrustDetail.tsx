@@ -17,7 +17,7 @@ const THEME: Record<TrustVerdict, { ring: string; fg: string; tint: string; bd: 
   risky: { ring: "#DC2626", fg: "#B91C1C", tint: "#FEE2E2", bd: "#FCA5A5", label: "High risk", safe: false },
 };
 
-const SIGNALS = ["Seller history on TrustFlow", "Account age & verification", "Conversation tone", "Price against the market"];
+const SIGNALS = ["Seller history on Zafe", "Account age & verification", "Conversation tone", "Price against the market"];
 
 export default function TrustDetail({ fallback = "safe" }: { fallback?: TrustVerdict }) {
   const router = useRouter();

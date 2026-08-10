@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Shared types for TrustFlow's AI backend (H2O's lane).
+   Shared types for Zafe's AI backend (H2O's lane).
 
    Three AI features live here:
      1. Trust Score      — a 0–100 pre-deal risk score for a seller + chat
@@ -18,7 +18,7 @@ export type AiMode = "live" | "mock" | "mock-fallback";
 export interface SellerProfile {
   name?: string;
   /** The seller's phone or email, as the buyer entered it — used to look up
-      the seller's standing across past TrustFlow deals. */
+      the seller's standing across past Zafe deals. */
   contact?: string;
   /** BVN/NIN verified — every seller must verify before they can be paid. */
   verified?: boolean;

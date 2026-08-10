@@ -1,7 +1,7 @@
 "use client";
 
 /* ==========================================================================
-   ScreenHtml — renders one finished design screen (from the TrustFlow design)
+   ScreenHtml — renders one finished design screen (from the Zafe design)
    as a real, interactive app page. The visuals are the exact design markup, so
    screens stay pixel-identical; this component makes them *work*:
 

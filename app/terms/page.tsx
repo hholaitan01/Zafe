@@ -2,23 +2,23 @@ import type { Metadata } from "next";
 import { LegalDoc, type LegalSection } from "@/app/_lib/LegalDoc";
 
 export const metadata: Metadata = {
-  title: "Terms of Service · TrustFlow",
-  description: "The terms that govern your use of TrustFlow's AI-powered escrow for peer-to-peer trades.",
+  title: "Terms of Service · Zafe",
+  description: "The terms that govern your use of Zafe's AI-powered escrow for peer-to-peer trades.",
 };
 
 const sections: LegalSection[] = [
   {
-    h: "What TrustFlow is",
+    h: "What Zafe is",
     body: [
-      <>TrustFlow is an escrow service for peer-to-peer trades. When a buyer pays, we hold the money in a dedicated account and release it to the seller only after the buyer confirms the item was received as agreed. Before payment, an AI can review the deal for scam signals.</>,
+      <>Zafe is an escrow service for peer-to-peer trades. When a buyer pays, we hold the money in a dedicated account and release it to the seller only after the buyer confirms the item was received as agreed. Before payment, an AI can review the deal for scam signals.</>,
       <><b>We are an intermediary, not a bank and not a party to your trade.</b> We do not sell the goods, guarantee their quality, or take ownership of them. We hold and move funds according to these terms and the outcome of each deal.</>,
     ],
   },
   {
-    h: "Who can use TrustFlow",
+    h: "Who can use Zafe",
     body: [
-      <>To use TrustFlow you must be at least 18 years old, able to enter a binding contract, and using the service for lawful trades. You agree to give accurate information and to keep it up to date.</>,
-      <>TrustFlow is built for trades settled in Nigeria over Nigerian bank rails. Availability elsewhere is not guaranteed.</>,
+      <>To use Zafe you must be at least 18 years old, able to enter a binding contract, and using the service for lawful trades. You agree to give accurate information and to keep it up to date.</>,
+      <>Zafe is built for trades settled in Nigeria over Nigerian bank rails. Availability elsewhere is not guaranteed.</>,
     ],
   },
   {
@@ -58,7 +58,7 @@ const sections: LegalSection[] = [
   {
     h: "The AI features",
     body: [
-      <>TrustFlow includes AI that produces a Trust Score, flags possible scam tactics, and suggests how a dispute might be resolved. <b>These are decision-support tools, not guarantees.</b> A high score does not promise a deal is safe, and a low score does not prove fraud. You remain responsible for your own decision to trade.</>,
+      <>Zafe includes AI that produces a Trust Score, flags possible scam tactics, and suggests how a dispute might be resolved. <b>These are decision-support tools, not guarantees.</b> A high score does not promise a deal is safe, and a low score does not prove fraud. You remain responsible for your own decision to trade.</>,
       <>When you paste a chat for an AI check, that text is processed to produce the score. Do not paste information you are not comfortable processing for that purpose.</>,
     ],
   },
@@ -66,7 +66,7 @@ const sections: LegalSection[] = [
     h: "Disputes and resolution",
     body: [
       <>If a deal goes wrong, either party can open a dispute. The AI reviews the evidence both sides submit and <b>suggests</b> an outcome — release to the seller, refund to the buyer, or a split.</>,
-      <>If both parties accept the suggestion, it is applied and the funds move accordingly. If either party does not accept, the dispute is <b>escalated to human review</b>: the funds stay locked while a member of the TrustFlow team reviews the evidence and makes a decision. You agree to cooperate and provide honest evidence. Our resolution decision is final for the purpose of moving the escrowed funds.</>,
+      <>If both parties accept the suggestion, it is applied and the funds move accordingly. If either party does not accept, the dispute is <b>escalated to human review</b>: the funds stay locked while a member of the Zafe team reviews the evidence and makes a decision. You agree to cooperate and provide honest evidence. Our resolution decision is final for the purpose of moving the escrowed funds.</>,
     ],
   },
   {
@@ -75,7 +75,7 @@ const sections: LegalSection[] = [
       <>You agree not to:
         <ul>
           <li>Trade illegal, stolen, counterfeit, or prohibited goods or services.</li>
-          <li>Use TrustFlow to commit fraud, launder money, or deceive a counterparty.</li>
+          <li>Use Zafe to commit fraud, launder money, or deceive a counterparty.</li>
           <li>Move a deal off the platform to avoid escrow after starting it, or pressure a counterparty to do so.</li>
           <li>Submit false identity, payment, or dispute evidence.</li>
           <li>Interfere with, probe, or try to break the security of the service.</li>
@@ -92,8 +92,8 @@ const sections: LegalSection[] = [
   {
     h: "Availability and liability",
     body: [
-      <>TrustFlow is provided on an "as is" basis, especially during beta. We work to keep it accurate and available, but we do not promise it will be uninterrupted or error-free.</>,
-      <>To the extent the law allows, TrustFlow is not liable for the acts of a counterparty, for goods that are not as described beyond the escrowed amount, or for indirect or consequential loss. Our role and responsibility are limited to holding and moving the escrowed funds according to these terms.</>,
+      <>Zafe is provided on an "as is" basis, especially during beta. We work to keep it accurate and available, but we do not promise it will be uninterrupted or error-free.</>,
+      <>To the extent the law allows, Zafe is not liable for the acts of a counterparty, for goods that are not as described beyond the escrowed amount, or for indirect or consequential loss. Our role and responsibility are limited to holding and moving the escrowed funds according to these terms.</>,
     ],
   },
   {
@@ -106,7 +106,7 @@ const sections: LegalSection[] = [
   {
     h: "Changes to these terms",
     body: [
-      <>We may update these terms as the product grows. When we make a material change, we will update the date above and, where appropriate, notify you. Continuing to use TrustFlow after a change means you accept the updated terms.</>,
+      <>We may update these terms as the product grows. When we make a material change, we will update the date above and, where appropriate, notify you. Continuing to use Zafe after a change means you accept the updated terms.</>,
     ],
   },
   {
@@ -124,7 +124,7 @@ export default function TermsPage() {
       updated="August 2026"
       intro={
         <p>
-          These terms are the agreement between you and TrustFlow when you use the app to protect a
+          These terms are the agreement between you and Zafe when you use the app to protect a
           trade. Please read them. By signing in or starting a deal, you accept them.
         </p>
       }

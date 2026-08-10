@@ -79,7 +79,7 @@ export default function SettingsPage() {
         <div className="tf-card st-group">
           <Link href="/selling" className="st-row">
             <span className="st-ic st-ic-safe"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6" /></svg></span>
-            <span className="st-main"><span className="st-title">Sell on TrustFlow</span><span className="st-sub">Verify & manage your sales</span></span>
+            <span className="st-main"><span className="st-title">Sell on Zafe</span><span className="st-sub">Verify & manage your sales</span></span>
             <Chevron />
           </Link>
         </div>
