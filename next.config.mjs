@@ -2,10 +2,11 @@ import path from "node:path";
 
 /* Security headers applied to every response. Tuned to what TrustFlow actually
    loads so nothing breaks:
-   - style-src / font-src allow Google Fonts (IBM Plex Sans, imported in
-     globals.css) and 'unsafe-inline' for the app's inline <style> blocks.
-   - script-src 'unsafe-inline' — Next's App Router injects inline bootstrap
-     scripts (no nonce pipeline here).
+   - The font (IBM Plex Sans) is self-hosted under /fonts, so font-src is 'self'
+     only and no external font hosts are allowed.
+   - style-src 'unsafe-inline' for the app's inline <style> blocks; script-src
+     'unsafe-inline' — Next's App Router injects inline bootstrap scripts (no
+     nonce pipeline here).
    - connect-src allows same-origin plus Supabase (auth + realtime websockets).
    - img-src allows data: (profile photos / avatars) and https: (OAuth avatars).
    - Permissions-Policy KEEPS camera=(self) — the seller liveness selfie needs it.
@@ -17,8 +18,8 @@ const csp = [
   "frame-ancestors 'none'",
   "form-action 'self'",
   "img-src 'self' data: blob: https:",
-  "font-src 'self' https://fonts.gstatic.com data:",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'unsafe-inline'",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
   "manifest-src 'self'",
