@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import PwaRegister from "./_lib/PwaRegister";
 import { ToastHost } from "./_lib/Toast";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   applicationName: "Zafe",
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <ToastHost />
         <PwaRegister />
+        <SpeedInsights />
       </body>
     </html>
   );
