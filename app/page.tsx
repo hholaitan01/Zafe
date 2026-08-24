@@ -79,7 +79,7 @@ export default function Landing() {
           <div className="lp-navcta">
             <Link href="/seller" className="lp-link lp-link-sell">Become a seller</Link>
             <Link href="/login" className="lp-link">Sign in</Link>
-            <Link href="/login" className="lp-btn lp-btn-primary">Get started</Link>
+            <Link href="/waitlist" className="lp-btn lp-btn-primary">Join the waitlist</Link>
           </div>
         </div>
       </header>
@@ -88,11 +88,10 @@ export default function Landing() {
       <section className="lp-hero" id="top">
         <div className="lp-wrap lp-herogrid">
           <div className="lp-herocopy lp-reveal">
-            <span className="lp-eyebrow">AI escrow for peer-to-peer trades</span>
             <h1>Buy from strangers.<br />Keep your money safe.</h1>
             <p className="lp-sub">Your money stays locked until you confirm the item arrived. An AI checks the deal for scams before you pay.</p>
             <div className="lp-herobtns">
-              <Link href="/login" className="lp-btn lp-btn-primary lp-btn-lg">Start a protected deal</Link>
+              <Link href="/waitlist" className="lp-btn lp-btn-primary lp-btn-lg">Join the waitlist</Link>
               <a href="#how" className="lp-btn lp-btn-ghost lp-btn-lg">See how it works</a>
             </div>
           </div>
@@ -101,7 +100,6 @@ export default function Landing() {
           <div className="lp-herovis lp-reveal">
             <div className="lp-card lp-escrow">
               <div className="lp-escrow-top">
-                <span className="lp-badge"><Icon d={I.shield} color="#047857" size={14} />In escrow</span>
                 <span className="lp-escrow-id">TF-4821</span>
               </div>
               <div className="lp-escrow-amt">₦450,000</div>
@@ -158,7 +156,6 @@ export default function Landing() {
       <section className="lp-section lp-aiwrap" id="ai">
         <div className="lp-wrap lp-aigrid">
           <div className="lp-aicopy lp-reveal">
-            <span className="lp-eyebrow">The part no other escrow has</span>
             <h2>An AI reads the deal before your money moves.</h2>
             <p>Most fraud happens in the chat, long before anyone pays. Paste the conversation and Zafe flags the pressure tactics, the off-platform tricks, and the fake urgency. If it is risky, you cannot pay until you have seen exactly why.</p>
             <div className="lp-ailist">
@@ -234,8 +231,8 @@ export default function Landing() {
       <section className="lp-cta lp-reveal">
         <div className="lp-wrap lp-ctacard">
           <h2>Your next deal, protected.</h2>
-          <p>Set up your first escrow in under a minute. No password to remember, no bank details until a payout is due.</p>
-          <Link href="/login" className="lp-btn lp-btn-safe lp-btn-lg">Start a protected deal<Icon d={I.arrow} color="#fff" size={18} /></Link>
+          <p>Zafe is launching soon. Join the waitlist to get early access the moment we go live.</p>
+          <Link href="/waitlist" className="lp-btn lp-btn-safe lp-btn-lg">Join the waitlist<Icon d={I.arrow} color="#fff" size={18} /></Link>
           <p className="lp-cta-sell">Selling instead? <Link href="/seller">Become a verified seller</Link></p>
         </div>
       </section>
@@ -314,7 +311,7 @@ const css = `
 .lp-herovis{position:relative}
 .lp-card{background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh)}
 .lp-escrow{padding:22px; box-shadow:var(--sh-lg); position:relative; z-index:2}
-.lp-escrow-top{display:flex; align-items:center; justify-content:space-between}
+.lp-escrow-top{display:flex; align-items:center; justify-content:flex-end}
 .lp-badge{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:999px; color:#047857; background:var(--safe-tint); border:1px solid #C7F0DE}
 .lp-escrow-id{font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; font-weight:500; font-family:ui-monospace,Menlo,monospace}
 .lp-escrow-amt{margin-top:18px; font-size:44px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
