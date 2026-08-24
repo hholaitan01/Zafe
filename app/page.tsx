@@ -88,7 +88,6 @@ export default function Landing() {
       <section className="lp-hero" id="top">
         <div className="lp-wrap lp-herogrid">
           <div className="lp-herocopy lp-reveal">
-            <span className="lp-eyebrow">AI escrow for peer-to-peer trades</span>
             <h1>Buy from strangers.<br />Keep your money safe.</h1>
             <p className="lp-sub">Your money stays locked until you confirm the item arrived. An AI checks the deal for scams before you pay.</p>
             <div className="lp-herobtns">
@@ -101,7 +100,6 @@ export default function Landing() {
           <div className="lp-herovis lp-reveal">
             <div className="lp-card lp-escrow">
               <div className="lp-escrow-top">
-                <span className="lp-badge"><Icon d={I.shield} color="#047857" size={14} />In escrow</span>
                 <span className="lp-escrow-id">TF-4821</span>
               </div>
               <div className="lp-escrow-amt">₦450,000</div>
@@ -158,7 +156,6 @@ export default function Landing() {
       <section className="lp-section lp-aiwrap" id="ai">
         <div className="lp-wrap lp-aigrid">
           <div className="lp-aicopy lp-reveal">
-            <span className="lp-eyebrow">The part no other escrow has</span>
             <h2>An AI reads the deal before your money moves.</h2>
             <p>Most fraud happens in the chat, long before anyone pays. Paste the conversation and Zafe flags the pressure tactics, the off-platform tricks, and the fake urgency. If it is risky, you cannot pay until you have seen exactly why.</p>
             <div className="lp-ailist">
@@ -314,7 +311,7 @@ const css = `
 .lp-herovis{position:relative}
 .lp-card{background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh)}
 .lp-escrow{padding:22px; box-shadow:var(--sh-lg); position:relative; z-index:2}
-.lp-escrow-top{display:flex; align-items:center; justify-content:space-between}
+.lp-escrow-top{display:flex; align-items:center; justify-content:flex-end}
 .lp-badge{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:999px; color:#047857; background:var(--safe-tint); border:1px solid #C7F0DE}
 .lp-escrow-id{font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; font-weight:500; font-family:ui-monospace,Menlo,monospace}
 .lp-escrow-amt{margin-top:18px; font-size:44px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
