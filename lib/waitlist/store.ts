@@ -60,3 +60,28 @@ export async function waitlistCount(): Promise<number> {
   const { count, error } = await db().from("waitlist").select("*", { count: "exact", head: true });
   return error ? 0 : count ?? 0;
 }
+
+export interface WaitlistRow {
+  email: string;
+  name?: string;
+  source?: string;
+  createdAt: string;
+}
+
+/** All sign-ups, newest first. Admin-only: only ever called from the admin
+    route, which gates on isAdmin() before invoking this. */
+export async function listWaitlist(): Promise<WaitlistRow[]> {
+  if (!live()) {
+    return [...mem().values()]
+      .map((v) => ({ email: v.email, name: v.name, source: v.source, createdAt: v.createdAt }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+  const { data, error } = await db().from("waitlist").select("email,name,source,created_at").order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map((r) => ({
+    email: String(r.email),
+    name: (r.name as string) ?? undefined,
+    source: (r.source as string) ?? undefined,
+    createdAt: String(r.created_at),
+  }));
+}
