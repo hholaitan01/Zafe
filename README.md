@@ -10,7 +10,7 @@ deal goes wrong, an AI settles it. And every trader carries a reputation they ac
 
 Built on Wema's ALAT rails.
 
-[**Open the live app**](https://trustflow-seven-phi.vercel.app) · [**View the design in Figma**](https://www.figma.com/design/Us0oRlytOQwSacJoGawZQV/WEMA-BANK-HACKATOBN)
+[**Open the live app**](https://getzafe.vercel.app) · [**View the design in Figma**](https://www.figma.com/design/Us0oRlytOQwSacJoGawZQV/WEMA-BANK-HACKATOBN)
 
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs)
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react)

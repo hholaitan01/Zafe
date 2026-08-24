@@ -17,7 +17,7 @@ const config: CapacitorConfig = {
   webDir: "capacitor-shell",
   backgroundColor: "#0F172A",
   server: {
-    url: process.env.CAP_SERVER_URL || "https://trustflow-seven-phi.vercel.app",
+    url: process.env.CAP_SERVER_URL || "https://getzafe.vercel.app",
     cleartext: false,
   },
   ios: {
