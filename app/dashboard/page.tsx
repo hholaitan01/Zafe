@@ -16,9 +16,9 @@ import type { Deal, DealStatus } from "@/lib/deals/types";
 
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: string }> = {
   created: { label: "Awaiting payment", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
-  funded: { label: "Funded", bg: "#ECFDF5", fg: "#047857", dot: "#10B981" },
+  funded: { label: "Funded", bg: "#ECFDF5", fg: "#047857", dot: "#059669" },
   shipped: { label: "Delivered", bg: "#FEF3C7", fg: "#A16207", dot: "#E89914" },
-  completed: { label: "Released", bg: "#ECFDF5", fg: "#047857", dot: "#10B981" },
+  completed: { label: "Released", bg: "#ECFDF5", fg: "#047857", dot: "#059669" },
   disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C", dot: "#DC2626" },
   under_review: { label: "Under review", bg: "#EDE9FE", fg: "#6D28D9", dot: "#7C3AED" },
   refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
@@ -187,7 +187,7 @@ const css = `
 .dsh-kpis{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:26px }
 .dsh-kpi{ padding:16px 17px }
 .dsh-kpi-hero{ grid-column:1 / -1; background:radial-gradient(120% 130% at 88% 0%, #14304A 0%, #0F172A 58%); border:none; color:#fff }
-.dsh-kpi-hero .tf-eyebrow{ color:#6EE7B7 }
+.dsh-kpi-hero .tf-eyebrow{ color:rgba(255,255,255,.72) }
 .dsh-kpi-val{ font-size:30px; font-weight:700; letter-spacing:-.03em; line-height:1.05; margin-top:6px; color:var(--ink) }
 .dsh-kpi-hero .dsh-kpi-val{ color:#fff; font-size:38px }
 .dsh-naira{ color:#93A4BC; margin-right:1px }

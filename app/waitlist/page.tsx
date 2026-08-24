@@ -84,7 +84,7 @@ export default function WaitlistScreen() {
           <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
             <path d="M8.5 10.5H23.5" stroke="#F8FAFC" strokeWidth="4.2" strokeLinecap="round" />
             <path d="M8.5 21.5H23.5" stroke="#F8FAFC" strokeWidth="4.2" strokeLinecap="round" />
-            <path d="M23.5 10.5L8.5 21.5" stroke="#10B981" strokeWidth="4.2" strokeLinecap="round" />
+            <path d="M23.5 10.5L8.5 21.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" />
           </svg>
           <span>Zafe</span>
         </Link>
@@ -93,7 +93,7 @@ export default function WaitlistScreen() {
           /* ---- On the list ---- */
           <div className="wl-card wl-enter">
             <div className="wl-check" aria-hidden="true">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0A0F1C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F8FAFC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
             </div>
             <h1 className="wl-h1">You&apos;re on the waitlist!</h1>
             {result.position != null && (
@@ -151,7 +151,7 @@ export default function WaitlistScreen() {
             </div>
 
             <button className="wl-btn" onClick={submit} disabled={loading || !valid}>
-              {loading ? <span className="wl-busy"><Spinner light size={15} />Joining…</span> : "Join the waitlist"}
+              {loading ? <span className="wl-busy"><Spinner size={15} />Joining…</span> : "Join the waitlist"}
             </button>
 
             <p className="wl-status" role="status" aria-live="polite">{error}</p>
@@ -165,7 +165,7 @@ export default function WaitlistScreen() {
 
 const css = `
 .wl{ --bg:#0A0F1C; --text:#F8FAFC; --muted:rgba(255,255,255,.62); --faint:rgba(255,255,255,.42);
-  --panel:rgba(255,255,255,.045); --line:rgba(255,255,255,.10); --safe:#10B981; --safe-2:#34D399; --danger:#FCA5A5;
+  --panel:rgba(255,255,255,.045); --line:rgba(255,255,255,.10); --safe:#059669; --danger:#FCA5A5;
   --ease:cubic-bezier(.22,1,.36,1);
   position:relative; overflow:hidden; min-height:100dvh; display:flex; align-items:center; justify-content:center;
   font-family:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; color:var(--text);
@@ -174,7 +174,7 @@ const css = `
 .wl a{ text-decoration:none; color:inherit }
 .tf-mono{ font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums }
 .wl-glow{ position:absolute; top:-160px; left:50%; transform:translateX(-50%); width:520px; height:520px; border-radius:50%;
-  background:radial-gradient(circle at 50% 50%, rgba(16,185,129,.22), transparent 62%); filter:blur(6px); pointer-events:none }
+  background:radial-gradient(circle at 50% 50%, rgba(5,150,105,.16), transparent 62%); filter:blur(6px); pointer-events:none }
 
 .wl-inner{ position:relative; width:100%; max-width:460px; display:flex; flex-direction:column; align-items:center; text-align:center }
 .wl-brand{ display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:18px; letter-spacing:-.02em; margin-bottom:26px }
@@ -189,9 +189,9 @@ const css = `
 .wl-sub{ margin-top:11px; font-size:14.5px; line-height:1.6; color:var(--muted) }
 
 .wl-count{ display:inline-flex; align-items:center; gap:8px; margin-top:18px; padding:7px 14px; border-radius:999px;
-  background:rgba(16,185,129,.10); border:1px solid rgba(16,185,129,.28); color:var(--safe-2); font-size:13px; font-weight:600 }
-.wl-dot{ width:7px; height:7px; border-radius:50%; background:var(--safe); box-shadow:0 0 0 0 rgba(16,185,129,.7); animation:wlPulse 2s infinite }
-@keyframes wlPulse{ 0%{ box-shadow:0 0 0 0 rgba(16,185,129,.55) } 70%{ box-shadow:0 0 0 7px rgba(16,185,129,0) } 100%{ box-shadow:0 0 0 0 rgba(16,185,129,0) } }
+  background:rgba(255,255,255,.05); border:1px solid var(--line); color:var(--muted); font-size:13px; font-weight:600 }
+.wl-dot{ width:7px; height:7px; border-radius:50%; background:var(--safe); box-shadow:0 0 0 0 rgba(5,150,105,.7); animation:wlPulse 2s infinite }
+@keyframes wlPulse{ 0%{ box-shadow:0 0 0 0 rgba(5,150,105,.55) } 70%{ box-shadow:0 0 0 7px rgba(5,150,105,0) } 100%{ box-shadow:0 0 0 0 rgba(5,150,105,0) } }
 @media (prefers-reduced-motion:reduce){ .wl-dot{ animation:none } }
 
 .wl-label{ display:block; text-align:left; font-size:13px; font-weight:600; color:var(--text); margin:18px 0 7px }
@@ -199,41 +199,37 @@ const css = `
 .wl-input{ width:100%; height:52px; border-radius:13px; background:rgba(255,255,255,.05); border:1px solid var(--line); padding:0 15px;
   font-family:inherit; font-size:16px; color:var(--text); outline:none; transition:border-color .15s var(--ease), box-shadow .15s var(--ease) }
 .wl-input::placeholder{ color:var(--faint) }
-.wl-input:focus{ border-color:var(--safe); box-shadow:0 0 0 3px rgba(16,185,129,.18) }
+.wl-input:focus{ border-color:var(--safe); box-shadow:0 0 0 3px rgba(5,150,105,.22) }
 .wl-hp{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden }
 
 .wl-btn{ width:100%; height:52px; margin-top:20px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  font-family:inherit; font-weight:700; font-size:15.5px; cursor:pointer; border:none; color:#04110B; background:var(--safe);
-  box-shadow:0 12px 26px -12px rgba(16,185,129,.7); transition:transform .12s var(--ease), background .18s var(--ease), box-shadow .18s var(--ease) }
+  font-family:inherit; font-weight:700; font-size:15.5px; cursor:pointer; border:none; color:#0A0F1C; background:var(--text);
+  box-shadow:0 12px 26px -14px rgba(0,0,0,.7); transition:transform .12s var(--ease), background .18s var(--ease) }
 .wl-btn:active{ transform:scale(.985) }
-.wl-btn:disabled{ opacity:.5; cursor:not-allowed; transform:none; box-shadow:none }
-@media (hover:hover) and (pointer:fine){ .wl-btn:not(:disabled):hover{ background:var(--safe-2); transform:translateY(-1px) } }
-.wl-busy{ display:inline-flex; align-items:center; gap:8px; color:#04110B }
+.wl-btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; box-shadow:none }
+@media (hover:hover) and (pointer:fine){ .wl-btn:not(:disabled):hover{ background:#fff; transform:translateY(-1px) } }
+.wl-busy{ display:inline-flex; align-items:center; gap:8px; color:#0A0F1C }
 .wl-status{ min-height:18px; margin-top:12px; font-size:13.5px; line-height:1.5; color:var(--danger); font-weight:500 }
 .wl-consent{ margin-top:4px; font-size:12.5px; line-height:1.55; color:var(--faint) }
 
 /* success */
 .wl-check{ width:56px; height:56px; margin:0 auto 8px; border-radius:16px; background:var(--safe); display:flex; align-items:center; justify-content:center;
-  box-shadow:0 12px 26px -10px rgba(16,185,129,.7) }
+  box-shadow:0 12px 26px -12px rgba(5,150,105,.6) }
 .wl-place{ margin-top:22px; padding:18px; border-radius:16px; background:rgba(255,255,255,.04); border:1px solid var(--line) }
 .wl-place-label{ font-size:11px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; color:var(--faint) }
-.wl-place-num{ font-size:46px; font-weight:700; letter-spacing:-.03em; line-height:1.05; margin-top:4px; color:var(--safe-2) }
+.wl-place-num{ font-size:46px; font-weight:700; letter-spacing:-.03em; line-height:1.05; margin-top:4px; color:var(--text) }
 .wl-place-of{ font-size:12.5px; color:var(--muted); margin-top:2px }
 
 .wl-reflink{ display:flex; gap:8px; margin-top:20px }
 .wl-reflink input{ flex:1; min-width:0; height:48px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid var(--line);
   padding:0 14px; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:13px; color:var(--muted); outline:none }
 .wl-reflink input:focus{ border-color:var(--safe) }
-.wl-copy{ width:48px; height:48px; flex-shrink:0; border:none; border-radius:12px; background:var(--safe); cursor:pointer; display:flex; align-items:center; justify-content:center;
+.wl-copy{ width:48px; height:48px; flex-shrink:0; border:none; border-radius:12px; background:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:transform .12s var(--ease), background .18s var(--ease) }
-.wl-copy:active{ transform:scale(.92) } .wl-copy:hover{ background:var(--safe-2) }
+.wl-copy:active{ transform:scale(.92) } .wl-copy:hover{ background:#fff }
 
 .wl-share{ display:flex; justify-content:center; gap:11px; margin-top:16px }
-.wl-sh{ width:46px; height:46px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; color:#fff;
-  border:1px solid var(--line); transition:transform .14s var(--ease), filter .18s var(--ease) }
-.wl-sh:active{ transform:scale(.92) } .wl-sh:hover{ filter:brightness(1.12) }
-.wl-sh-wa{ background:#25D366; color:#04110B; border-color:transparent }
-.wl-sh-x{ background:#000; border-color:rgba(255,255,255,.2) }
-.wl-sh-fb{ background:#1877F2; border-color:transparent }
-.wl-sh-mail{ background:rgba(255,255,255,.08); color:var(--text) }
+.wl-sh{ width:46px; height:46px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; color:var(--text);
+  background:rgba(255,255,255,.06); border:1px solid var(--line); transition:transform .14s var(--ease), background .18s var(--ease) }
+.wl-sh:active{ transform:scale(.92) } .wl-sh:hover{ background:rgba(255,255,255,.12) }
 `;

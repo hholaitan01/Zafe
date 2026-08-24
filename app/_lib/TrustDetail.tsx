@@ -12,7 +12,7 @@ import { getCurrentDealId, getDeal } from "@/lib/client";
 import type { TrustVerdict } from "@/lib/ai/types";
 
 const THEME: Record<TrustVerdict, { ring: string; fg: string; tint: string; bd: string; label: string; safe: boolean }> = {
-  safe: { ring: "#10B981", fg: "#047857", tint: "#ECFDF5", bd: "#C7F0DE", label: "Low risk", safe: true },
+  safe: { ring: "#059669", fg: "#047857", tint: "#ECFDF5", bd: "#C7F0DE", label: "Low risk", safe: true },
   caution: { ring: "#E89914", fg: "#A16207", tint: "#FEF3C7", bd: "#FCE4A6", label: "Caution", safe: false },
   risky: { ring: "#DC2626", fg: "#B91C1C", tint: "#FEE2E2", bd: "#FCA5A5", label: "High risk", safe: false },
 };

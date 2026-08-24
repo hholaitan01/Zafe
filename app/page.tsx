@@ -20,7 +20,7 @@ function Mark({ size = 28 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
       <path d="M8.5 10.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" />
       <path d="M8.5 21.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" />
-      <path d="M23.5 10.5L8.5 21.5" stroke="#10B981" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M23.5 10.5L8.5 21.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -199,7 +199,7 @@ export default function Landing() {
               { d: I.scale, t: "Fair disputes", b: "If a deal goes wrong, an AI judge weighs the evidence and releases or refunds accordingly." },
             ].map((f, i) => (
               <div className="lp-feature lp-reveal" key={f.t} style={{ transitionDelay: `${i * 50}ms` }}>
-                <div className="lp-featicon"><Icon d={f.d} color="#10B981" size={20} /></div>
+                <div className="lp-featicon"><Icon d={f.d} color="#059669" size={20} /></div>
                 <div><h3>{f.t}</h3><p>{f.b}</p></div>
               </div>
             ))}
@@ -258,7 +258,7 @@ const css = `
 .lp{
   --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --faint:#94A3B8;
   --bg:#F8FAFC; --card:#FFFFFF; --border:#E6EAF0; --line-2:#EEF2F6;
-  --navy:#0F172A; --safe:#059669; --safe-2:#10B981; --safe-tint:#ECFDF5; --danger:#DC2626;
+  --navy:#0F172A; --safe:#059669; --safe-2:#047857; --safe-tint:#ECFDF5; --danger:#DC2626;
   --ease:cubic-bezier(.22,1,.36,1);
   --sh-sm:0 1px 2px rgba(15,23,42,.06); --sh:0 12px 30px -14px rgba(15,23,42,.22);
   --sh-lg:0 30px 60px -24px rgba(15,23,42,.30);
@@ -375,7 +375,7 @@ const css = `
 .lp-safety-h{color:#fff} .lp-safety-p{color:#9FB0C7}
 .lp-features{margin-top:46px; display:grid; grid-template-columns:1fr 1fr; gap:16px}
 .lp-feature{display:flex; gap:14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); border-radius:16px; padding:18px}
-.lp-featicon{width:40px; height:40px; border-radius:11px; background:rgba(16,185,129,.14); display:flex; align-items:center; justify-content:center; flex-shrink:0}
+.lp-featicon{width:40px; height:40px; border-radius:11px; background:rgba(5,150,105,.14); display:flex; align-items:center; justify-content:center; flex-shrink:0}
 .lp-feature h3{font-size:16px; font-weight:600}
 .lp-feature p{margin-top:6px; font-size:14px; color:#9FB0C7; line-height:1.55}
 

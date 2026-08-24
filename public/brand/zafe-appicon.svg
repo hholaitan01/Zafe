@@ -3,5 +3,5 @@
   <rect x="4" y="4" width="112" height="112" rx="28" fill="url(#tile)"/>
   <path d="M42 46 L78 46" stroke="#F8FAFC" stroke-width="11" stroke-linecap="round"/>
   <path d="M42 74 L78 74" stroke="#F8FAFC" stroke-width="11" stroke-linecap="round"/>
-  <path d="M78 46 L42 74" stroke="#10B981" stroke-width="11" stroke-linecap="round"/>
+  <path d="M78 46 L42 74" stroke="#059669" stroke-width="11" stroke-linecap="round"/>
 </svg>

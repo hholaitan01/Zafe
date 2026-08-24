@@ -62,7 +62,7 @@ export default function ReceiptPage() {
         <div className="rc-card rc-enter">
           {/* logo panel */}
           <div className="rc-logo">
-            <span className="rc-mark"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8.5 10.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" /><path d="M8.5 21.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" /><path d="M23.5 10.5L8.5 21.5" stroke="#10B981" strokeWidth="4.2" strokeLinecap="round" /></svg></span>
+            <span className="rc-mark"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8.5 10.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" /><path d="M8.5 21.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" /><path d="M23.5 10.5L8.5 21.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" /></svg></span>
             <span className="rc-wordmark">Zafe<span>Escrow</span></span>
           </div>
 
@@ -104,7 +104,7 @@ function Row({ k, v, strong, mono, last }: { k: string; v: string; strong?: bool
 }
 
 const css = `
-.rc{ --paper:#0E2036; --ink:#0F172A; --muted:#6B7280; --faint:#9CA3AF; --line:#EEF0F3; --safe:#10B981;
+.rc{ --paper:#0E2036; --ink:#0F172A; --muted:#6B7280; --faint:#9CA3AF; --line:#EEF0F3; --safe:#059669;
   --ease:cubic-bezier(.22,1,.36,1); font-family:'IBM Plex Sans',system-ui,sans-serif;
   background:linear-gradient(180deg,#0E2036,#0B1626); min-height:100dvh; display:flex; justify-content:center;
   padding:28px 18px 34px; -webkit-font-smoothing:antialiased }

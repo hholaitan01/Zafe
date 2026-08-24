@@ -94,7 +94,7 @@ export default function LoginScreen() {
           <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
             <path d="M8.5 10.5H23.5" stroke="#F8FAFC" strokeWidth="4.2" strokeLinecap="round" />
             <path d="M8.5 21.5H23.5" stroke="#F8FAFC" strokeWidth="4.2" strokeLinecap="round" />
-            <path d="M23.5 10.5L8.5 21.5" stroke="#10B981" strokeWidth="4.2" strokeLinecap="round" />
+            <path d="M23.5 10.5L8.5 21.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" />
           </svg>
           <span>Zafe</span>
         </div>
@@ -199,7 +199,7 @@ export default function LoginScreen() {
 
 const css = `
 .auth{ --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --faint:#94A3B8; --bg:#F8FAFC;
-  --card:#FFFFFF; --line:#E6EAF0; --safe:#059669; --safe-2:#10B981; --safe-tint:#ECFDF5; --danger:#DC2626;
+  --card:#FFFFFF; --line:#E6EAF0; --safe:#059669; --safe-2:#047857; --safe-tint:#ECFDF5; --danger:#DC2626;
   --ease:cubic-bezier(.22,1,.36,1);
   font-family:'IBM Plex Sans',system-ui,sans-serif; color:var(--ink); background:var(--bg);
   min-height:100dvh; display:flex; flex-direction:column; -webkit-font-smoothing:antialiased }
@@ -218,7 +218,7 @@ const css = `
     linear-gradient(180deg, rgba(15,23,42,.82) 0%, rgba(15,23,42,.90) 55%, rgba(15,23,42,.96) 100%),
     url("/images/commerce.jpg") center 22% / cover no-repeat; }
 .auth-aside::after{ content:""; position:absolute; top:-50px; right:-30px; z-index:0; width:170px; height:170px; border-radius:50%;
-  background:radial-gradient(circle at 40% 40%, rgba(16,185,129,.30), transparent 70%) }
+  background:radial-gradient(circle at 40% 40%, rgba(5,150,105,.30), transparent 70%) }
 .auth-aside > *{ position:relative; z-index:1 }
 .auth-mark{ position:relative; display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:17px; letter-spacing:-.02em; color:#fff }
 .auth-aside-mid{ position:relative }
