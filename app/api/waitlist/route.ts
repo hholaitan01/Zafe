@@ -44,14 +44,19 @@ export async function POST(req: Request): Promise<Response> {
   const body = await readJson<{ email?: string; name?: string; source?: string; company?: string }>(req);
   if (!body) return jsonError("Invalid request.");
 
-  // Honeypot: accept silently so a bot sees success, but store nothing.
-  if (typeof body.company === "string" && body.company.trim()) return Response.json({ ok: true });
+  // Coerce every field to a string before touching it. A public caller can send
+  // valid JSON with a non-string value (e.g. {"email":{}}); trimming that would
+  // throw and surface as a 500 instead of a clean 400.
+  const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
-  const email = (body.email || "").trim().toLowerCase();
+  // Honeypot: accept silently so a bot sees success, but store nothing.
+  if (str(body.company).trim()) return Response.json({ ok: true });
+
+  const email = str(body.email).trim().toLowerCase();
   if (email.length > 254 || !EMAIL_RE.test(email)) return jsonError("Enter a valid email address.");
 
-  const name = (body.name || "").trim().slice(0, 80) || undefined;
-  const source = (body.source || "").trim().slice(0, 40) || "waitlist";
+  const name = str(body.name).trim().slice(0, 80) || undefined;
+  const source = str(body.source).trim().slice(0, 40) || "waitlist";
 
   const res = await addToWaitlist({ email, name, source });
   if (!res.ok) return jsonError("Could not join the waitlist. Please try again.", 500);
