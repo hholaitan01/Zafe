@@ -79,7 +79,7 @@ export default function Landing() {
           <div className="lp-navcta">
             <Link href="/seller" className="lp-link lp-link-sell">Become a seller</Link>
             <Link href="/login" className="lp-link">Sign in</Link>
-            <Link href="/login" className="lp-btn lp-btn-primary">Get started</Link>
+            <Link href="/waitlist" className="lp-btn lp-btn-primary">Join the waitlist</Link>
           </div>
         </div>
       </header>
@@ -92,7 +92,7 @@ export default function Landing() {
             <h1>Buy from strangers.<br />Keep your money safe.</h1>
             <p className="lp-sub">Your money stays locked until you confirm the item arrived. An AI checks the deal for scams before you pay.</p>
             <div className="lp-herobtns">
-              <Link href="/login" className="lp-btn lp-btn-primary lp-btn-lg">Start a protected deal</Link>
+              <Link href="/waitlist" className="lp-btn lp-btn-primary lp-btn-lg">Join the waitlist</Link>
               <a href="#how" className="lp-btn lp-btn-ghost lp-btn-lg">See how it works</a>
             </div>
           </div>
@@ -234,8 +234,8 @@ export default function Landing() {
       <section className="lp-cta lp-reveal">
         <div className="lp-wrap lp-ctacard">
           <h2>Your next deal, protected.</h2>
-          <p>Set up your first escrow in under a minute. No password to remember, no bank details until a payout is due.</p>
-          <Link href="/login" className="lp-btn lp-btn-safe lp-btn-lg">Start a protected deal<Icon d={I.arrow} color="#fff" size={18} /></Link>
+          <p>Zafe is launching soon. Join the waitlist to get early access the moment we go live.</p>
+          <Link href="/waitlist" className="lp-btn lp-btn-safe lp-btn-lg">Join the waitlist<Icon d={I.arrow} color="#fff" size={18} /></Link>
           <p className="lp-cta-sell">Selling instead? <Link href="/seller">Become a verified seller</Link></p>
         </div>
       </section>
