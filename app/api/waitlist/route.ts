@@ -1,22 +1,21 @@
 /* ==========================================================================
-   POST /api/waitlist  { email, name?, source?, company? }
+   GET  /api/waitlist                       → { count }  (public social proof)
+   POST /api/waitlist { email, name?, ref? } → { ok, code, position, total, referrals }
 
-   Collects a pre-launch email. Public (no auth), so it is hardened against the
-   obvious abuse:
+   Public (no auth), so it is hardened against the obvious abuse:
      • Server-side email validation (never trust the client).
-     • A hidden honeypot field (`company`): real users leave it blank, bots fill
-       it. Filled means: pretend success, store nothing.
+     • A hidden honeypot field (`company`): real users leave it blank.
      • Body size is capped by readJson (~1 MB).
      • Best-effort per-instance rate limit as a speed bump.
-     • The response is the same whether the email is new or already on the list,
-       so the endpoint can't be used to enumerate who has signed up.
+     • A repeat email returns its existing standing, so the endpoint can't be
+       used to tell whether an address was already on the list.
 
    Writes go through the server-only store (service-role key). The browser never
-   touches the database directly.
+   touches the database. `ref` is a referrer's code and is validated server-side.
    ========================================================================== */
 
 import { jsonError, readJson } from "@/lib/ai/http";
-import { addToWaitlist } from "@/lib/waitlist/store";
+import { addToWaitlist, getStanding, waitlistCount } from "@/lib/waitlist/store";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -30,23 +29,26 @@ function limited(ip: string): boolean {
   const rec = HITS.get(ip);
   if (!rec || now - rec.t > windowMs) {
     HITS.set(ip, { n: 1, t: now });
-    if (HITS.size > 5000) HITS.clear(); // bound memory
+    if (HITS.size > 5000) HITS.clear();
     return false;
   }
   rec.n += 1;
   return rec.n > max;
 }
 
+export async function GET(): Promise<Response> {
+  return Response.json({ count: await waitlistCount() });
+}
+
 export async function POST(req: Request): Promise<Response> {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (limited(ip)) return jsonError("Too many requests. Please try again shortly.", 429);
 
-  const body = await readJson<{ email?: string; name?: string; source?: string; company?: string }>(req);
+  const body = await readJson<{ email?: string; name?: string; source?: string; ref?: string; company?: string }>(req);
   if (!body) return jsonError("Invalid request.");
 
-  // Coerce every field to a string before touching it. A public caller can send
-  // valid JSON with a non-string value (e.g. {"email":{}}); trimming that would
-  // throw and surface as a 500 instead of a clean 400.
+  // Coerce every field to a string before touching it (a caller can send a
+  // non-string value in valid JSON).
   const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
   // Honeypot: accept silently so a bot sees success, but store nothing.
@@ -57,10 +59,17 @@ export async function POST(req: Request): Promise<Response> {
 
   const name = str(body.name).trim().slice(0, 80) || undefined;
   const source = str(body.source).trim().slice(0, 40) || "waitlist";
+  const ref = str(body.ref).trim().slice(0, 64) || undefined;
 
-  const res = await addToWaitlist({ email, name, source });
+  const res = await addToWaitlist({ email, name, source, ref });
   if (!res.ok) return jsonError("Could not join the waitlist. Please try again.", 500);
 
-  // Same response for new and existing emails (no enumeration).
-  return Response.json({ ok: true });
+  const standing = await getStanding(email);
+  return Response.json({
+    ok: true,
+    code: res.code ?? standing?.code,
+    position: standing?.position,
+    total: standing?.total,
+    referrals: standing?.referrals ?? 0,
+  });
 }

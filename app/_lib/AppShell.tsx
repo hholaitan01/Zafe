@@ -39,7 +39,7 @@ function Mark({ size = 26 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
       <path d="M8.5 10.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" />
       <path d="M8.5 21.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" />
-      <path d="M23.5 10.5L8.5 21.5" stroke="#10B981" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M23.5 10.5L8.5 21.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -129,7 +129,7 @@ export default function AppShell({
 const kit = `
 .tf-app{ --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --faint:#94A3B8;
   --bg:#F8FAFC; --card:#FFFFFF; --line:#E6EAF0; --line-2:#EEF2F6;
-  --safe:#059669; --safe-2:#10B981; --safe-tint:#ECFDF5; --gold:#A16207; --danger:#DC2626;
+  --safe:#059669; --safe-2:#047857; --safe-tint:#ECFDF5; --gold:#A16207; --danger:#DC2626;
   --sh-1:0 1px 2px rgba(15,23,42,.05); --sh-2:0 12px 30px -14px rgba(15,23,42,.18);
   --ease:cubic-bezier(.22,1,.36,1);
   font-family:var(--font,'IBM Plex Sans',system-ui,sans-serif); color:var(--ink); background:var(--bg);

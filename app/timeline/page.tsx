@@ -17,15 +17,15 @@ import { cacheDeal, confirmReceipt, getCachedDeal, getCurrentDealId, getDeal, na
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
 const VERDICT: Record<string, { label: string; fg: string; bg: string; dot: string }> = {
-  safe: { label: "Low risk", fg: "#047857", bg: "#ECFDF5", dot: "#10B981" },
+  safe: { label: "Low risk", fg: "#047857", bg: "#ECFDF5", dot: "#059669" },
   caution: { label: "Caution", fg: "#A16207", bg: "#FEF3C7", dot: "#E89914" },
   risky: { label: "High risk", fg: "#B91C1C", bg: "#FEE2E2", dot: "#DC2626" },
 };
 const STATUS_PILL: Record<DealStatus, { label: string; fg: string; bg: string; dot: string }> = {
   created: { label: "Awaiting payment", fg: "#475569", bg: "#F1F5F9", dot: "#94A3B8" },
-  funded: { label: "Funded", fg: "#047857", bg: "#ECFDF5", dot: "#10B981" },
+  funded: { label: "Funded", fg: "#047857", bg: "#ECFDF5", dot: "#059669" },
   shipped: { label: "Delivered", fg: "#A16207", bg: "#FEF3C7", dot: "#E89914" },
-  completed: { label: "Released", fg: "#047857", bg: "#ECFDF5", dot: "#10B981" },
+  completed: { label: "Released", fg: "#047857", bg: "#ECFDF5", dot: "#059669" },
   disputed: { label: "Disputed", fg: "#B91C1C", bg: "#FEE2E2", dot: "#DC2626" },
   under_review: { label: "Under review", fg: "#6D28D9", bg: "#EDE9FE", dot: "#7C3AED" },
   refunded: { label: "Refunded", fg: "#475569", bg: "#F1F5F9", dot: "#94A3B8" },

@@ -24,11 +24,17 @@ not-yet-migrated screens.
 | `bg` | `#F8FAFC` | page background |
 | `card` | `#FFFFFF` | cards / surfaces |
 | `border` | `#E6EAF0` | hairline borders |
-| `safe` | `#059669` (deep) / `#10B981` (bright) | the "money held safe" story: success, escrow, verified |
+| `safe` | `#059669` | the one brand emerald: "money held safe", success, escrow, verified |
+| `safe-2` | `#047857` | a darker shade of the same emerald, for depth / hover only |
 | `safe-tint` | `#ECFDF5` | safe backgrounds, badges, icon wells |
 | `blue` | `#1E3A8A` | secondary info accents |
 | `gold` | `#A16207` | premium seal, used **sparingly** (one accent per view) |
 | `danger` | `#DC2626` | risk / disputes / errors |
+
+Emerald is a single hue. Use `#059669` (with `#047857` for depth); never pair it
+with a brighter mint/teal green such as the old `#10B981` or `#34D399`. One green
+only, no two-green mixes. On dark surfaces, prominent text and primary actions go
+neutral (white/ink); emerald stays a sparing accent (marks, dots, focus rings).
 
 Navy is the trust anchor; emerald carries the core "your money is safe"
 message; gold is a rare premium accent. Primary CTAs are navy; the highest-intent

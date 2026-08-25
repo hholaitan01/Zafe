@@ -388,7 +388,7 @@ const css = `
 .dp-reco-state{ font-size:13px; line-height:1.55; border-radius:12px; padding:12px 14px }
 .dp-reco-state b{ color:#fff; font-weight:700 }
 .dp-reco-review{ background:rgba(124,58,237,.18); border:1px solid rgba(167,139,250,.4); color:rgba(255,255,255,.86) }
-.dp-reco-settled{ background:rgba(16,185,129,.16); border:1px solid rgba(52,211,153,.4); color:rgba(255,255,255,.9) }
+.dp-reco-settled{ background:rgba(5,150,105,.16); border:1px solid rgba(52,211,153,.4); color:rgba(255,255,255,.9) }
 .dp-reco-actions{ display:flex; gap:10px }
 .dp-accept{ flex:1; height:46px }
 .dp-accept:disabled, .dp-escalate:disabled{ opacity:.55; cursor:not-allowed }

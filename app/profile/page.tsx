@@ -120,8 +120,8 @@ function TrustScoreChart({ data }: { data: { label: string; score: number }[] })
     <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: 150, marginTop: 14, display: "block" }} preserveAspectRatio="none">
       <defs>
         <linearGradient id="ts-area" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#10B981" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+          <stop offset="0%" stopColor="#059669" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#059669" stopOpacity="0" />
         </linearGradient>
       </defs>
       {[25, 50, 75].map((g) => (

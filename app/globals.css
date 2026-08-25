@@ -32,7 +32,7 @@
   --card: #ffffff;
   --line: #e6eaf0;
   --safe: #059669;
-  --safe-2: #10b981;
+  --safe-2: #047857;   /* darker shade of the same emerald, for depth/hover only */
   --safe-tint: #ecfdf5;
   --blue: #1e3a8a;
   --gold: #a16207;
@@ -393,7 +393,7 @@ body {
 }
 .tf-toast[data-leaving] { opacity: 0; transform: translateY(8px); animation: none; }
 .tf-toast-ic { flex-shrink: 0; display: flex; }
-.tf-toast--success .tf-toast-ic { color: #34d399; }
+.tf-toast--success .tf-toast-ic { color: #059669; }
 .tf-toast--error .tf-toast-ic { color: #f87171; }
 .tf-toast--info .tf-toast-ic { color: #93c5fd; }
 .tf-toast-msg { flex: 1; min-width: 0; }

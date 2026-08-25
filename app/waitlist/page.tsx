@@ -1,31 +1,50 @@
 "use client";
 
 /* ==========================================================================
-   Waitlist — pre-launch email capture. Public, no auth.
+   Waitlist — pre-launch sign-up with a referral queue. Public, no auth.
 
-   Same visual language as the login split screen: a navy "promise" panel (brand,
-   the stakes, a live escrow card) beside the join form. All assets are
-   self-hosted (the photo lives under /images), so nothing external is loaded and
-   the app's strict CSP is satisfied without change.
+   Dark, centred layout. Two states:
+     • Join: brand, a live "N on the waitlist" count, name + email form.
+     • On the list: your place in line, your referral link (copy + share), and
+       a nudge that referring friends moves you up.
 
-   The form posts to /api/waitlist (same origin, allowed by form-action 'self'
-   and connect-src 'self'). A hidden honeypot field deters bots. The server does
-   the real validation and storage; the browser never touches the database.
+   All assets are self-hosted / inline SVG, so the strict CSP is satisfied
+   without change. The form posts same-origin to /api/waitlist; share buttons
+   are ordinary target=_blank links (top-level navigation, not fetch).
    ========================================================================== */
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Spinner } from "@/app/_lib/States";
+
+interface Result { code?: string; position?: number; total?: number; referrals?: number }
 
 export default function WaitlistScreen() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [company, setCompany] = useState(""); // honeypot: must stay empty
+  const [ref, setRef] = useState<string | undefined>(undefined);
+  const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const [result, setResult] = useState<Result | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [origin, setOrigin] = useState("");
+
+  // Read a referrer code from the URL, capture the origin for share links, and
+  // fetch the current head-count for social proof.
+  useEffect(() => {
+    setOrigin(window.location.origin);
+    const r = new URLSearchParams(window.location.search).get("ref");
+    if (r) setRef(r.trim().slice(0, 64));
+    fetch("/api/waitlist").then((res) => res.json()).then((d: { count?: number }) => {
+      if (typeof d.count === "number") setCount(d.count);
+    }).catch(() => {});
+  }, []);
 
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const shareUrl = result?.code ? `${origin}/waitlist?ref=${result.code}` : "";
+  const shareText = "I just joined the Zafe waitlist. Escrow that keeps your money safe when you buy from strangers online. Join me:";
 
   async function submit() {
     if (loading || !valid) return;
@@ -35,10 +54,10 @@ export default function WaitlistScreen() {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined, source: "waitlist", company }),
+        body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined, source: "waitlist", ref, company }),
       });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-      if (res.ok && data.ok) setDone(true);
+      const data = (await res.json().catch(() => ({}))) as Result & { ok?: boolean; error?: string };
+      if (res.ok && data.ok) setResult({ code: data.code, position: data.position, total: data.total, referrals: data.referrals });
       else setError(data.error || "Could not join the waitlist. Please try again.");
     } catch {
       setError("Couldn't reach the server. Please try again.");
@@ -47,167 +66,170 @@ export default function WaitlistScreen() {
     }
   }
 
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch { /* clipboard blocked; the field is selectable as a fallback */ }
+  }
+
   return (
     <main className="wl">
       <style>{css}</style>
+      <div className="wl-glow" aria-hidden="true" />
 
-      {/* ---- LEFT / promise (a header band on mobile) ---- */}
-      <section className="wl-aside">
-        <Link href="/" className="wl-mark" aria-label="Zafe home">
+      <div className="wl-inner">
+        <Link href="/" className="wl-brand" aria-label="Zafe home">
           <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
             <path d="M8.5 10.5H23.5" stroke="#F8FAFC" strokeWidth="4.2" strokeLinecap="round" />
             <path d="M8.5 21.5H23.5" stroke="#F8FAFC" strokeWidth="4.2" strokeLinecap="round" />
-            <path d="M23.5 10.5L8.5 21.5" stroke="#10B981" strokeWidth="4.2" strokeLinecap="round" />
+            <path d="M23.5 10.5L8.5 21.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" />
           </svg>
           <span>Zafe</span>
         </Link>
 
-        <div className="wl-aside-mid">
-          <div className="wl-eyebrow">Escrow for P2P commerce</div>
-          <h1 className="wl-headline">Be first to trade safely.</h1>
-          <p className="wl-lede">Zafe holds a buyer&apos;s money safe until they confirm delivery. Join the waitlist to get early access when we go live on Nigerian rails.</p>
-
-          <div className="wl-stat">
-            <div className="wl-stat-fig tf-mono">₦25.85<span>bn</span></div>
-            <div className="wl-stat-cap">lost to digital payment fraud in Nigeria in 2025 across 67,518 cases. Zafe closes the gap.</div>
-          </div>
-        </div>
-
-        <div className="wl-foot tf-mono">No spam. We only email you about the launch.</div>
-      </section>
-
-      {/* ---- RIGHT / form ---- */}
-      <section className="wl-form">
-        <div className="wl-card wl-enter">
-          {done ? (
-            <>
-              <div className="wl-check" aria-hidden="true">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+        {result ? (
+          /* ---- On the list ---- */
+          <div className="wl-card wl-enter">
+            <div className="wl-check" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F8FAFC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            </div>
+            <h1 className="wl-h1">You&apos;re on the waitlist!</h1>
+            {result.position != null && (
+              <div className="wl-place">
+                <div className="wl-place-label">Your place in line</div>
+                <div className="wl-place-num tf-mono">#{result.position.toLocaleString()}</div>
+                {result.total != null && <div className="wl-place-of">of {result.total.toLocaleString()} waiting</div>}
               </div>
-              <h2 className="wl-title">You&apos;re on the list.</h2>
-              <p className="wl-sub">Thanks for joining. We&apos;ll email <b>{email.trim()}</b> the moment early access opens.</p>
-              <Link href="/" className="wl-btn wl-btn-ghost">Back to home</Link>
-            </>
-          ) : (
-            <>
-              <h2 className="wl-title">Join the waitlist</h2>
-              <p className="wl-sub">Get early access when Zafe launches. We&apos;ll reach out to you first.</p>
+            )}
+            <p className="wl-sub">Skip ahead by referring friends. Every person who joins with your link moves you up the line.{result.referrals ? ` You've referred ${result.referrals} so far.` : ""}</p>
 
-              <label htmlFor="wl-name" className="wl-label">Name <span className="wl-opt">(optional)</span></label>
-              <input id="wl-name" className="wl-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" maxLength={80} />
-
-              <label htmlFor="wl-email" className="wl-label">Email address</label>
-              <input
-                id="wl-email"
-                type="email"
-                inputMode="email"
-                className="wl-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submit()}
-                placeholder="you@example.com"
-                autoComplete="email"
-                enterKeyHint="go"
-                maxLength={254}
-              />
-
-              {/* Honeypot: hidden from people and assistive tech, tempting to bots. */}
-              <div className="wl-hp" aria-hidden="true">
-                <label htmlFor="wl-company">Company</label>
-                <input id="wl-company" tabIndex={-1} autoComplete="off" value={company} onChange={(e) => setCompany(e.target.value)} />
-              </div>
-
-              <button className="wl-btn wl-btn-primary" onClick={submit} disabled={loading || !valid}>
-                {loading ? <span className="wl-busy"><Spinner light size={15} />Joining…</span> : "Join the waitlist"}
+            <div className="wl-reflink">
+              <input readOnly value={shareUrl} onFocus={(e) => e.currentTarget.select()} aria-label="Your referral link" />
+              <button className="wl-copy" onClick={copy} aria-label="Copy link">
+                {copied
+                  ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A0F1C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                  : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0A0F1C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="12" height="12" rx="2.5" /><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" /></svg>}
               </button>
+            </div>
 
-              <p className="wl-status" role="status" aria-live="polite">{error}</p>
+            <div className="wl-share">
+              <a className="wl-sh wl-sh-wa" href={`https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`} target="_blank" rel="noopener noreferrer" aria-label="Share on WhatsApp">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2Zm5.8 14.16c-.24.68-1.4 1.3-1.94 1.34-.5.05-.98.24-3.3-.69-2.78-1.1-4.55-3.94-4.69-4.12-.14-.18-1.13-1.5-1.13-2.86 0-1.36.71-2.03.97-2.31.24-.26.53-.32.71-.32.18 0 .35 0 .5.01.16.01.38-.06.59.45.24.58.82 2 .89 2.14.07.14.12.31.02.49-.09.18-.14.29-.28.45-.14.16-.29.36-.42.48-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.44.12.6-.07.18-.21.69-.8.87-1.08.18-.28.36-.23.6-.14.24.09 1.55.73 1.81.86.26.14.44.21.5.32.07.11.07.64-.17 1.32Z" /></svg>
+              </a>
+              <a className="wl-sh wl-sh-x" href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" aria-label="Share on X">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2.5h3.3l-7.2 8.2 8.5 11.3h-6.7l-5.2-6.9-6 6.9H1.5l7.7-8.8L1 2.5h6.8l4.7 6.3 5.4-6.3Zm-1.2 17.6h1.8L7.3 4.4H5.4l12.3 15.7Z" /></svg>
+              </a>
+              <a className="wl-sh wl-sh-fb" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z" /></svg>
+              </a>
+              <a className="wl-sh wl-sh-mail" href={`mailto:?subject=${encodeURIComponent("Join me on the Zafe waitlist")}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`} aria-label="Share by email">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m3 7 9 6 9-6" /></svg>
+              </a>
+            </div>
+          </div>
+        ) : (
+          /* ---- Join ---- */
+          <div className="wl-card wl-enter">
+            <h1 className="wl-h1">Join the waitlist</h1>
+            <p className="wl-sub">Zafe holds a buyer&apos;s money safe until they confirm delivery. Be first to get access when we go live on Nigerian rails.</p>
 
-              <p className="wl-consent">We&apos;ll only use your email to tell you when Zafe launches. No spam, and you can opt out anytime.</p>
-            </>
-          )}
-        </div>
-      </section>
+            {count != null && count > 0 && (
+              <div className="wl-count"><span className="wl-dot" />{count.toLocaleString()} {count === 1 ? "person" : "people"} already on the waitlist</div>
+            )}
+
+            <label htmlFor="wl-name" className="wl-label">Name <span className="wl-opt">(optional)</span></label>
+            <input id="wl-name" className="wl-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" maxLength={80} />
+
+            <label htmlFor="wl-email" className="wl-label">Email address</label>
+            <input id="wl-email" type="email" inputMode="email" className="wl-input" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="you@example.com" autoComplete="email" enterKeyHint="go" maxLength={254} />
+
+            <div className="wl-hp" aria-hidden="true">
+              <label htmlFor="wl-company">Company</label>
+              <input id="wl-company" tabIndex={-1} autoComplete="off" value={company} onChange={(e) => setCompany(e.target.value)} />
+            </div>
+
+            <button className="wl-btn" onClick={submit} disabled={loading || !valid}>
+              {loading ? <span className="wl-busy"><Spinner size={15} />Joining…</span> : "Join the waitlist"}
+            </button>
+
+            <p className="wl-status" role="status" aria-live="polite">{error}</p>
+            <p className="wl-consent">No spam. We only email you about the launch, and you can opt out anytime.</p>
+          </div>
+        )}
+      </div>
     </main>
   );
 }
 
 const css = `
-.wl{ --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --faint:#94A3B8; --bg:#F8FAFC;
-  --card:#FFFFFF; --line:#E6EAF0; --safe:#059669; --safe-2:#10B981; --safe-tint:#ECFDF5; --danger:#DC2626;
+.wl{ --bg:#0A0F1C; --text:#F8FAFC; --muted:rgba(255,255,255,.62); --faint:rgba(255,255,255,.42);
+  --panel:rgba(255,255,255,.045); --line:rgba(255,255,255,.10); --safe:#059669; --danger:#FCA5A5;
   --ease:cubic-bezier(.22,1,.36,1);
-  font-family:'IBM Plex Sans',system-ui,sans-serif; color:var(--ink); background:var(--bg);
-  min-height:100dvh; display:flex; flex-direction:column; -webkit-font-smoothing:antialiased }
+  position:relative; overflow:hidden; min-height:100dvh; display:flex; align-items:center; justify-content:center;
+  font-family:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; color:var(--text);
+  background:radial-gradient(120% 90% at 50% -10%, #12203A 0%, #0A0F1C 55%); -webkit-font-smoothing:antialiased; padding:32px 22px }
 .wl *{ box-sizing:border-box }
 .wl a{ text-decoration:none; color:inherit }
 .tf-mono{ font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums }
+.wl-glow{ position:absolute; top:-160px; left:50%; transform:translateX(-50%); width:520px; height:520px; border-radius:50%;
+  background:radial-gradient(circle at 50% 50%, rgba(5,150,105,.16), transparent 62%); filter:blur(6px); pointer-events:none }
 
-/* ---- aside (mobile: a navy header band) ---- */
-.wl-aside{ position:relative; overflow:hidden; padding:26px 24px 60px; color:#fff; background-color:#0F172A; display:flex; flex-direction:column }
-.wl-aside::before{ content:""; position:absolute; inset:0; z-index:0;
-  background:
-    linear-gradient(180deg, rgba(15,23,42,.84) 0%, rgba(15,23,42,.92) 60%, rgba(15,23,42,.96) 100%),
-    url("/images/commerce.jpg") center 22% / cover no-repeat; }
-.wl-aside::after{ content:""; position:absolute; top:-50px; right:-30px; z-index:0; width:170px; height:170px; border-radius:50%;
-  background:radial-gradient(circle at 40% 40%, rgba(16,185,129,.30), transparent 70%) }
-.wl-aside > *{ position:relative; z-index:1 }
-.wl-mark{ display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:17px; letter-spacing:-.02em; color:#fff }
-.wl-aside-mid{ margin-top:8px }
-.wl-eyebrow{ font-size:11px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; color:rgba(255,255,255,.55) }
-.wl-headline{ margin:14px 0 0; font-size:26px; font-weight:700; letter-spacing:-.02em; line-height:1.15; max-width:15ch }
-.wl-lede{ margin-top:12px; font-size:14.5px; line-height:1.55; color:rgba(255,255,255,.74); max-width:44ch }
-.wl-stat{ margin-top:22px; padding:16px; border-radius:16px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10) }
-.wl-stat-fig{ font-size:32px; font-weight:700; letter-spacing:-.03em; line-height:1 } .wl-stat-fig span{ font-size:18px; color:rgba(255,255,255,.6); margin-left:2px }
-.wl-stat-cap{ margin-top:8px; font-size:12.5px; line-height:1.5; color:rgba(255,255,255,.72) }
-.wl-foot{ position:relative; margin-top:22px; font-size:12px; color:rgba(255,255,255,.5); letter-spacing:.03em; display:none }
+.wl-inner{ position:relative; width:100%; max-width:460px; display:flex; flex-direction:column; align-items:center; text-align:center }
+.wl-brand{ display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:18px; letter-spacing:-.02em; margin-bottom:26px }
 
-/* ---- form panel ---- */
-.wl-form{ flex:1; padding:0 22px 34px; margin-top:-38px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start }
-.wl-card{ width:100%; max-width:420px; background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:0 24px 48px -24px rgba(15,23,42,.35); padding:24px 22px }
+.wl-card{ width:100%; background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:30px 26px;
+  box-shadow:0 30px 70px -30px rgba(0,0,0,.6); backdrop-filter:blur(6px) }
 .wl-enter{ animation:wlIn .5s var(--ease) both }
 @keyframes wlIn{ from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
 @media (prefers-reduced-motion:reduce){ .wl-enter{ animation:none } }
 
-.wl-title{ font-size:24px; font-weight:700; letter-spacing:-.02em }
-.wl-sub{ margin-top:6px; font-size:14.5px; line-height:1.55; color:var(--muted) } .wl-sub b{ color:var(--ink); font-weight:600 }
+.wl-h1{ font-size:27px; font-weight:700; letter-spacing:-.02em; line-height:1.15 }
+.wl-sub{ margin-top:11px; font-size:14.5px; line-height:1.6; color:var(--muted) }
 
-.wl-label{ display:block; font-size:13px; font-weight:600; color:var(--ink-2); margin:18px 0 7px }
+.wl-count{ display:inline-flex; align-items:center; gap:8px; margin-top:18px; padding:7px 14px; border-radius:999px;
+  background:rgba(255,255,255,.05); border:1px solid var(--line); color:var(--muted); font-size:13px; font-weight:600 }
+.wl-dot{ width:7px; height:7px; border-radius:50%; background:var(--safe); box-shadow:0 0 0 0 rgba(5,150,105,.7); animation:wlPulse 2s infinite }
+@keyframes wlPulse{ 0%{ box-shadow:0 0 0 0 rgba(5,150,105,.55) } 70%{ box-shadow:0 0 0 7px rgba(5,150,105,0) } 100%{ box-shadow:0 0 0 0 rgba(5,150,105,0) } }
+@media (prefers-reduced-motion:reduce){ .wl-dot{ animation:none } }
+
+.wl-label{ display:block; text-align:left; font-size:13px; font-weight:600; color:var(--text); margin:18px 0 7px }
 .wl-opt{ color:var(--faint); font-weight:400 }
-.wl-input{ width:100%; height:52px; border-radius:13px; background:#fff; border:1px solid var(--line); padding:0 15px; font-family:inherit; font-size:16px; color:var(--ink); outline:none; transition:border-color .15s var(--ease), box-shadow .15s var(--ease) }
+.wl-input{ width:100%; height:52px; border-radius:13px; background:rgba(255,255,255,.05); border:1px solid var(--line); padding:0 15px;
+  font-family:inherit; font-size:16px; color:var(--text); outline:none; transition:border-color .15s var(--ease), box-shadow .15s var(--ease) }
 .wl-input::placeholder{ color:var(--faint) }
-.wl-input:focus{ border-color:var(--safe); box-shadow:0 0 0 3px rgba(5,150,105,.15) }
-
-/* Honeypot: removed from layout and from the accessibility tree. */
+.wl-input:focus{ border-color:var(--safe); box-shadow:0 0 0 3px rgba(5,150,105,.22) }
 .wl-hp{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden }
 
-.wl-btn{ width:100%; height:52px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; font-weight:600; font-size:15.5px; cursor:pointer; border:1px solid transparent; transition:transform .12s var(--ease), box-shadow .18s var(--ease), background .18s var(--ease), border-color .18s var(--ease) }
+.wl-btn{ width:100%; height:52px; margin-top:20px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  font-family:inherit; font-weight:700; font-size:15.5px; cursor:pointer; border:none; color:#0A0F1C; background:var(--text);
+  box-shadow:0 12px 26px -14px rgba(0,0,0,.7); transition:transform .12s var(--ease), background .18s var(--ease) }
 .wl-btn:active{ transform:scale(.985) }
-.wl-btn:disabled{ opacity:.5; cursor:not-allowed; transform:none }
-.wl-btn:focus-visible{ outline:2px solid var(--safe); outline-offset:2px }
-.wl-btn-primary{ background:var(--safe); color:#fff; box-shadow:0 10px 22px -12px rgba(5,150,105,.6); margin-top:20px }
-@media (hover:hover) and (pointer:fine){ .wl-btn-primary:not(:disabled):hover{ background:#047857; transform:translateY(-1px) } }
-.wl-btn-ghost{ background:#fff; color:var(--ink); border-color:var(--line); margin-top:18px }
-.wl-btn-ghost:hover{ border-color:#CBD5E1 }
-.wl-busy{ display:inline-flex; align-items:center; gap:8px }
-
+.wl-btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; box-shadow:none }
+@media (hover:hover) and (pointer:fine){ .wl-btn:not(:disabled):hover{ background:#fff; transform:translateY(-1px) } }
+.wl-busy{ display:inline-flex; align-items:center; gap:8px; color:#0A0F1C }
 .wl-status{ min-height:18px; margin-top:12px; font-size:13.5px; line-height:1.5; color:var(--danger); font-weight:500 }
-.wl-consent{ margin-top:6px; font-size:12.5px; line-height:1.55; color:var(--muted) }
+.wl-consent{ margin-top:4px; font-size:12.5px; line-height:1.55; color:var(--faint) }
 
-.wl-check{ width:52px; height:52px; border-radius:14px; background:var(--safe-tint); display:flex; align-items:center; justify-content:center; margin-bottom:16px }
+/* success */
+.wl-check{ width:56px; height:56px; margin:0 auto 8px; border-radius:16px; background:var(--safe); display:flex; align-items:center; justify-content:center;
+  box-shadow:0 12px 26px -12px rgba(5,150,105,.6) }
+.wl-place{ margin-top:22px; padding:18px; border-radius:16px; background:rgba(255,255,255,.04); border:1px solid var(--line) }
+.wl-place-label{ font-size:11px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; color:var(--faint) }
+.wl-place-num{ font-size:46px; font-weight:700; letter-spacing:-.03em; line-height:1.05; margin-top:4px; color:var(--text) }
+.wl-place-of{ font-size:12.5px; color:var(--muted); margin-top:2px }
 
-@media (min-width:1024px){
-  .wl{ display:grid; grid-template-columns:1.05fr 1fr; min-height:100vh }
-  .wl-aside{ padding:52px 52px 44px; justify-content:space-between }
-  .wl-headline{ font-size:40px; max-width:14ch; margin-top:24px }
-  .wl-lede{ font-size:15px }
-  .wl-stat{ margin-top:32px; max-width:400px }
-  .wl-stat-fig{ font-size:40px }
-  .wl-foot{ display:block }
-  .wl-form{ padding:52px 60px; margin-top:0; justify-content:center }
-  .wl-card{ border:none; box-shadow:none; padding:0; max-width:400px }
-}
-/* Transparency off: drop the photo/scrim for a solid navy panel. */
-@media (prefers-reduced-transparency:reduce){
-  .wl-aside::before{ background:#0F172A }
-}
+.wl-reflink{ display:flex; gap:8px; margin-top:20px }
+.wl-reflink input{ flex:1; min-width:0; height:48px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid var(--line);
+  padding:0 14px; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:13px; color:var(--muted); outline:none }
+.wl-reflink input:focus{ border-color:var(--safe) }
+.wl-copy{ width:48px; height:48px; flex-shrink:0; border:none; border-radius:12px; background:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:transform .12s var(--ease), background .18s var(--ease) }
+.wl-copy:active{ transform:scale(.92) } .wl-copy:hover{ background:#fff }
+
+.wl-share{ display:flex; justify-content:center; gap:11px; margin-top:16px }
+.wl-sh{ width:46px; height:46px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; color:var(--text);
+  background:rgba(255,255,255,.06); border:1px solid var(--line); transition:transform .14s var(--ease), background .18s var(--ease) }
+.wl-sh:active{ transform:scale(.92) } .wl-sh:hover{ background:rgba(255,255,255,.12) }
 `;
