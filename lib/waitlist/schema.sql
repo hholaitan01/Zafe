@@ -23,13 +23,25 @@ alter table public.waitlist
   add column if not exists code        text,
   add column if not exists referred_by text;
 
--- Backfill a unique referral code for any row added before these columns
--- existed. Without this, a legacy sign-up has a NULL code and re-joining would
--- collide on the primary key. gen_random_uuid() is built in on Supabase; the
--- first 8 hex chars match the app's code format.
-update public.waitlist
-   set code = substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)
- where code is null;
+-- Backfill a referral code for any row added before these columns existed.
+-- Without this, a legacy sign-up has a NULL code and re-joining would collide on
+-- the primary key. An 8-hex code is only 2^32 values, so a single batch UPDATE
+-- could generate the same code twice and break the unique index below. Assign
+-- one row at a time and re-roll on any clash (against both existing codes and
+-- ones set earlier in this loop), so the result is always collision-free.
+do $$
+declare
+  r         record;
+  new_code  text;
+begin
+  for r in select email from public.waitlist where code is null loop
+    loop
+      new_code := substr(replace(gen_random_uuid()::text, '-', ''), 1, 8);
+      exit when not exists (select 1 from public.waitlist where code = new_code);
+    end loop;
+    update public.waitlist set code = new_code where email = r.email;
+  end loop;
+end $$;
 
 -- Unique referral code (partial index so any remaining NULLs are still allowed).
 create unique index if not exists waitlist_code_key on public.waitlist (code) where code is not null;
