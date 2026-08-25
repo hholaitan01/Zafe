@@ -71,11 +71,24 @@ function rowToRec(r: Record<string, unknown>): WaitlistRec {
   };
 }
 
+// Supabase caps a single select at 1,000 rows, so page through the whole table.
+// Ordered so pagination is stable and the result is already oldest-first.
+const PAGE = 1000;
 async function allRows(): Promise<WaitlistRec[]> {
   if (!live()) return [...mem().values()];
-  const { data, error } = await db().from("waitlist").select("email,name,source,code,referred_by,created_at");
-  if (error || !data) return [];
-  return data.map(rowToRec);
+  const rows: WaitlistRec[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await db()
+      .from("waitlist")
+      .select("email,name,source,code,referred_by,created_at")
+      .order("created_at", { ascending: true })
+      .order("email", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error || !data || data.length === 0) break;
+    rows.push(...data.map(rowToRec));
+    if (data.length < PAGE) break;
+  }
+  return rows;
 }
 
 /**
@@ -99,10 +112,21 @@ export async function addToWaitlist(entry: WaitlistEntry): Promise<{ ok: boolean
     return { ok: true, code };
   }
 
-  // Already on the list? Return the existing code, don't re-refer.
+  // Already on the list? Return the existing code, don't re-refer. Legacy rows
+  // (added before the referral columns) have a NULL code, so assign one now
+  // instead of falling through to an insert that would collide on the PK.
   {
     const { data } = await db().from("waitlist").select("code").eq("email", email).maybeSingle();
-    if (data?.code) return { ok: true, code: String(data.code) };
+    if (data) {
+      if (data.code) return { ok: true, code: String(data.code) };
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const code = genCode();
+        await db().from("waitlist").update({ code }).eq("email", email).is("code", null);
+        const { data: after } = await db().from("waitlist").select("code").eq("email", email).maybeSingle();
+        if (after?.code) return { ok: true, code: String(after.code) }; // ours, or a concurrent writer's
+      }
+      return { ok: false };
+    }
   }
 
   // Validate the referrer code against a real sign-up.
