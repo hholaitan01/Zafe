@@ -19,6 +19,11 @@ import { Spinner } from "@/app/_lib/States";
 
 interface Result { code?: string; position?: number; total?: number; referrals?: number }
 
+// Remembers, on this device only, that this browser has already joined. It never
+// leaves the browser, so it isn't an email-enumeration oracle: the server still
+// answers the same for new and existing emails.
+const STORE_KEY = "zafe_waitlist_v1";
+
 export default function WaitlistScreen() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -30,9 +35,36 @@ export default function WaitlistScreen() {
   const [result, setResult] = useState<Result | null>(null);
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [hydrated, setHydrated] = useState(false); // has the device check run yet
 
-  // Read a referrer code from the URL, capture the origin for share links, and
-  // fetch the current head-count for social proof.
+  function remember(joinEmail: string, r: Result) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ email: joinEmail, result: r })); } catch { /* storage blocked */ }
+  }
+  function forget() {
+    try { localStorage.removeItem(STORE_KEY); } catch { /* storage blocked */ }
+  }
+
+  // Refresh a returning member's live standing (position moves as others join and
+  // refer). Idempotent on the server, so it never creates a second sign-up.
+  async function refreshStanding(joinEmail: string) {
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: joinEmail, source: "waitlist" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as Result & { ok?: boolean };
+      if (res.ok && data.ok) {
+        const r = { code: data.code, position: data.position, total: data.total, referrals: data.referrals };
+        setResult(r);
+        remember(joinEmail, r);
+      }
+    } catch { /* offline: keep the stored standing */ }
+  }
+
+  // Read a referrer code from the URL, capture the origin for share links, fetch
+  // the head-count, and — if this device already joined — restore that standing
+  // instead of showing the form again.
   useEffect(() => {
     setOrigin(window.location.origin);
     const r = new URLSearchParams(window.location.search).get("ref");
@@ -40,6 +72,17 @@ export default function WaitlistScreen() {
     fetch("/api/waitlist").then((res) => res.json()).then((d: { count?: number }) => {
       if (typeof d.count === "number") setCount(d.count);
     }).catch(() => {});
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as { email?: string; result?: Result };
+        if (saved?.result) {
+          setResult(saved.result);
+          if (saved.email) refreshStanding(saved.email);
+        }
+      }
+    } catch { /* storage blocked or malformed */ }
+    setHydrated(true);
   }, []);
 
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -51,19 +94,32 @@ export default function WaitlistScreen() {
     setError(null);
     setLoading(true);
     try {
+      const joinEmail = email.trim();
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined, source: "waitlist", ref, company }),
+        body: JSON.stringify({ email: joinEmail, name: name.trim() || undefined, source: "waitlist", ref, company }),
       });
       const data = (await res.json().catch(() => ({}))) as Result & { ok?: boolean; error?: string };
-      if (res.ok && data.ok) setResult({ code: data.code, position: data.position, total: data.total, referrals: data.referrals });
-      else setError(data.error || "Could not join the waitlist. Please try again.");
+      if (res.ok && data.ok) {
+        const r = { code: data.code, position: data.position, total: data.total, referrals: data.referrals };
+        setResult(r);
+        remember(joinEmail, r);
+      } else setError(data.error || "Could not join the waitlist. Please try again.");
     } catch {
       setError("Couldn't reach the server. Please try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  // Shared device: let someone else start a fresh sign-up.
+  function joinAnother() {
+    forget();
+    setResult(null);
+    setEmail("");
+    setName("");
+    setError(null);
   }
 
   async function copy() {
@@ -89,7 +145,10 @@ export default function WaitlistScreen() {
           <span>Zafe</span>
         </Link>
 
-        {result ? (
+        {!hydrated ? (
+          /* ---- Checking this device before showing the form ---- */
+          <div className="wl-card wl-loading"><Spinner light size={22} /></div>
+        ) : result ? (
           /* ---- On the list ---- */
           <div className="wl-card wl-enter">
             <div className="wl-check" aria-hidden="true">
@@ -128,6 +187,8 @@ export default function WaitlistScreen() {
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m3 7 9 6 9-6" /></svg>
               </a>
             </div>
+
+            <button type="button" className="wl-switch" onClick={joinAnother}>Not you? Join with a different email</button>
           </div>
         ) : (
           /* ---- Join ---- */
@@ -232,4 +293,10 @@ const css = `
 .wl-sh{ width:46px; height:46px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; color:var(--text);
   background:rgba(255,255,255,.06); border:1px solid var(--line); transition:transform .14s var(--ease), background .18s var(--ease) }
 .wl-sh:active{ transform:scale(.92) } .wl-sh:hover{ background:rgba(255,255,255,.12) }
+
+.wl-switch{ display:block; margin:18px auto 0; padding:6px; background:none; border:none; cursor:pointer;
+  font-family:inherit; font-size:13px; color:var(--faint); text-decoration:underline; text-underline-offset:3px; transition:color .15s var(--ease) }
+.wl-switch:hover{ color:var(--muted) }
+
+.wl-loading{ display:flex; align-items:center; justify-content:center; min-height:180px }
 `;
