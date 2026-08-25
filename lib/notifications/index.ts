@@ -17,7 +17,7 @@ import type { Deal } from "@/lib/deals/types";
 import { sendEmail } from "./email";
 
 export function appUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL || "https://trustflow-seven-phi.vercel.app").replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_APP_URL || "https://getzafe.vercel.app").replace(/\/$/, "");
 }
 
 function looksLikeEmail(v?: string): boolean {

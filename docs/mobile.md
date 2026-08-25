@@ -28,7 +28,7 @@ Activity with [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap):
 
 ```bash
 npm i -g @bubblewrap/cli
-bubblewrap init --manifest https://trustflow-seven-phi.vercel.app/manifest.webmanifest
+bubblewrap init --manifest https://getzafe.vercel.app/manifest.webmanifest
 bubblewrap build
 ```
 
@@ -56,7 +56,7 @@ the shell loads the live site over `server.url` rather than a static bundle.
    `server.url` to your real URL (or export `CAP_SERVER_URL`), for example:
 
    ```ts
-   server: { url: "https://trustflow-seven-phi.vercel.app", cleartext: false }
+   server: { url: "https://getzafe.vercel.app", cleartext: false }
    ```
 
 2. **Add the native projects** (run on your own machine, not in CI):
