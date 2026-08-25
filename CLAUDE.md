@@ -59,6 +59,15 @@ doesn't work), skeleton/placeholder for data-heavy sections.
 ("launch faster", "build your dreams"). No fake testimonials. No generic AI
 faces or placeholder names ("Sarah Chen").
 
+**Breathing room — avoid congestion at all cost** — this is a hard rule, not a
+preference. A screen should carry one message and let it breathe. Do not stack an
+eyebrow, a headline, a long paragraph, a stat card, and a form all in one viewport.
+Cut before you add: fewer elements, shorter copy, more whitespace. Every element
+must earn its place; if it does not serve the screen's one job, remove it. Keep it
+simple and brief, and make sure what remains clearly carries the message it exists
+to pass on. When a screen feels full, the fix is subtraction, never smaller type or
+tighter spacing.
+
 **Core principle** — inconsistency signals vibe-coding more than any single
 element. When adding UI, match an existing pattern rather than inventing one.
 
