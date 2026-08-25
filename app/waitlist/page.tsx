@@ -133,7 +133,7 @@ export default function WaitlistScreen() {
           /* ---- Join ---- */
           <div className="wl-card wl-enter">
             <h1 className="wl-h1">Join the waitlist</h1>
-            <p className="wl-sub">Zafe holds a buyer&apos;s money safe until they confirm delivery. Be first to get access when we go live on Nigerian rails.</p>
+            <p className="wl-sub">Your money, held safe until you confirm delivery. Be first in when we launch.</p>
 
             {count != null && count > 0 && (
               <div className="wl-count"><span className="wl-dot" />{count.toLocaleString()} {count === 1 ? "person" : "people"} already on the waitlist</div>

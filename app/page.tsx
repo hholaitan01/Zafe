@@ -157,7 +157,7 @@ export default function Landing() {
         <div className="lp-wrap lp-aigrid">
           <div className="lp-aicopy lp-reveal">
             <h2>An AI reads the deal before your money moves.</h2>
-            <p>Most fraud happens in the chat, long before anyone pays. Paste the conversation and Zafe flags the pressure tactics, the off-platform tricks, and the fake urgency. If it is risky, you cannot pay until you have seen exactly why.</p>
+            <p>Most fraud happens in the chat, before anyone pays. Paste the conversation and Zafe flags the pressure tactics and off-platform tricks. If it is risky, you cannot pay until you have seen why.</p>
             <div className="lp-ailist">
               <div><Icon d={I.check} color="#059669" size={17} />Names the specific scam tactic in the chat</div>
               <div><Icon d={I.check} color="#059669" size={17} />Scores the seller from their past deals</div>

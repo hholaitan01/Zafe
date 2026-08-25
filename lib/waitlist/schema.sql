@@ -23,7 +23,15 @@ alter table public.waitlist
   add column if not exists code        text,
   add column if not exists referred_by text;
 
--- Unique referral code (partial index so pre-existing NULLs are allowed).
+-- Backfill a unique referral code for any row added before these columns
+-- existed. Without this, a legacy sign-up has a NULL code and re-joining would
+-- collide on the primary key. gen_random_uuid() is built in on Supabase; the
+-- first 8 hex chars match the app's code format.
+update public.waitlist
+   set code = substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)
+ where code is null;
+
+-- Unique referral code (partial index so any remaining NULLs are still allowed).
 create unique index if not exists waitlist_code_key on public.waitlist (code) where code is not null;
 
 alter table public.waitlist enable row level security;
