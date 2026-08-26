@@ -8,7 +8,7 @@
 
 import { useMemo, useState } from "react";
 import AgentChat, { type ChatBubble } from "@/app/_lib/AgentChat";
-import { getCachedDeal, getCurrentDealId, mediateDispute, naira } from "@/lib/client";
+import { fileMediatedDispute, getCachedDeal, getCurrentDealId, mediateDispute, naira } from "@/lib/client";
 import type { DisputeResult } from "@/lib/ai/types";
 
 const LABEL: Record<string, string> = { release_to_seller: "Pay the seller", refund_buyer: "Full refund", split: "Partial refund" };
@@ -28,6 +28,24 @@ export default function DisputeMediatorPage() {
   const [messages, setMessages] = useState<ChatBubble[]>([INTRO]);
   const [loading, setLoading] = useState(false);
   const [decision, setDecision] = useState<DisputeResult | null>(null);
+  const [filing, setFiling] = useState(false);
+  const [filed, setFiled] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  async function fileIt() {
+    if (!dealId || filing || filed) return;
+    setFiling(true);
+    setFileError(null);
+    try {
+      const turns = messages.filter((m) => m !== INTRO);
+      await fileMediatedDispute(dealId, turns);
+      setFiled(true);
+    } catch {
+      setFileError("Couldn't file it just now. Please try again.");
+    } finally {
+      setFiling(false);
+    }
+  }
 
   async function onSend(text: string) {
     const next = [...messages, { role: "user" as const, content: text }];
@@ -73,7 +91,23 @@ export default function DisputeMediatorPage() {
         <div className="med-points"><div className="med-points-h">For the seller</div><ul>{decision.sellerPoints.map((p, i) => <li key={i}>{p}</li>)}</ul></div>
       )}
       <div className="med-meta">Confidence {decision.confidence}%{decision.mode !== "live" ? " · demo" : ""}</div>
-      <a className="med-cta" href="/dispute">Open this in your dispute</a>
+      {filed ? (
+        <>
+          <div className="med-filed">Filed on your dispute. Both sides now accept it before any money moves.</div>
+          <a className="med-cta" href="/dispute">Review and accept in your dispute</a>
+        </>
+      ) : dealId ? (
+        <>
+          {fileError && <div className="med-err">{fileError}</div>}
+          <button className="med-cta" onClick={fileIt} disabled={filing}>{filing ? "Filing…" : "File this on my dispute"}</button>
+          <div className="med-note">This attaches the recommendation to your deal. No money moves until both sides accept it.</div>
+        </>
+      ) : (
+        <>
+          <a className="med-cta" href="/dispute">Open this in your dispute</a>
+          <div className="med-note">Open the mediator from one of your deals to file this recommendation onto it.</div>
+        </>
+      )}
     </div>
   ) : null;
 
@@ -106,7 +140,11 @@ const cardCss = `
 .med-points ul{ margin:5px 0 0; padding-left:18px }
 .med-points li{ font-size:13.5px; line-height:1.5; color:#334155 }
 .med-meta{ margin-top:14px; font-size:12px; color:#64748B }
-.med-cta{ display:block; text-align:center; margin-top:14px; padding:12px; border-radius:12px; background:#0F172A; color:#F8FAFC;
-  font-weight:700; font-size:14.5px; text-decoration:none }
-.med-cta:hover{ background:#1e293b }
+.med-cta{ display:block; width:100%; text-align:center; margin-top:14px; padding:13px; border-radius:12px; border:none; background:#0F172A; color:#F8FAFC;
+  font-family:inherit; font-weight:700; font-size:14.5px; text-decoration:none; cursor:pointer; transition:background .18s cubic-bezier(.22,1,.36,1) }
+.med-cta:hover:not(:disabled){ background:#1e293b }
+.med-cta:disabled{ opacity:.6; cursor:not-allowed }
+.med-filed{ margin-top:14px; padding:10px 12px; border-radius:10px; background:#ECFDF5; border:1px solid #C7F0DE; color:#047857; font-size:13px; font-weight:600 }
+.med-note{ margin-top:9px; font-size:12px; color:#64748B; text-align:center; line-height:1.5 }
+.med-err{ margin-top:12px; font-size:13px; color:#DC2626; font-weight:500 }
 `;

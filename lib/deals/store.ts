@@ -350,6 +350,11 @@ export interface DisputeInput {
   reason?: string;
   buyer: { claim: string; evidence?: string[] };
   seller: { claim: string; evidence?: string[] };
+  /** A resolution already decided server-side (e.g. by the dispute mediator).
+      When set, it is stored as the suggestion instead of running the one-shot
+      judge. NEVER pass a client-supplied value here — only one computed on the
+      server in the same request, or acceptDispute would move money on it. */
+  resolution?: DisputeResult;
 }
 
 export interface DisputeOutcome {
@@ -375,7 +380,9 @@ export async function openDispute(id: string, input: DisputeInput): Promise<Disp
   }
 
   const openedAt = new Date().toISOString();
-  const resolution = await getDisputeDecision({
+  // Use the mediator's server-computed resolution when one was passed; otherwise
+  // fall back to the one-shot judge (the original form-based flow).
+  const resolution = input.resolution ?? await getDisputeDecision({
     item: deal.item,
     amount: deal.item.amount,
     buyer: input.buyer,
