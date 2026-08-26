@@ -121,3 +121,31 @@ export interface DisputeResult {
   recommendedAction: string;
   mode: AiMode;
 }
+
+/* --------------------------- Conversational agents ---------------------- */
+
+/** A compact, non-sensitive summary of a deal, safe to hand an agent as
+    grounding. Built server-side only for a caller who is a party to the deal. */
+export interface DealSummary {
+  reference: string;
+  item: string;
+  amount: number;
+  currency: string;
+  /** The deal's DealStatus, kept as a string here to avoid a lib/deals import cycle. */
+  status: string;
+  role: "buyer" | "seller" | "you";
+  trustScore?: number;
+  hasDispute?: boolean;
+}
+
+/* Agent 2 — Dispute mediator. One turn is either a follow-up question or a
+   final recommendation (the same shape as the one-shot judge). */
+export type DisputeTurn =
+  | { kind: "question"; question: string; mode: AiMode }
+  | { kind: "decision"; decision: DisputeResult };
+
+/* Agent 3 — Support assistant. A plain-text reply plus the seam mode. */
+export interface SupportReply {
+  reply: string;
+  mode: AiMode;
+}

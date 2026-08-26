@@ -93,7 +93,7 @@ export default function AppShell({
         <header className="tf-topbar">
           <div className="tf-search"><NavIcon size={16}><><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></></NavIcon><span>Search transactions, sellers, refs</span></div>
           <div className="tf-topbar-right">
-            <Link href="/notifications" className="tf-icon-btn" aria-label="Notifications"><NavIcon size={18}><><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></></NavIcon></Link>
+            <Link href="/support" className="tf-icon-btn" aria-label="Ask Zafe"><NavIcon size={18}><><circle cx="12" cy="12" r="9" /><path d="M9.1 9.2a3 3 0 0 1 5.7 1c0 2-3 2.4-3 4" /><path d="M12 17h.01" /></></NavIcon></Link><Link href="/notifications" className="tf-icon-btn" aria-label="Notifications"><NavIcon size={18}><><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></></NavIcon></Link>
             <div className="tf-topbar-meta"><div className="tf-topbar-name">{user.name}</div>{user.score != null && <div className="tf-topbar-role">Trust Score · {user.score}/100</div>}</div>
             <div className="tf-avatar" style={avatarStyle}>{user.photo ? "" : user.initials}</div>
           </div>
@@ -106,7 +106,7 @@ export default function AppShell({
             <div><div className="tf-mtop-hi">Welcome,</div><div className="tf-mtop-name">{user.name}</div></div>
           </div>
           <div className="tf-mtop-actions">
-            <Link href="/notifications" className="tf-icon-btn" aria-label="Notifications"><NavIcon size={18}><><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></></NavIcon></Link>
+            <Link href="/support" className="tf-icon-btn" aria-label="Ask Zafe"><NavIcon size={18}><><circle cx="12" cy="12" r="9" /><path d="M9.1 9.2a3 3 0 0 1 5.7 1c0 2-3 2.4-3 4" /><path d="M12 17h.01" /></></NavIcon></Link><Link href="/notifications" className="tf-icon-btn" aria-label="Notifications"><NavIcon size={18}><><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></></NavIcon></Link>
             <Link href="/settings" className="tf-icon-btn" aria-label="Settings"><NavIcon size={18}><><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.42l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15H4.5a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 6.4 9.6L6.34 9.54A2 2 0 1 1 9.17 6.7l.06.06A1.65 1.65 0 0 0 12 5.6V4.5a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 19.42 9l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 21 15z" /></></NavIcon></Link>
           </div>
         </header>

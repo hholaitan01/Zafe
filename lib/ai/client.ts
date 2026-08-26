@@ -69,6 +69,73 @@ export async function runStructured<T>(opts: RunStructuredOptions): Promise<T> {
   return JSON.parse(text) as T;
 }
 
+/** One turn in a conversation with an agent. */
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** Cap how much conversation we ever send to the model. Bounds cost and blast
+    radius from a client that keeps appending. */
+const MAX_TURNS = 24;
+const MAX_TURN_CHARS = 6000;
+
+function trimTurns(messages: ChatMessage[]): ChatMessage[] {
+  return messages
+    .slice(-MAX_TURNS)
+    .map((m) => ({ role: m.role, content: String(m.content ?? "").slice(0, MAX_TURN_CHARS) }));
+}
+
+/**
+ * A plain-text conversational turn: send the history, get the assistant's reply.
+ * Used by the support agent. Throws on API/parse errors so callers fall back.
+ */
+export async function runChat(opts: { system: string; messages: ChatMessage[]; maxTokens?: number }): Promise<string> {
+  const response = await getClient().messages.create({
+    model: AI_MODEL,
+    max_tokens: opts.maxTokens ?? 1024,
+    system: opts.system,
+    messages: trimTurns(opts.messages),
+  });
+  if (response.stop_reason === "refusal") throw new Error("Claude declined the request (safety refusal)");
+  const text = response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("")
+    .trim();
+  if (!text) throw new Error("Claude returned no text");
+  return text;
+}
+
+/**
+ * A structured conversational turn: same as runStructured, but over a message
+ * history instead of a single prompt. Used by the dispute agent, which asks
+ * follow-up questions before it decides.
+ */
+export async function runStructuredChat<T>(opts: {
+  system: string;
+  messages: ChatMessage[];
+  schema: Record<string, unknown>;
+  effort?: "low" | "medium" | "high" | "xhigh" | "max";
+  maxTokens?: number;
+}): Promise<T> {
+  const response = await getClient().messages.create({
+    model: AI_MODEL,
+    max_tokens: opts.maxTokens ?? 8000,
+    system: opts.system,
+    output_config: { format: { type: "json_schema", schema: opts.schema }, effort: opts.effort ?? "medium" },
+    messages: trimTurns(opts.messages),
+  });
+  if (response.stop_reason === "refusal") throw new Error("Claude declined the request (safety refusal)");
+  const text = response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("")
+    .trim();
+  if (!text) throw new Error("Claude returned no text to parse");
+  return JSON.parse(text) as T;
+}
+
 /** Clamp any model- or heuristic-produced number into an integer 0–100. */
 export function clampScore(value: unknown, fallback = 50): number {
   const n = typeof value === "number" && Number.isFinite(value) ? value : fallback;
