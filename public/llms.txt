@@ -1,0 +1,22 @@
+# Zafe
+
+> Zafe is AI-powered escrow for Nigerian peer-to-peer trades. A buyer's money is held safe until they confirm the item arrived, an AI checks every deal chat for scams before payment, and payouts only reach identity-verified sellers.
+
+Zafe protects people who buy from strangers on WhatsApp, Instagram, and campus groups. Instead of paying the seller directly, the buyer pays into Zafe. The money is held in escrow while the seller ships. When the item arrives and matches, the buyer confirms and Zafe releases the money. If a deal goes wrong, either side opens a dispute; an AI mediator weighs the evidence and recommends where the money goes, and the money stays locked until it is settled.
+
+## How it works
+- Agree the deal: enter the item, price, and seller. Paste the chat and the AI checks it for scams.
+- Pay into escrow: the money is held safe. The seller sees it is there but cannot touch it yet.
+- Seller ships: they send the item knowing the money is real and waiting for them.
+- You confirm: release the money, or open a dispute if something is wrong.
+
+## Key facts
+- Setting up a protected deal is free. Escrow fees apply only when a deal completes.
+- Buyers can pay from any Nigerian bank. Transfers are detected automatically, with no receipt to upload.
+- Sellers must verify their identity (BVN or NIN) before any payout.
+- Every seller carries a Trust Score based on their past deals.
+- An AI dispute mediator interviews the person raising a dispute and recommends a fair outcome; money moves only when both sides accept.
+
+## Links
+- Home: https://getzafe.vercel.app/
+- Join the waitlist: https://getzafe.vercel.app/waitlist
