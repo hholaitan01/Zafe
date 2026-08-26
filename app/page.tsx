@@ -14,6 +14,8 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { LandingStructuredData } from "./_lib/StructuredData";
+import { FAQS } from "./_lib/site";
 
 function Mark({ size = 28 }: { size?: number }) {
   return (
@@ -65,6 +67,7 @@ export default function Landing() {
   return (
     <div className="lp">
       <style>{css}</style>
+      <LandingStructuredData />
 
       {/* ---- Nav ---- */}
       <header className="lp-nav">
@@ -212,12 +215,7 @@ export default function Landing() {
         <div className="lp-wrap lp-faqwrap">
           <div className="lp-head lp-reveal"><h2>Questions, answered plainly.</h2></div>
           <div className="lp-faq">
-            {[
-              { q: "Is my money actually safe?", a: "Yes. Once you pay, the money sits in escrow. The seller cannot withdraw it. It only moves when you confirm delivery, or when a dispute is resolved." },
-              { q: "What if the seller never ships?", a: "You open a dispute. If the item never arrives, the money is refunded to you. The seller is only paid for a deal they actually completed." },
-              { q: "Do I need a Wema account?", a: "No. You can pay from any bank. We detect the transfer automatically, so there is no receipt to upload and no screenshot to send." },
-              { q: "What does it cost?", a: "Setting up a protected deal is free. Escrow fees apply only when a deal completes, so trying it costs you nothing." },
-            ].map((f) => (
+            {FAQS.map((f) => (
               <details className="lp-faqitem lp-reveal" key={f.q}>
                 <summary>{f.q}<span className="lp-faqchev" aria-hidden="true"><Icon d={I.chevron} color="#64748B" size={18} /></span></summary>
                 <p>{f.a}</p>
