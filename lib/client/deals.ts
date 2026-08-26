@@ -81,6 +81,13 @@ export function disputeDeal(id: string, input: DisputeInput): Promise<{ deal: De
   return apiFetch<{ deal: Deal; resolution?: DisputeResult }>(`/api/deals/${id}/dispute`, { method: "POST", body: JSON.stringify(input) });
 }
 
+/** Dispute mediator — file the mediator's recommendation onto a deal. The
+    mediator is re-run server-side over the transcript, so the stored suggestion
+    is trusted. No money moves until both sides accept it. */
+export function fileMediatedDispute(id: string, messages: { role: "user" | "assistant"; content: string }[]): Promise<{ deal: Deal; resolution?: DisputeResult }> {
+  return apiFetch<{ deal: Deal; resolution?: DisputeResult }>(`/api/deals/${id}/dispute/mediate`, { method: "POST", body: JSON.stringify({ messages }) });
+}
+
 /** Dispute screen — the caller accepts the AI's suggestion. Settles only once
     both sides have accepted (`settled: true`). */
 export function acceptDisputeResolution(id: string): Promise<{ deal: Deal; settled: boolean }> {
