@@ -241,6 +241,7 @@ export default function Landing() {
           <a className="lp-brand" href="#top" aria-label="Zafe home"><Mark size={24} /><span>Zafe</span></a>
           <p className="lp-footnote">AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.</p>
           <nav className="lp-footlinks" aria-label="Legal">
+            <Link href="/guides">Guides</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/seller">Become a seller</Link>
