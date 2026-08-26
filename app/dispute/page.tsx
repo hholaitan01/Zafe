@@ -165,6 +165,10 @@ export default function DisputePage() {
 
       <div className="tf-ph-head dp-head">
         <div><div className="tf-eyebrow">Resolution centre</div><h1>Open a dispute</h1></div>
+        <Link href="/dispute/mediator" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 700, color: "#059669", textDecoration: "none", whiteSpace: "nowrap" }}>
+          Talk it through with the AI mediator
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </Link>
       </div>
 
       {deals == null ? (
