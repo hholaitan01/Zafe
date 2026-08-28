@@ -13,13 +13,9 @@
    ========================================================================== */
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { LandingStructuredData } from "./_lib/StructuredData";
 import { FAQS } from "./_lib/site";
-
-/* The four things the Trust check screen tells the buyer it reviewed. Kept in
-   sync with app/_lib/TrustDetail.tsx so the demo is the real screen. */
-const TRUST_SIGNALS = ["Seller history on Zafe", "Account age & verification", "Conversation tone", "Price against the market"];
 
 function Mark({ size = 28 }: { size?: number }) {
   return (
@@ -68,66 +64,13 @@ export default function Landing() {
     return () => io.disconnect();
   }, []);
 
-  // ---- Hero: the real "locked" screen counts the protected amount up from ₦0,
-  // exactly as the app does after a payment lands. Plus a live waitlist count.
+  // A live waitlist count for social proof under the hero CTAs.
   const [count, setCount] = useState<number | null>(null);
-  const [amt, setAmt] = useState(450000);
-
-  useEffect(() => {
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
-    setAmt(0);
-    let raf = 0;
-    const start = performance.now();
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - start) / 1100);
-      setAmt(Math.round(450000 * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
   useEffect(() => {
     fetch("/api/waitlist")
       .then((r) => r.json())
       .then((d: { count?: number }) => typeof d.count === "number" && setCount(d.count))
       .catch(() => {});
-  }, []);
-
-  // The Trust check dial counts up to the score the first time it scrolls in,
-  // exactly like the real screen (app/_lib/TrustDetail.tsx). A high-risk deal
-  // scores low, so the dial fills red to 23.
-  const TRUST_SCORE = 23;
-  const scoreRef = useRef<HTMLDivElement>(null);
-  const [score, setScore] = useState(TRUST_SCORE);
-  useEffect(() => {
-    const el = scoreRef.current;
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (!el || reduce || !("IntersectionObserver" in window)) return;
-    setScore(0);
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return;
-        io.disconnect();
-        let raf = 0;
-        const start = performance.now();
-        const step = (t: number) => {
-          const p = Math.min(1, (t - start) / 900);
-          setScore(Math.round(TRUST_SCORE * (1 - Math.pow(1 - p, 3))));
-          if (p < 1) raf = requestAnimationFrame(step);
-        };
-        raf = requestAnimationFrame(step);
-        cancel = () => cancelAnimationFrame(raf);
-      },
-      { threshold: 0.5 },
-    );
-    let cancel = () => {};
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      cancel();
-    };
   }, []);
 
   return (
@@ -167,31 +110,20 @@ export default function Landing() {
             )}
           </div>
 
-          {/* Hero visual: the real app "locked" screen (app/_screens/locked.ts),
-              the moment a buyer sees their money is held safe, shown on a phone. */}
+          {/* Hero visual: a real screenshot of the app "locked" screen, captured
+              from the running product, shown on a phone. */}
           <div className="lp-herovis lp-reveal">
             <div className="lp-phone">
               <span className="lp-phone-island" aria-hidden="true" />
-              <div className="lp-phone-screen lp-locked">
-                <div className="lp-locked-status">
-                  <span className="lp-locked-time">9:41</span>
-                  <span className="lp-locked-sysicons" aria-hidden="true">
+              <div className="lp-phone-screen">
+                <img className="lp-shot" src="/demo/locked-mobile.png" width={660} height={1388} alt="The Zafe app showing ₦450,000 locked safely in escrow until the buyer confirms delivery" />
+                <div className="lp-status-overlay" aria-hidden="true">
+                  <span className="lp-status-time">9:41</span>
+                  <span className="lp-status-icons">
                     <svg width="18" height="11" viewBox="0 0 18 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="1" /><rect x="5" y="5" width="3" height="6" rx="1" /><rect x="10" y="2.5" width="3" height="8.5" rx="1" /><rect x="15" y="0" width="3" height="11" rx="1" /></svg>
-                    <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 10.2 8.01 10.2M2 4.2a9 9 0 0 1 12 0M4.4 6.7a5.5 5.5 0 0 1 7.2 0M8 9.4a1.4 1.4 0 0 1 0 0" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" /><circle cx="8" cy="9.6" r="1.1" fill="#fff" /></svg>
+                    <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M2 4.2a9 9 0 0 1 12 0M4.4 6.7a5.5 5.5 0 0 1 7.2 0" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" /><circle cx="8" cy="9.6" r="1.1" fill="#fff" /></svg>
                     <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#fff" strokeOpacity="0.5" /><rect x="2" y="2" width="18" height="8" rx="1.5" fill="#fff" /><rect x="23" y="4" width="2" height="4" rx="1" fill="#fff" fillOpacity="0.5" /></svg>
                   </span>
-                </div>
-                <div className="lp-locked-body">
-                  <div className="lp-vault" aria-hidden="true">
-                    <span className="lp-vault-orb" />
-                    <span className="lp-vault-arc" />
-                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="2"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" strokeLinecap="round" /></svg>
-                  </div>
-                  <div className="lp-locked-amt">₦{amt.toLocaleString()}</div>
-                  <div className="lp-locked-h">is locked safely in escrow</div>
-                  <p className="lp-locked-p">The seller can now ship. Your money is released only when <b>you</b> confirm you got the item.</p>
-                  <div className="lp-locked-pill"><span className="lp-locked-dot" />Escrow held safe</div>
-                  <div className="lp-locked-btn">Track this deal</div>
                 </div>
               </div>
             </div>
@@ -240,8 +172,8 @@ export default function Landing() {
             <p>Most fraud happens in the chat, before anyone pays. Paste the conversation and Zafe flags the pressure tactics and off-platform tricks. If it is risky, you cannot pay until you have seen why.</p>
           </div>
 
-          {/* The real app "Trust check" page (app/_lib/TrustDetail.tsx) as it
-              renders on desktop: a centred read on the deal, shown in a browser. */}
+          {/* A real screenshot of the app "Trust check" page, captured from the
+              running product on desktop, shown inside a browser window. */}
           <div className="lp-window lp-window-wide lp-reveal">
             <div className="lp-window-bar" aria-hidden="true">
               <span className="lp-window-dots"><i /><i /><i /></span>
@@ -249,35 +181,7 @@ export default function Landing() {
               <span className="lp-window-spacer" />
             </div>
             <div className="lp-window-screen">
-              <div className="lp-trust" ref={scoreRef}>
-                <div className="lp-trust-top">
-                  <span className="lp-trust-back" aria-hidden="true"><Icon d="M15 18l-6-6 6-6" color="#0F172A" size={18} /></span>
-                  <h3>Trust check</h3>
-                </div>
-                <div className="lp-trust-dialwrap">
-                  <div className="lp-trust-dial" style={{ background: `conic-gradient(#DC2626 ${score * 3.6}deg, #EEF2F6 0)` }}>
-                    <div className="lp-trust-hole">
-                      <div className="lp-trust-score">{score}</div>
-                      <div className="lp-trust-outof">out of 100</div>
-                    </div>
-                  </div>
-                  <div className="lp-trust-verdict">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" /></svg>
-                    High risk
-                  </div>
-                </div>
-                <div className="lp-trust-headline"><p>We found risk signals here. Read them carefully before you send any money.</p></div>
-                <div className="lp-trust-signals">
-                  <div className="lp-trust-signals-head">What the AI reviewed</div>
-                  {TRUST_SIGNALS.map((s) => (
-                    <div className="lp-trust-signal" key={s}>
-                      <span className="lp-trust-signal-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v5M12 16h.01" /><circle cx="12" cy="12" r="9" /></svg></span>
-                      {s}
-                    </div>
-                  ))}
-                </div>
-                <div className="lp-trust-cta">Review, then decide on payment</div>
-              </div>
+              <img className="lp-shot" src="/demo/trust-desktop.png" width={2080} height={1760} alt="The Zafe Trust check page flagging a deal as high risk with a score of 4 out of 100" />
             </div>
           </div>
         </div>
@@ -368,7 +272,7 @@ const css = `
 .lp-draw.lp-in{transform:scaleX(1)}
 @media (prefers-reduced-motion:reduce){.lp-reveal{opacity:1; transform:none; transition:none}
   .lp-draw{transform:none; transition:none}
-  .lp-hero::before,.lp-phone,.lp-vault,.lp-livedot{animation:none}}
+  .lp-hero::before,.lp-phone,.lp-livedot{animation:none}}
 
 /* nav */
 .lp-nav{position:sticky; top:0; z-index:40; background:rgba(248,250,252,.82); backdrop-filter:saturate(1.4) blur(12px); border-bottom:1px solid var(--border)}
@@ -419,26 +323,13 @@ const css = `
 .lp-phone{position:relative; z-index:2; width:328px; max-width:100%; padding:13px; border-radius:48px; background:linear-gradient(160deg,#1E293B,#0F172A); box-shadow:var(--sh-lg), inset 0 0 0 2px rgba(255,255,255,.04); animation:lpFloat 7s ease-in-out infinite}
 @keyframes lpFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 .lp-phone-island{position:absolute; top:24px; left:50%; transform:translateX(-50%); width:88px; height:24px; border-radius:999px; background:#0B1220; z-index:3}
-.lp-phone-screen{position:relative; border-radius:38px; overflow:hidden}
+.lp-phone-screen{position:relative; border-radius:38px; overflow:hidden; background:#0A1524}
 
-/* the real "locked" screen (app/_screens/locked.ts) at native scale: vault
-   centred, action pinned to the bottom, just as the app renders it full-screen */
-.lp-locked{position:relative; background:radial-gradient(120% 80% at 50% 10%, #14304A 0%, #0F172A 52%, #0A1524 100%); color:#fff; height:672px}
-.lp-locked-status{position:relative; z-index:2; height:52px; display:flex; align-items:center; justify-content:space-between; padding:16px 22px 0 28px}
-.lp-locked-time{font-size:15px; font-weight:600; letter-spacing:.02em; font-variant-numeric:tabular-nums}
-.lp-locked-sysicons{display:inline-flex; align-items:center; gap:6px}
-.lp-locked-body{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 30px}
-.lp-vault{position:relative; width:140px; height:140px; animation:lpFloaty 5.5s ease-in-out infinite}
-.lp-vault svg{position:absolute; top:48px; left:48px}
-.lp-vault-orb{position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 35% 28%, #1e405f 0%, #0F172A 70%); box-shadow:0 30px 70px -14px rgba(0,0,0,.6), inset 0 0 0 1px rgba(5,150,105,.3)}
-.lp-vault-arc{position:absolute; inset:-3px; border-radius:50%; border:3px solid transparent; border-top-color:var(--safe); border-right-color:var(--safe); box-shadow:0 0 22px rgba(5,150,105,.5)}
-@keyframes lpFloaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-.lp-locked-amt{margin-top:32px; font-size:36px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
-.lp-locked-h{margin-top:8px; font-size:23px; font-weight:700; letter-spacing:-.02em; line-height:1.25}
-.lp-locked-p{margin-top:14px; font-size:15px; color:#93A4BC; line-height:1.55; max-width:32ch} .lp-locked-p b{color:#fff}
-.lp-locked-pill{margin-top:22px; display:inline-flex; align-items:center; gap:8px; padding:8px 15px; border-radius:999px; background:rgba(5,150,105,.12); border:1px solid rgba(5,150,105,.26); font-size:12.5px; font-weight:600; color:#E2E8F0}
-.lp-locked-dot{width:7px; height:7px; border-radius:50%; background:var(--safe)}
-.lp-locked-btn{position:absolute; left:30px; right:30px; bottom:40px; height:56px; border-radius:16px; background:#fff; color:#0F172A; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:16px}
+/* iOS-style status bar overlaid on the captured screen (the app hides its own,
+   expecting the real OS bar) so the phone reads as a genuine device */
+.lp-status-overlay{position:absolute; top:0; left:0; right:0; height:52px; display:flex; align-items:center; justify-content:space-between; padding:15px 22px 0 28px; color:#fff; z-index:2}
+.lp-status-time{font-size:15px; font-weight:600; letter-spacing:.02em; font-variant-numeric:tabular-nums}
+.lp-status-icons{display:inline-flex; align-items:center; gap:6px}
 
 /* trust band */
 .lp-band{display:flex; flex-wrap:wrap; gap:14px 32px; margin-top:30px; padding:22px 24px; border-top:1px solid var(--border); border-bottom:1px solid var(--border)}
@@ -470,26 +361,10 @@ const css = `
 .lp-window-url{display:inline-flex; align-items:center; gap:8px; max-width:340px; width:100%; margin:0 auto; font-size:13px; color:var(--muted); background:#fff; border:1px solid var(--border); border-radius:8px; padding:7px 14px; justify-content:center; font-variant-numeric:tabular-nums}
 .lp-window-spacer{width:44px; flex-shrink:0}
 .lp-window-wide{max-width:960px; margin:48px auto 0}
-.lp-window-screen{background:var(--bg); padding:28px 24px 40px; min-height:560px}
+.lp-window-screen{background:var(--bg); font-size:0}
 
-/* the real "Trust check" page (app/_lib/TrustDetail.tsx) at desktop sizes:
-   a centred column on the app canvas, exactly as it renders in the product */
-.lp-trust{max-width:520px; margin:0 auto}
-.lp-trust-top{display:flex; align-items:center; gap:14px; padding:4px 0}
-.lp-trust-back{width:40px; height:40px; border-radius:12px; background:#fff; border:1px solid var(--border); box-shadow:var(--sh-sm); display:flex; align-items:center; justify-content:center; flex-shrink:0}
-.lp-trust-top h3{font-size:20px; font-weight:700; letter-spacing:-.02em}
-.lp-trust-dialwrap{display:flex; flex-direction:column; align-items:center; margin-top:22px}
-.lp-trust-dial{width:200px; height:200px; border-radius:50%; display:flex; align-items:center; justify-content:center}
-.lp-trust-hole{width:164px; height:164px; border-radius:50%; background:#fff; box-shadow:inset 0 2px 10px rgba(15,23,42,.06); display:flex; flex-direction:column; align-items:center; justify-content:center}
-.lp-trust-score{font-size:60px; font-weight:700; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}
-.lp-trust-outof{font-size:13px; color:var(--faint); margin-top:2px}
-.lp-trust-verdict{margin-top:18px; display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:999px; background:#FEE2E2; border:1px solid #FCA5A5; color:#B91C1C; font-size:14px; font-weight:700; letter-spacing:.02em}
-.lp-trust-headline{margin-top:22px; padding:16px; border-radius:16px; background:#FEE2E2; border:1px solid #FCA5A5} .lp-trust-headline p{font-size:14.5px; line-height:1.55; color:var(--ink-2); font-weight:500}
-.lp-trust-signals{margin-top:22px}
-.lp-trust-signals-head{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); margin-bottom:8px}
-.lp-trust-signal{display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--line-2); font-size:14px; color:var(--ink-2)} .lp-trust-signal:last-child{border-bottom:none}
-.lp-trust-signal-ic{width:28px; height:28px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#FEE2E2; color:#B91C1C}
-.lp-trust-cta{margin-top:24px; height:56px; border-radius:14px; background:#B91C1C; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:16px}
+/* real captured screenshots fill their frames */
+.lp-shot{display:block; width:100%; height:auto}
 
 /* safety */
 .lp-safety{position:relative;
@@ -551,9 +426,7 @@ const css = `
   .lp-flow{grid-template-columns:1fr}
   .lp-head h2,.lp-ctacard h2{font-size:28px}
   .lp-navcta{gap:12px} .lp-navcta .lp-link-sell{display:none}
-  .lp-window-screen{padding:20px 14px 28px; min-height:0}
   .lp-window-url{max-width:none} .lp-window-spacer{display:none}
-  .lp-trust-dial{width:170px; height:170px} .lp-trust-hole{width:136px; height:136px} .lp-trust-score{font-size:52px}
   .lp-ctacard{padding:40px 22px}
 }
 `;
