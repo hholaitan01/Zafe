@@ -412,32 +412,33 @@ const css = `
 .lp-herobtns{margin-top:28px; display:flex; gap:12px; flex-wrap:wrap}
 
 /* hero visual */
-.lp-herovis{position:relative; width:300px; max-width:100%; margin:0 auto}
+.lp-herovis{position:relative; width:328px; max-width:100%; margin:0 auto}
 .lp-card{background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh)}
 
-/* phone frame — the hero escrow is a real mobile screen */
-.lp-phone{position:relative; z-index:2; width:300px; max-width:100%; padding:12px; border-radius:44px; background:linear-gradient(160deg,#1E293B,#0F172A); box-shadow:var(--sh-lg), inset 0 0 0 2px rgba(255,255,255,.04); animation:lpFloat 7s ease-in-out infinite}
+/* phone frame — a real device: true 19.5:9 screen at native proportions */
+.lp-phone{position:relative; z-index:2; width:328px; max-width:100%; padding:13px; border-radius:48px; background:linear-gradient(160deg,#1E293B,#0F172A); box-shadow:var(--sh-lg), inset 0 0 0 2px rgba(255,255,255,.04); animation:lpFloat 7s ease-in-out infinite}
 @keyframes lpFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
-.lp-phone-island{position:absolute; top:22px; left:50%; transform:translateX(-50%); width:78px; height:20px; border-radius:999px; background:#0B1220; z-index:2}
-.lp-phone-screen{position:relative; border-radius:34px; overflow:hidden}
+.lp-phone-island{position:absolute; top:24px; left:50%; transform:translateX(-50%); width:88px; height:24px; border-radius:999px; background:#0B1220; z-index:3}
+.lp-phone-screen{position:relative; border-radius:38px; overflow:hidden}
 
-/* the real "locked" screen (app/_screens/locked.ts) */
-.lp-locked{background:radial-gradient(120% 80% at 50% 10%, #14304A 0%, #0F172A 52%, #0A1524 100%); color:#fff; height:552px; display:flex; flex-direction:column}
-.lp-locked-status{height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:12px 20px 0 26px}
+/* the real "locked" screen (app/_screens/locked.ts) at native scale: vault
+   centred, action pinned to the bottom, just as the app renders it full-screen */
+.lp-locked{position:relative; background:radial-gradient(120% 80% at 50% 10%, #14304A 0%, #0F172A 52%, #0A1524 100%); color:#fff; height:672px}
+.lp-locked-status{position:relative; z-index:2; height:52px; display:flex; align-items:center; justify-content:space-between; padding:16px 22px 0 28px}
 .lp-locked-time{font-size:15px; font-weight:600; letter-spacing:.02em; font-variant-numeric:tabular-nums}
 .lp-locked-sysicons{display:inline-flex; align-items:center; gap:6px}
-.lp-locked-body{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 26px}
-.lp-vault{position:relative; width:124px; height:124px; margin-bottom:6px; animation:lpFloaty 5.5s ease-in-out infinite}
-.lp-vault svg{position:absolute; top:40px; left:40px}
+.lp-locked-body{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 30px}
+.lp-vault{position:relative; width:140px; height:140px; animation:lpFloaty 5.5s ease-in-out infinite}
+.lp-vault svg{position:absolute; top:48px; left:48px}
 .lp-vault-orb{position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 35% 28%, #1e405f 0%, #0F172A 70%); box-shadow:0 30px 70px -14px rgba(0,0,0,.6), inset 0 0 0 1px rgba(5,150,105,.3)}
 .lp-vault-arc{position:absolute; inset:-3px; border-radius:50%; border:3px solid transparent; border-top-color:var(--safe); border-right-color:var(--safe); box-shadow:0 0 22px rgba(5,150,105,.5)}
 @keyframes lpFloaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-.lp-locked-amt{margin-top:26px; font-size:33px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
-.lp-locked-h{margin-top:6px; font-size:21px; font-weight:700; letter-spacing:-.02em; line-height:1.25}
-.lp-locked-p{margin-top:12px; font-size:13.5px; color:#93A4BC; line-height:1.55; max-width:30ch} .lp-locked-p b{color:#fff}
-.lp-locked-pill{margin-top:20px; display:inline-flex; align-items:center; gap:8px; padding:8px 15px; border-radius:999px; background:rgba(5,150,105,.12); border:1px solid rgba(5,150,105,.26); font-size:12.5px; font-weight:600; color:#E2E8F0}
+.lp-locked-amt{margin-top:32px; font-size:36px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.lp-locked-h{margin-top:8px; font-size:23px; font-weight:700; letter-spacing:-.02em; line-height:1.25}
+.lp-locked-p{margin-top:14px; font-size:15px; color:#93A4BC; line-height:1.55; max-width:32ch} .lp-locked-p b{color:#fff}
+.lp-locked-pill{margin-top:22px; display:inline-flex; align-items:center; gap:8px; padding:8px 15px; border-radius:999px; background:rgba(5,150,105,.12); border:1px solid rgba(5,150,105,.26); font-size:12.5px; font-weight:600; color:#E2E8F0}
 .lp-locked-dot{width:7px; height:7px; border-radius:50%; background:var(--safe)}
-.lp-locked-btn{margin-top:26px; align-self:stretch; height:52px; border-radius:16px; background:#fff; color:#0F172A; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px}
+.lp-locked-btn{position:absolute; left:30px; right:30px; bottom:40px; height:56px; border-radius:16px; background:#fff; color:#0F172A; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:16px}
 
 /* trust band */
 .lp-band{display:flex; flex-wrap:wrap; gap:14px 32px; margin-top:30px; padding:22px 24px; border-top:1px solid var(--border); border-bottom:1px solid var(--border)}
