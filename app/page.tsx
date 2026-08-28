@@ -313,15 +313,14 @@ const css = `
 .lp-livedot{width:8px; height:8px; border-radius:50%; background:var(--safe); box-shadow:0 0 0 0 rgba(5,150,105,.6); animation:lpPulseDot 2s infinite}
 @keyframes lpPulseDot{0%{box-shadow:0 0 0 0 rgba(5,150,105,.5)}70%{box-shadow:0 0 0 8px rgba(5,150,105,0)}100%{box-shadow:0 0 0 0 rgba(5,150,105,0)}}
 
-/* centred hero: message stacked over the product shot */
-.lp-herocenter{display:flex; flex-direction:column; align-items:center; text-align:center}
-.lp-herocopy{max-width:680px}
-.lp-herocopy h1{margin:8px 0 0; font-size:50px; line-height:1.06; letter-spacing:-.03em; font-weight:700}
-.lp-herosub{margin:20px auto 0; max-width:52ch; font-size:18px; line-height:1.6; color:var(--muted)}
-.lp-herobtns{margin-top:30px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center}
+/* hero: two columns on desktop (copy left, product shot right) */
+.lp-herocenter{display:grid; grid-template-columns:1.12fr .88fr; gap:52px; align-items:center}
+.lp-herocopy h1{margin:0; font-size:44px; line-height:1.08; letter-spacing:-.03em; font-weight:700}
+.lp-herosub{margin:20px 0 0; max-width:46ch; font-size:17px; line-height:1.6; color:var(--muted)}
+.lp-herobtns{margin-top:28px; display:flex; gap:12px; flex-wrap:wrap}
 
 /* hero visual */
-.lp-herovis{position:relative; width:328px; max-width:100%; margin:52px auto 0}
+.lp-herovis{position:relative; width:328px; max-width:100%; margin:0 auto}
 .lp-card{background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh)}
 
 /* phone frame — a real device: true 19.5:9 screen at native proportions */
@@ -416,7 +415,11 @@ const css = `
 
 /* responsive */
 @media (max-width:900px){
+  .lp-herocenter{grid-template-columns:1fr; gap:40px; justify-items:center; text-align:center}
   .lp-herocopy h1{font-size:42px}
+  .lp-herosub{margin-left:auto; margin-right:auto}
+  .lp-herobtns{justify-content:center}
+  .lp-livecount{justify-content:center}
   .lp-window-wide{margin-top:36px}
   .lp-features{grid-template-columns:1fr}
   .lp-flow{grid-template-columns:1fr 1fr} .lp-flowline{display:none}
