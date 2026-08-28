@@ -158,7 +158,6 @@ export default function Landing() {
         <div className="lp-wrap lp-herogrid">
           <div className="lp-herocopy lp-reveal">
             <h1>Buy from strangers.<br />Keep your money safe.</h1>
-            <p className="lp-sub">Your money stays locked until you confirm the item arrived. An AI checks the deal for scams before you pay.</p>
             <div className="lp-herobtns">
               <Link href="/waitlist" className="lp-btn lp-btn-primary lp-btn-lg">Join the waitlist</Link>
               <a href="#how" className="lp-btn lp-btn-ghost lp-btn-lg">See how it works</a>
@@ -170,10 +169,13 @@ export default function Landing() {
 
           {/* Hero visual: the escrow surface playing the "held safe" story, plus the AI verdict that sets it apart */}
           <div className="lp-herovis lp-reveal">
-            <div className={`lp-card lp-escrow${phase === 3 ? " is-released" : ""}`}>
-              <div className="lp-escrow-top">
-                <span className="lp-escrow-id">TF-4821</span>
-              </div>
+            <div className="lp-phone">
+              <span className="lp-phone-island" aria-hidden="true" />
+              <div className="lp-phone-screen">
+                <div className={`lp-escrow${phase === 3 ? " is-released" : ""}`}>
+                  <div className="lp-escrow-top">
+                    <span className="lp-escrow-id">TF-4821</span>
+                  </div>
               <div className="lp-escrow-amt">₦{amt.toLocaleString()}</div>
               <div className="lp-escrow-label">{phase === 3 ? "released to the seller" : "held safely until you confirm delivery"}</div>
               <div className="lp-escrow-steps">
@@ -187,8 +189,10 @@ export default function Landing() {
                   );
                 })}
               </div>
-              <div className={`lp-escrow-cta${phase === 2 ? " is-live" : ""}${phase === 3 ? " is-done" : ""}`}>
-                {phase === 3 ? "Released" : "Confirm and release"}
+                  <div className={`lp-escrow-cta${phase === 2 ? " is-live" : ""}${phase === 3 ? " is-done" : ""}`}>
+                    {phase === 3 ? "Released" : "Confirm and release"}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="lp-verdict">
@@ -245,20 +249,28 @@ export default function Landing() {
             </div>
           </div>
           <div className="lp-aivis lp-reveal">
-            <div className="lp-card lp-risk" ref={riskRef}>
-              <div className="lp-risk-head"><span className="lp-risk-chip">AI</span>Scam check</div>
-              <div className="lp-chat">
-                <div className="lp-msg lp-msg-them">Pay into my personal account first, then I ship. Last one left, someone else is asking. Send now.</div>
+            <div className="lp-window">
+              <div className="lp-window-bar" aria-hidden="true">
+                <span className="lp-window-dots"><i /><i /><i /></span>
+                <span className="lp-window-url">getzafe.vercel.app</span>
               </div>
-              <div className="lp-risk-verdict">
-                <div className="lp-risk-score">{risk}<span>/100</span></div>
-                <div className="lp-risk-flags">
-                  <span className="lp-flag">High-pressure urgency</span>
-                  <span className="lp-flag">Wants payment off escrow</span>
-                  <span className="lp-flag">Unverified, brand new</span>
+              <div className="lp-window-screen">
+                <div className="lp-risk" ref={riskRef}>
+                  <div className="lp-risk-head"><span className="lp-risk-chip">AI</span>Scam check</div>
+                  <div className="lp-chat">
+                    <div className="lp-msg lp-msg-them">Pay into my personal account first, then I ship. Last one left, someone else is asking. Send now.</div>
+                  </div>
+                  <div className="lp-risk-verdict">
+                    <div className="lp-risk-score">{risk}<span>/100</span></div>
+                    <div className="lp-risk-flags">
+                      <span className="lp-flag">High-pressure urgency</span>
+                      <span className="lp-flag">Wants payment off escrow</span>
+                      <span className="lp-flag">Unverified, brand new</span>
+                    </div>
+                  </div>
+                  <div className="lp-risk-foot">High risk. We would stop you here before you paid.</div>
                 </div>
               </div>
-              <div className="lp-risk-foot">High risk. We would stop you here before you paid.</div>
             </div>
           </div>
         </div>
@@ -349,7 +361,7 @@ const css = `
 .lp-draw.lp-in{transform:scaleX(1)}
 @media (prefers-reduced-motion:reduce){.lp-reveal{opacity:1; transform:none; transition:none}
   .lp-draw{transform:none; transition:none}
-  .lp-hero::before,.lp-escrow,.lp-tick-now,.lp-escrow-cta.is-live,.lp-livedot,.lp-verdict{animation:none}}
+  .lp-hero::before,.lp-phone,.lp-tick-now,.lp-escrow-cta.is-live,.lp-livedot,.lp-verdict{animation:none}}
 
 /* nav */
 .lp-nav{position:sticky; top:0; z-index:40; background:rgba(248,250,252,.82); backdrop-filter:saturate(1.4) blur(12px); border-bottom:1px solid var(--border)}
@@ -394,15 +406,20 @@ const css = `
 .lp-herobtns{margin-top:28px; display:flex; gap:12px; flex-wrap:wrap}
 
 /* hero visual */
-.lp-herovis{position:relative}
+.lp-herovis{position:relative; width:300px; max-width:100%; margin:0 auto}
 .lp-card{background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh)}
-.lp-escrow{padding:22px; box-shadow:var(--sh-lg); position:relative; z-index:2; animation:lpFloat 7s ease-in-out infinite; transition:box-shadow .4s var(--ease)}
+
+/* phone frame — the hero escrow is a real mobile screen */
+.lp-phone{position:relative; z-index:2; width:300px; max-width:100%; padding:12px; border-radius:44px; background:linear-gradient(160deg,#1E293B,#0F172A); box-shadow:var(--sh-lg), inset 0 0 0 2px rgba(255,255,255,.04); animation:lpFloat 7s ease-in-out infinite}
 @keyframes lpFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
-.lp-escrow.is-released{box-shadow:0 30px 60px -24px rgba(5,150,105,.4), var(--sh-lg)}
+.lp-phone-island{position:absolute; top:22px; left:50%; transform:translateX(-50%); width:78px; height:20px; border-radius:999px; background:#0B1220; z-index:2}
+.lp-phone-screen{position:relative; background:var(--card); border-radius:34px; padding:34px 18px 18px; overflow:hidden}
+.lp-escrow{position:relative; transition:none}
+.lp-escrow.is-released{}
 .lp-escrow-top{display:flex; align-items:center; justify-content:flex-end}
 .lp-badge{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:999px; color:#047857; background:var(--safe-tint); border:1px solid #C7F0DE}
 .lp-escrow-id{font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; font-weight:500; font-family:ui-monospace,Menlo,monospace}
-.lp-escrow-amt{margin-top:18px; font-size:44px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.lp-escrow-amt{margin-top:16px; font-size:38px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
 .lp-escrow-label{margin-top:2px; font-size:14px; color:var(--muted)}
 .lp-escrow-steps{margin-top:20px; display:flex; flex-direction:column; gap:12px}
 .lp-step{display:flex; align-items:center; gap:11px; font-size:14px; font-weight:500; color:var(--ink-2)}
@@ -449,7 +466,14 @@ const css = `
 .lp-aicopy p{margin-top:16px; font-size:16.5px; color:var(--muted); line-height:1.65; max-width:52ch}
 .lp-ailist{margin-top:22px; display:flex; flex-direction:column; gap:12px}
 .lp-ailist div{display:flex; align-items:center; gap:10px; font-size:15px; font-weight:500; color:var(--ink-2)}
-.lp-risk{padding:20px; box-shadow:var(--sh-lg); border-color:#F1D9D9}
+
+/* desktop browser window — the AI scam check on the real product */
+.lp-window{position:relative; border-radius:16px; overflow:hidden; background:var(--card); border:1px solid var(--border); box-shadow:var(--sh-lg)}
+.lp-window-bar{display:flex; align-items:center; gap:12px; padding:11px 14px; background:#F1F5F9; border-bottom:1px solid var(--border)}
+.lp-window-dots{display:inline-flex; gap:7px} .lp-window-dots i{width:11px; height:11px; border-radius:50%; background:#CBD5E1} .lp-window-dots i:first-child{background:#F87171} .lp-window-dots i:nth-child(2){background:#FBBF24} .lp-window-dots i:nth-child(3){background:var(--safe)}
+.lp-window-url{flex:1; text-align:center; font-size:12.5px; color:var(--muted); background:#fff; border:1px solid var(--border); border-radius:8px; padding:5px 12px; font-variant-numeric:tabular-nums}
+.lp-window-screen{padding:22px}
+.lp-risk{position:relative}
 .lp-risk-head{display:flex; align-items:center; gap:9px; font-size:14px; font-weight:700}
 .lp-risk-chip{background:var(--danger); color:#fff; font-size:11px; font-weight:700; letter-spacing:.06em; padding:3px 7px; border-radius:6px}
 .lp-chat{margin-top:14px}
@@ -500,7 +524,7 @@ const css = `
 
 /* footer */
 .lp-footer{border-top:1px solid var(--border); padding:32px 0}
-.lp-footrow{display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap}
+.lp-footrow{display:flex; flex-direction:column; align-items:flex-start; gap:16px}
 .lp-footnote{font-size:13.5px; color:var(--muted)}
 .lp-footlinks{display:flex; gap:20px; font-size:13.5px; font-weight:600} .lp-footlinks a{color:var(--ink-2)} .lp-footlinks a:hover{color:var(--safe)}
 
