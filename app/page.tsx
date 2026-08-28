@@ -316,7 +316,6 @@ export default function Landing() {
       <footer className="lp-footer">
         <div className="lp-wrap lp-footrow">
           <a className="lp-brand" href="#top" aria-label="Zafe home"><Mark size={24} /><span>Zafe</span></a>
-          <p className="lp-footnote">AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.</p>
           <nav className="lp-footlinks" aria-label="Legal">
             <Link href="/terms">Terms</Link>
             <Link href="/privacy">Privacy</Link>
@@ -517,7 +516,8 @@ const css = `
 @media (max-width:560px){
   .lp-hero{padding:44px 0 24px}
   .lp-herocopy h1{font-size:34px}
-  .lp-band{gap:12px} .lp-band span{font-size:13.5px}
+  .lp-band{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:18px 14px}
+  .lp-band span{flex-direction:column; align-items:center; text-align:center; gap:7px; font-size:11.5px; line-height:1.25}
   .lp-flow{grid-template-columns:1fr}
   .lp-head h2,.lp-ctacard h2{font-size:28px} .lp-aicopy h2{font-size:27px}
   .lp-navcta{gap:12px} .lp-navcta .lp-link-sell{display:none}
