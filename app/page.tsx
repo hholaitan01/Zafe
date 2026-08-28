@@ -13,9 +13,11 @@
    ========================================================================== */
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LandingStructuredData } from "./_lib/StructuredData";
 import { FAQS } from "./_lib/site";
+
+const STEP_LABELS = ["Buyer paid into escrow", "Seller shipped the item", "You confirm delivery"];
 
 function Mark({ size = 28 }: { size?: number }) {
   return (
@@ -64,6 +66,38 @@ export default function Landing() {
     return () => io.disconnect();
   }, []);
 
+  // ---- Hero motion: the escrow card plays the "money held safe" story on a
+  // loop, a live waitlist count for social proof, and a count-up on the amount.
+  const [phase, setPhase] = useState(2);
+  const [count, setCount] = useState<number | null>(null);
+  const [amt, setAmt] = useState(450000);
+
+  useEffect(() => {
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    setAmt(0);
+    let raf = 0;
+    const start = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / 1100);
+      setAmt(Math.round(450000 * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    const loop = setInterval(() => setPhase((p) => (p + 1) % 4), 1700);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearInterval(loop);
+    };
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/waitlist")
+      .then((r) => r.json())
+      .then((d: { count?: number }) => typeof d.count === "number" && setCount(d.count))
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="lp">
       <style>{css}</style>
@@ -97,22 +131,33 @@ export default function Landing() {
               <Link href="/waitlist" className="lp-btn lp-btn-primary lp-btn-lg">Join the waitlist</Link>
               <a href="#how" className="lp-btn lp-btn-ghost lp-btn-lg">See how it works</a>
             </div>
+            {count != null && count > 0 && (
+              <div className="lp-livecount"><span className="lp-livedot" />{count.toLocaleString()} {count === 1 ? "person" : "people"} already on the waitlist</div>
+            )}
           </div>
 
-          {/* Hero visual: the real escrow surface + the AI verdict that sets it apart */}
+          {/* Hero visual: the escrow surface playing the "held safe" story, plus the AI verdict that sets it apart */}
           <div className="lp-herovis lp-reveal">
-            <div className="lp-card lp-escrow">
+            <div className={`lp-card lp-escrow${phase === 3 ? " is-released" : ""}`}>
               <div className="lp-escrow-top">
                 <span className="lp-escrow-id">TF-4821</span>
               </div>
-              <div className="lp-escrow-amt">₦450,000</div>
-              <div className="lp-escrow-label">held safely until you confirm delivery</div>
+              <div className="lp-escrow-amt">₦{amt.toLocaleString()}</div>
+              <div className="lp-escrow-label">{phase === 3 ? "released to the seller" : "held safely until you confirm delivery"}</div>
               <div className="lp-escrow-steps">
-                <div className="lp-step done"><span className="lp-tick"><Icon d={I.check} color="#fff" size={12} /></span>Buyer paid into escrow</div>
-                <div className="lp-step done"><span className="lp-tick"><Icon d={I.check} color="#fff" size={12} /></span>Seller shipped the item</div>
-                <div className="lp-step now"><span className="lp-tick lp-tick-now" />Waiting for you to confirm</div>
+                {STEP_LABELS.map((label, i) => {
+                  const state = phase === 3 ? "done" : i < phase ? "done" : i === phase ? "now" : "pending";
+                  return (
+                    <div className={`lp-step is-${state}`} key={label}>
+                      <span className={`lp-tick lp-tick-${state}`}>{state === "done" && <Icon d={I.check} color="#fff" size={12} />}</span>
+                      {label}
+                    </div>
+                  );
+                })}
               </div>
-              <div className="lp-escrow-cta">Confirm and release</div>
+              <div className={`lp-escrow-cta${phase === 2 ? " is-live" : ""}${phase === 3 ? " is-done" : ""}`}>
+                {phase === 3 ? "Released" : "Confirm and release"}
+              </div>
             </div>
             <div className="lp-verdict">
               <span className="lp-verdict-chip">AI</span>
@@ -269,7 +314,8 @@ const css = `
 
 .lp-reveal{opacity:0; transform:translateY(14px); transition:opacity .6s var(--ease), transform .6s var(--ease)}
 .lp-reveal.lp-in{opacity:1; transform:none}
-@media (prefers-reduced-motion:reduce){.lp-reveal{opacity:1; transform:none; transition:none}}
+@media (prefers-reduced-motion:reduce){.lp-reveal{opacity:1; transform:none; transition:none}
+  .lp-hero::before,.lp-escrow,.lp-tick-now,.lp-escrow-cta.is-live,.lp-livedot,.lp-verdict{animation:none}}
 
 /* nav */
 .lp-nav{position:sticky; top:0; z-index:40; background:rgba(248,250,252,.82); backdrop-filter:saturate(1.4) blur(12px); border-bottom:1px solid var(--border)}
@@ -299,7 +345,15 @@ const css = `
 .lp-eyebrow{display:inline-flex; align-items:center; font-size:12.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--safe); background:var(--safe-tint); border:1px solid #C7F0DE; padding:6px 12px; border-radius:999px}
 
 /* hero */
-.lp-hero{padding:64px 0 40px; background:radial-gradient(90% 60% at 100% -10%, #EAF7F0 0%, rgba(234,247,240,0) 55%)}
+.lp-hero{position:relative; overflow:hidden; padding:64px 0 40px; background:radial-gradient(90% 60% at 100% -10%, #EAF7F0 0%, rgba(234,247,240,0) 55%)}
+.lp-hero::before{content:""; position:absolute; inset:-30% -10% auto -10%; height:640px; pointer-events:none; z-index:0;
+  background:radial-gradient(42% 55% at 26% 24%, rgba(5,150,105,.13), transparent 62%), radial-gradient(40% 52% at 82% 6%, rgba(5,150,105,.10), transparent 60%);
+  animation:lpAurora 16s ease-in-out infinite alternate}
+.lp-hero .lp-wrap{position:relative; z-index:1}
+@keyframes lpAurora{0%{transform:translate3d(-2%,0,0) scale(1)}100%{transform:translate3d(4%,2%,0) scale(1.08)}}
+.lp-livecount{margin-top:22px; display:inline-flex; align-items:center; gap:9px; font-size:13.5px; font-weight:600; color:var(--ink-2)}
+.lp-livedot{width:8px; height:8px; border-radius:50%; background:var(--safe); box-shadow:0 0 0 0 rgba(5,150,105,.6); animation:lpPulseDot 2s infinite}
+@keyframes lpPulseDot{0%{box-shadow:0 0 0 0 rgba(5,150,105,.5)}70%{box-shadow:0 0 0 8px rgba(5,150,105,0)}100%{box-shadow:0 0 0 0 rgba(5,150,105,0)}}
 .lp-herogrid{display:grid; grid-template-columns:1.12fr .88fr; gap:52px; align-items:center}
 .lp-herocopy h1{margin:18px 0 0; font-size:42px; line-height:1.08; letter-spacing:-.03em; font-weight:700}
 .lp-sub{margin-top:20px; font-size:18px; line-height:1.6; color:var(--muted); max-width:40ch}
@@ -308,7 +362,9 @@ const css = `
 /* hero visual */
 .lp-herovis{position:relative}
 .lp-card{background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh)}
-.lp-escrow{padding:22px; box-shadow:var(--sh-lg); position:relative; z-index:2}
+.lp-escrow{padding:22px; box-shadow:var(--sh-lg); position:relative; z-index:2; animation:lpFloat 7s ease-in-out infinite; transition:box-shadow .4s var(--ease)}
+@keyframes lpFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.lp-escrow.is-released{box-shadow:0 30px 60px -24px rgba(5,150,105,.4), var(--sh-lg)}
 .lp-escrow-top{display:flex; align-items:center; justify-content:flex-end}
 .lp-badge{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:999px; color:#047857; background:var(--safe-tint); border:1px solid #C7F0DE}
 .lp-escrow-id{font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; font-weight:500; font-family:ui-monospace,Menlo,monospace}
@@ -316,11 +372,18 @@ const css = `
 .lp-escrow-label{margin-top:2px; font-size:14px; color:var(--muted)}
 .lp-escrow-steps{margin-top:20px; display:flex; flex-direction:column; gap:12px}
 .lp-step{display:flex; align-items:center; gap:11px; font-size:14px; font-weight:500; color:var(--ink-2)}
-.lp-tick{width:20px; height:20px; border-radius:50%; background:var(--safe); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0}
-.lp-tick-now{background:transparent; border:2px solid var(--safe); box-shadow:0 0 0 3px rgba(5,150,105,.14)}
-.lp-step.now{color:var(--ink); font-weight:600}
-.lp-escrow-cta{margin-top:22px; height:48px; border-radius:var(--r-btn); background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px}
-.lp-verdict{position:absolute; bottom:-22px; left:-20px; display:inline-flex; align-items:center; gap:11px; background:#fff; border:1px solid var(--border); box-shadow:var(--sh); border-radius:14px; padding:11px 14px; z-index:3}
+.lp-tick{width:20px; height:20px; border-radius:50%; background:var(--safe); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .35s var(--ease), border-color .35s var(--ease)}
+.lp-tick-now{background:transparent; border:2px solid var(--safe); box-shadow:0 0 0 3px rgba(5,150,105,.14); animation:lpPulseDot 1.7s infinite}
+.lp-tick-pending{background:transparent; border:2px solid var(--border)}
+.lp-step{transition:color .35s var(--ease)}
+.lp-step.is-now{color:var(--ink); font-weight:600}
+.lp-step.is-pending{color:var(--faint)}
+.lp-escrow-cta{margin-top:22px; height:48px; border-radius:var(--r-btn); background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px; transition:background .35s var(--ease)}
+.lp-escrow-cta.is-live{background:var(--safe); animation:lpPulseBtn 1.7s infinite}
+.lp-escrow-cta.is-done{background:var(--safe)}
+@keyframes lpPulseBtn{0%{box-shadow:0 0 0 0 rgba(5,150,105,.45)}70%{box-shadow:0 0 0 12px rgba(5,150,105,0)}100%{box-shadow:0 0 0 0 rgba(5,150,105,0)}}
+.lp-verdict{position:absolute; bottom:-22px; left:-20px; display:inline-flex; align-items:center; gap:11px; background:#fff; border:1px solid var(--border); box-shadow:var(--sh); border-radius:14px; padding:11px 14px; z-index:3; animation:lpVerdict .7s var(--ease) .5s both}
+@keyframes lpVerdict{0%{opacity:0; transform:translateY(14px) scale(.96)}100%{opacity:1; transform:none}}
 .lp-verdict-chip{background:var(--safe); color:#fff; font-size:11px; font-weight:700; letter-spacing:.06em; padding:3px 7px; border-radius:6px}
 .lp-verdict-t{font-size:13.5px; font-weight:700}
 .lp-verdict-s{font-size:12px; color:var(--muted); margin-top:1px; font-variant-numeric:tabular-nums}
