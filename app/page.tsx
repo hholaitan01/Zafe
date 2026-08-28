@@ -13,7 +13,7 @@
    ========================================================================== */
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LandingStructuredData } from "./_lib/StructuredData";
 import { FAQS } from "./_lib/site";
 
@@ -53,7 +53,7 @@ export default function Landing() {
   // only, and instant for anyone who asked for reduced motion.
   useEffect(() => {
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const els = Array.from(document.querySelectorAll<HTMLElement>(".lp-reveal"));
+    const els = Array.from(document.querySelectorAll<HTMLElement>(".lp-reveal, .lp-draw"));
     if (reduce || !("IntersectionObserver" in window)) {
       els.forEach((el) => el.classList.add("lp-in"));
       return;
@@ -96,6 +96,38 @@ export default function Landing() {
       .then((r) => r.json())
       .then((d: { count?: number }) => typeof d.count === "number" && setCount(d.count))
       .catch(() => {});
+  }, []);
+
+  // The AI scam-check score counts up from 0 the first time the card scrolls in.
+  const riskRef = useRef<HTMLDivElement>(null);
+  const [risk, setRisk] = useState(23);
+  useEffect(() => {
+    const el = riskRef.current;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!el || reduce || !("IntersectionObserver" in window)) return;
+    setRisk(0);
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        io.disconnect();
+        let raf = 0;
+        const start = performance.now();
+        const step = (t: number) => {
+          const p = Math.min(1, (t - start) / 900);
+          setRisk(Math.round(23 * (1 - Math.pow(1 - p, 3))));
+          if (p < 1) raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
+        cancel = () => cancelAnimationFrame(raf);
+      },
+      { threshold: 0.5 },
+    );
+    let cancel = () => {};
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      cancel();
+    };
   }, []);
 
   return (
@@ -182,7 +214,7 @@ export default function Landing() {
             <p>The escrow does the trusting for you, so a deal with a stranger works like a deal with a friend.</p>
           </div>
           <div className="lp-flow">
-            <div className="lp-flowline" aria-hidden="true" />
+            <div className="lp-flowline lp-draw" aria-hidden="true" />
             {[
               { n: "1", d: I.scan, t: "Agree the deal", b: "Enter the item, the price, and the seller. Paste the chat and the AI checks it for scams." },
               { n: "2", d: I.lock, t: "Pay into escrow", b: "Your money is held safe. The seller sees it is there but cannot touch it yet." },
@@ -213,13 +245,13 @@ export default function Landing() {
             </div>
           </div>
           <div className="lp-aivis lp-reveal">
-            <div className="lp-card lp-risk">
+            <div className="lp-card lp-risk" ref={riskRef}>
               <div className="lp-risk-head"><span className="lp-risk-chip">AI</span>Scam check</div>
               <div className="lp-chat">
                 <div className="lp-msg lp-msg-them">Pay into my personal account first, then I ship. Last one left, someone else is asking. Send now.</div>
               </div>
               <div className="lp-risk-verdict">
-                <div className="lp-risk-score">23<span>/100</span></div>
+                <div className="lp-risk-score">{risk}<span>/100</span></div>
                 <div className="lp-risk-flags">
                   <span className="lp-flag">High-pressure urgency</span>
                   <span className="lp-flag">Wants payment off escrow</span>
@@ -312,9 +344,12 @@ const css = `
 .lp a:not(.lp-btn){color:inherit} .lp a{text-decoration:none}
 .lp-wrap{width:100%; max-width:1120px; margin:0 auto; padding:0 24px}
 
-.lp-reveal{opacity:0; transform:translateY(14px); transition:opacity .6s var(--ease), transform .6s var(--ease)}
+.lp-reveal{opacity:0; transform:translateY(22px); transition:opacity .7s var(--ease), transform .7s var(--ease)}
 .lp-reveal.lp-in{opacity:1; transform:none}
+.lp-draw{transform:scaleX(0); transform-origin:left center; transition:transform 1s var(--ease)}
+.lp-draw.lp-in{transform:scaleX(1)}
 @media (prefers-reduced-motion:reduce){.lp-reveal{opacity:1; transform:none; transition:none}
+  .lp-draw{transform:none; transition:none}
   .lp-hero::before,.lp-escrow,.lp-tick-now,.lp-escrow-cta.is-live,.lp-livedot,.lp-verdict{animation:none}}
 
 /* nav */
@@ -401,7 +436,8 @@ const css = `
 /* how — a connected flow, not four loose cards */
 .lp-flow{position:relative; margin-top:46px; display:grid; grid-template-columns:repeat(4,1fr); gap:18px}
 .lp-flowline{position:absolute; top:42px; left:12%; right:12%; height:2px; background:linear-gradient(90deg,var(--safe-tint),#CFEEDD,var(--safe-tint)); z-index:0}
-.lp-flowcard{position:relative; z-index:1; background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh-sm); padding:24px 20px}
+.lp-flowcard{position:relative; z-index:1; background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh-sm); padding:24px 20px; transition:transform .24s var(--ease), box-shadow .24s var(--ease)}
+.lp-flowcard:hover{transform:translateY(-4px); box-shadow:var(--sh)}
 .lp-flownum{position:absolute; top:-14px; left:22px; width:28px; height:28px; border-radius:50%; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700}
 .lp-flowicon{width:44px; height:44px; border-radius:12px; background:var(--safe-tint); display:flex; align-items:center; justify-content:center; margin-top:8px}
 .lp-flowcard h3{margin-top:16px; font-size:17px; font-weight:600; letter-spacing:-.01em}
@@ -435,7 +471,8 @@ const css = `
   color:#fff}
 .lp-safety-h{color:#fff} .lp-safety-p{color:#9FB0C7}
 .lp-features{margin-top:46px; display:grid; grid-template-columns:1fr 1fr; gap:16px}
-.lp-feature{display:flex; gap:14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); border-radius:16px; padding:18px}
+.lp-feature{display:flex; gap:14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); border-radius:16px; padding:18px; transition:transform .24s var(--ease), background .24s var(--ease), border-color .24s var(--ease)}
+.lp-feature:hover{transform:translateY(-4px); background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.16)}
 .lp-featicon{width:40px; height:40px; border-radius:11px; background:rgba(5,150,105,.14); display:flex; align-items:center; justify-content:center; flex-shrink:0}
 .lp-feature h3{font-size:16px; font-weight:600}
 .lp-feature p{margin-top:6px; font-size:14px; color:#9FB0C7; line-height:1.55}
@@ -443,7 +480,8 @@ const css = `
 /* faq */
 .lp-faqwrap{max-width:760px}
 .lp-faq{margin-top:40px; display:flex; flex-direction:column; gap:12px}
-.lp-faqitem{background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--sh-sm); overflow:hidden}
+.lp-faqitem{background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--sh-sm); overflow:hidden; transition:border-color .2s var(--ease), box-shadow .2s var(--ease)}
+.lp-faqitem:hover{border-color:#CFEEDD; box-shadow:var(--sh)}
 .lp-faqitem summary{list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px; font-size:16px; font-weight:600}
 .lp-faqitem summary::-webkit-details-marker{display:none}
 .lp-faqchev{transition:transform .2s var(--ease); display:inline-flex}
