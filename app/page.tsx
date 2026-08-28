@@ -13,7 +13,7 @@
    ========================================================================== */
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LandingStructuredData } from "./_lib/StructuredData";
 import { FAQS } from "./_lib/site";
 
@@ -51,7 +51,7 @@ export default function Landing() {
   // only, and instant for anyone who asked for reduced motion.
   useEffect(() => {
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const els = Array.from(document.querySelectorAll<HTMLElement>(".lp-reveal"));
+    const els = Array.from(document.querySelectorAll<HTMLElement>(".lp-reveal, .lp-draw"));
     if (reduce || !("IntersectionObserver" in window)) {
       els.forEach((el) => el.classList.add("lp-in"));
       return;
@@ -62,6 +62,15 @@ export default function Landing() {
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
+  }, []);
+
+  // A live waitlist count for social proof under the hero CTAs.
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    fetch("/api/waitlist")
+      .then((r) => r.json())
+      .then((d: { count?: number }) => typeof d.count === "number" && setCount(d.count))
+      .catch(() => {});
   }, []);
 
   return (
@@ -89,34 +98,35 @@ export default function Landing() {
 
       {/* ---- Hero ---- */}
       <section className="lp-hero" id="top">
-        <div className="lp-wrap lp-herogrid">
+        <div className="lp-wrap lp-herocenter">
           <div className="lp-herocopy lp-reveal">
             <h1>Buy from strangers.<br />Keep your money safe.</h1>
-            <p className="lp-sub">Your money stays locked until you confirm the item arrived. An AI checks the deal for scams before you pay.</p>
+            <p className="lp-herosub">Pay into escrow, not the seller. An AI checks the deal for scams and your money is released only when you confirm the item arrived.</p>
             <div className="lp-herobtns">
               <Link href="/waitlist" className="lp-btn lp-btn-primary lp-btn-lg">Join the waitlist</Link>
               <a href="#how" className="lp-btn lp-btn-ghost lp-btn-lg">See how it works</a>
             </div>
+            {count != null && count > 0 && (
+              <div className="lp-livecount"><span className="lp-livedot" />{count.toLocaleString()} {count === 1 ? "person" : "people"} already on the waitlist</div>
+            )}
           </div>
 
-          {/* Hero visual: the real escrow surface + the AI verdict that sets it apart */}
+          {/* Hero visual: a real screenshot of the app "locked" screen, captured
+              from the running product, shown on a phone. */}
           <div className="lp-herovis lp-reveal">
-            <div className="lp-card lp-escrow">
-              <div className="lp-escrow-top">
-                <span className="lp-escrow-id">TF-4821</span>
+            <div className="lp-phone">
+              <span className="lp-phone-island" aria-hidden="true" />
+              <div className="lp-phone-screen">
+                <img className="lp-shot" src="/demo/locked-mobile.png" width={660} height={1388} alt="The Zafe app showing ₦450,000 locked safely in escrow until the buyer confirms delivery" />
+                <div className="lp-status-overlay" aria-hidden="true">
+                  <span className="lp-status-time">9:41</span>
+                  <span className="lp-status-icons">
+                    <svg width="18" height="11" viewBox="0 0 18 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="1" /><rect x="5" y="5" width="3" height="6" rx="1" /><rect x="10" y="2.5" width="3" height="8.5" rx="1" /><rect x="15" y="0" width="3" height="11" rx="1" /></svg>
+                    <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M2 4.2a9 9 0 0 1 12 0M4.4 6.7a5.5 5.5 0 0 1 7.2 0" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" /><circle cx="8" cy="9.6" r="1.1" fill="#fff" /></svg>
+                    <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#fff" strokeOpacity="0.5" /><rect x="2" y="2" width="18" height="8" rx="1.5" fill="#fff" /><rect x="23" y="4" width="2" height="4" rx="1" fill="#fff" fillOpacity="0.5" /></svg>
+                  </span>
+                </div>
               </div>
-              <div className="lp-escrow-amt">₦450,000</div>
-              <div className="lp-escrow-label">held safely until you confirm delivery</div>
-              <div className="lp-escrow-steps">
-                <div className="lp-step done"><span className="lp-tick"><Icon d={I.check} color="#fff" size={12} /></span>Buyer paid into escrow</div>
-                <div className="lp-step done"><span className="lp-tick"><Icon d={I.check} color="#fff" size={12} /></span>Seller shipped the item</div>
-                <div className="lp-step now"><span className="lp-tick lp-tick-now" />Waiting for you to confirm</div>
-              </div>
-              <div className="lp-escrow-cta">Confirm and release</div>
-            </div>
-            <div className="lp-verdict">
-              <span className="lp-verdict-chip">AI</span>
-              <div><div className="lp-verdict-t">No scam signals found</div><div className="lp-verdict-s">Trust Score 87 of 100</div></div>
             </div>
           </div>
         </div>
@@ -137,7 +147,7 @@ export default function Landing() {
             <p>The escrow does the trusting for you, so a deal with a stranger works like a deal with a friend.</p>
           </div>
           <div className="lp-flow">
-            <div className="lp-flowline" aria-hidden="true" />
+            <div className="lp-flowline lp-draw" aria-hidden="true" />
             {[
               { n: "1", d: I.scan, t: "Agree the deal", b: "Enter the item, the price, and the seller. Paste the chat and the AI checks it for scams." },
               { n: "2", d: I.lock, t: "Pay into escrow", b: "Your money is held safe. The seller sees it is there but cannot touch it yet." },
@@ -157,31 +167,22 @@ export default function Landing() {
 
       {/* ---- AI in action ---- */}
       <section className="lp-section lp-aiwrap" id="ai">
-        <div className="lp-wrap lp-aigrid">
-          <div className="lp-aicopy lp-reveal">
+        <div className="lp-wrap">
+          <div className="lp-head lp-reveal">
             <h2>An AI reads the deal before your money moves.</h2>
             <p>Most fraud happens in the chat, before anyone pays. Paste the conversation and Zafe flags the pressure tactics and off-platform tricks. If it is risky, you cannot pay until you have seen why.</p>
-            <div className="lp-ailist">
-              <div><Icon d={I.check} color="#059669" size={17} />Names the specific scam tactic in the chat</div>
-              <div><Icon d={I.check} color="#059669" size={17} />Scores the seller from their past deals</div>
-              <div><Icon d={I.check} color="#059669" size={17} />Settles disputes fairly: pay, refund, or split</div>
-            </div>
           </div>
-          <div className="lp-aivis lp-reveal">
-            <div className="lp-card lp-risk">
-              <div className="lp-risk-head"><span className="lp-risk-chip">AI</span>Scam check</div>
-              <div className="lp-chat">
-                <div className="lp-msg lp-msg-them">Pay into my personal account first, then I ship. Last one left, someone else is asking. Send now.</div>
-              </div>
-              <div className="lp-risk-verdict">
-                <div className="lp-risk-score">23<span>/100</span></div>
-                <div className="lp-risk-flags">
-                  <span className="lp-flag">High-pressure urgency</span>
-                  <span className="lp-flag">Wants payment off escrow</span>
-                  <span className="lp-flag">Unverified, brand new</span>
-                </div>
-              </div>
-              <div className="lp-risk-foot">High risk. We would stop you here before you paid.</div>
+
+          {/* A real screenshot of the app "Trust check" page, captured from the
+              running product on desktop, shown inside a browser window. */}
+          <div className="lp-window lp-window-wide lp-reveal">
+            <div className="lp-window-bar" aria-hidden="true">
+              <span className="lp-window-dots"><i /><i /><i /></span>
+              <span className="lp-window-url"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" strokeLinecap="round" /></svg>getzafe.vercel.app/trust-score</span>
+              <span className="lp-window-spacer" />
+            </div>
+            <div className="lp-window-screen">
+              <img className="lp-shot" src="/demo/trust-desktop.png" width={2080} height={1760} alt="The Zafe Trust check page flagging a deal as high risk with a score of 4 out of 100" />
             </div>
           </div>
         </div>
@@ -239,7 +240,6 @@ export default function Landing() {
       <footer className="lp-footer">
         <div className="lp-wrap lp-footrow">
           <a className="lp-brand" href="#top" aria-label="Zafe home"><Mark size={24} /><span>Zafe</span></a>
-          <p className="lp-footnote">AI-powered escrow for peer-to-peer trades. Money held safe until you confirm.</p>
           <nav className="lp-footlinks" aria-label="Legal">
             <Link href="/guides">Guides</Link>
             <Link href="/terms">Terms</Link>
@@ -268,9 +268,13 @@ const css = `
 .lp a:not(.lp-btn){color:inherit} .lp a{text-decoration:none}
 .lp-wrap{width:100%; max-width:1120px; margin:0 auto; padding:0 24px}
 
-.lp-reveal{opacity:0; transform:translateY(14px); transition:opacity .6s var(--ease), transform .6s var(--ease)}
+.lp-reveal{opacity:0; transform:translateY(22px); transition:opacity .7s var(--ease), transform .7s var(--ease)}
 .lp-reveal.lp-in{opacity:1; transform:none}
-@media (prefers-reduced-motion:reduce){.lp-reveal{opacity:1; transform:none; transition:none}}
+.lp-draw{transform:scaleX(0); transform-origin:left center; transition:transform 1s var(--ease)}
+.lp-draw.lp-in{transform:scaleX(1)}
+@media (prefers-reduced-motion:reduce){.lp-reveal{opacity:1; transform:none; transition:none}
+  .lp-draw{transform:none; transition:none}
+  .lp-hero::before,.lp-phone,.lp-livedot{animation:none}}
 
 /* nav */
 .lp-nav{position:sticky; top:0; z-index:40; background:rgba(248,250,252,.82); backdrop-filter:saturate(1.4) blur(12px); border-bottom:1px solid var(--border)}
@@ -300,31 +304,37 @@ const css = `
 .lp-eyebrow{display:inline-flex; align-items:center; font-size:12.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--safe); background:var(--safe-tint); border:1px solid #C7F0DE; padding:6px 12px; border-radius:999px}
 
 /* hero */
-.lp-hero{padding:64px 0 40px; background:radial-gradient(90% 60% at 100% -10%, #EAF7F0 0%, rgba(234,247,240,0) 55%)}
-.lp-herogrid{display:grid; grid-template-columns:1.12fr .88fr; gap:52px; align-items:center}
-.lp-herocopy h1{margin:18px 0 0; font-size:42px; line-height:1.08; letter-spacing:-.03em; font-weight:700}
-.lp-sub{margin-top:20px; font-size:18px; line-height:1.6; color:var(--muted); max-width:40ch}
+.lp-hero{position:relative; overflow:hidden; padding:64px 0 40px; background:radial-gradient(90% 60% at 100% -10%, #EAF7F0 0%, rgba(234,247,240,0) 55%)}
+.lp-hero::before{content:""; position:absolute; inset:-30% -10% auto -10%; height:640px; pointer-events:none; z-index:0;
+  background:radial-gradient(42% 55% at 26% 24%, rgba(5,150,105,.13), transparent 62%), radial-gradient(40% 52% at 82% 6%, rgba(5,150,105,.10), transparent 60%);
+  animation:lpAurora 16s ease-in-out infinite alternate}
+.lp-hero .lp-wrap{position:relative; z-index:1}
+@keyframes lpAurora{0%{transform:translate3d(-2%,0,0) scale(1)}100%{transform:translate3d(4%,2%,0) scale(1.08)}}
+.lp-livecount{margin-top:22px; display:inline-flex; align-items:center; gap:9px; font-size:13.5px; font-weight:600; color:var(--ink-2)}
+.lp-livedot{width:8px; height:8px; border-radius:50%; background:var(--safe); box-shadow:0 0 0 0 rgba(5,150,105,.6); animation:lpPulseDot 2s infinite}
+@keyframes lpPulseDot{0%{box-shadow:0 0 0 0 rgba(5,150,105,.5)}70%{box-shadow:0 0 0 8px rgba(5,150,105,0)}100%{box-shadow:0 0 0 0 rgba(5,150,105,0)}}
+
+/* hero: two columns on desktop (copy left, product shot right) */
+.lp-herocenter{display:grid; grid-template-columns:1.12fr .88fr; gap:52px; align-items:center}
+.lp-herocopy h1{margin:0; font-size:44px; line-height:1.08; letter-spacing:-.03em; font-weight:700}
+.lp-herosub{margin:20px 0 0; max-width:46ch; font-size:17px; line-height:1.6; color:var(--muted)}
 .lp-herobtns{margin-top:28px; display:flex; gap:12px; flex-wrap:wrap}
 
 /* hero visual */
-.lp-herovis{position:relative}
+.lp-herovis{position:relative; width:328px; max-width:100%; margin:0 auto}
 .lp-card{background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh)}
-.lp-escrow{padding:22px; box-shadow:var(--sh-lg); position:relative; z-index:2}
-.lp-escrow-top{display:flex; align-items:center; justify-content:flex-end}
-.lp-badge{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:999px; color:#047857; background:var(--safe-tint); border:1px solid #C7F0DE}
-.lp-escrow-id{font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; font-weight:500; font-family:ui-monospace,Menlo,monospace}
-.lp-escrow-amt{margin-top:18px; font-size:44px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
-.lp-escrow-label{margin-top:2px; font-size:14px; color:var(--muted)}
-.lp-escrow-steps{margin-top:20px; display:flex; flex-direction:column; gap:12px}
-.lp-step{display:flex; align-items:center; gap:11px; font-size:14px; font-weight:500; color:var(--ink-2)}
-.lp-tick{width:20px; height:20px; border-radius:50%; background:var(--safe); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0}
-.lp-tick-now{background:transparent; border:2px solid var(--safe); box-shadow:0 0 0 3px rgba(5,150,105,.14)}
-.lp-step.now{color:var(--ink); font-weight:600}
-.lp-escrow-cta{margin-top:22px; height:48px; border-radius:var(--r-btn); background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px}
-.lp-verdict{position:absolute; bottom:-22px; left:-20px; display:inline-flex; align-items:center; gap:11px; background:#fff; border:1px solid var(--border); box-shadow:var(--sh); border-radius:14px; padding:11px 14px; z-index:3}
-.lp-verdict-chip{background:var(--safe); color:#fff; font-size:11px; font-weight:700; letter-spacing:.06em; padding:3px 7px; border-radius:6px}
-.lp-verdict-t{font-size:13.5px; font-weight:700}
-.lp-verdict-s{font-size:12px; color:var(--muted); margin-top:1px; font-variant-numeric:tabular-nums}
+
+/* phone frame — a real device: true 19.5:9 screen at native proportions */
+.lp-phone{position:relative; z-index:2; width:328px; max-width:100%; padding:13px; border-radius:48px; background:linear-gradient(160deg,#1E293B,#0F172A); box-shadow:var(--sh-lg), inset 0 0 0 2px rgba(255,255,255,.04); animation:lpFloat 7s ease-in-out infinite}
+@keyframes lpFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.lp-phone-island{position:absolute; top:24px; left:50%; transform:translateX(-50%); width:88px; height:24px; border-radius:999px; background:#0B1220; z-index:3}
+.lp-phone-screen{position:relative; border-radius:38px; overflow:hidden; background:#0A1524}
+
+/* iOS-style status bar overlaid on the captured screen (the app hides its own,
+   expecting the real OS bar) so the phone reads as a genuine device */
+.lp-status-overlay{position:absolute; top:0; left:0; right:0; height:52px; display:flex; align-items:center; justify-content:space-between; padding:15px 22px 0 28px; color:#fff; z-index:2}
+.lp-status-time{font-size:15px; font-weight:600; letter-spacing:.02em; font-variant-numeric:tabular-nums}
+.lp-status-icons{display:inline-flex; align-items:center; gap:6px}
 
 /* trust band */
 .lp-band{display:flex; flex-wrap:wrap; gap:14px 32px; margin-top:30px; padding:22px 24px; border-top:1px solid var(--border); border-bottom:1px solid var(--border)}
@@ -339,7 +349,8 @@ const css = `
 /* how — a connected flow, not four loose cards */
 .lp-flow{position:relative; margin-top:46px; display:grid; grid-template-columns:repeat(4,1fr); gap:18px}
 .lp-flowline{position:absolute; top:42px; left:12%; right:12%; height:2px; background:linear-gradient(90deg,var(--safe-tint),#CFEEDD,var(--safe-tint)); z-index:0}
-.lp-flowcard{position:relative; z-index:1; background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh-sm); padding:24px 20px}
+.lp-flowcard{position:relative; z-index:1; background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh-sm); padding:24px 20px; transition:transform .24s var(--ease), box-shadow .24s var(--ease)}
+.lp-flowcard:hover{transform:translateY(-4px); box-shadow:var(--sh)}
 .lp-flownum{position:absolute; top:-14px; left:22px; width:28px; height:28px; border-radius:50%; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700}
 .lp-flowicon{width:44px; height:44px; border-radius:12px; background:var(--safe-tint); display:flex; align-items:center; justify-content:center; margin-top:8px}
 .lp-flowcard h3{margin-top:16px; font-size:17px; font-weight:600; letter-spacing:-.01em}
@@ -347,22 +358,18 @@ const css = `
 
 /* AI in action */
 .lp-aiwrap{background:linear-gradient(180deg,#fff, #F4F8FB)}
-.lp-aigrid{display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center}
-.lp-aicopy h2{margin-top:16px; font-size:33px; line-height:1.12; letter-spacing:-.03em; font-weight:700; max-width:18ch}
-.lp-aicopy p{margin-top:16px; font-size:16.5px; color:var(--muted); line-height:1.65; max-width:52ch}
-.lp-ailist{margin-top:22px; display:flex; flex-direction:column; gap:12px}
-.lp-ailist div{display:flex; align-items:center; gap:10px; font-size:15px; font-weight:500; color:var(--ink-2)}
-.lp-risk{padding:20px; box-shadow:var(--sh-lg); border-color:#F1D9D9}
-.lp-risk-head{display:flex; align-items:center; gap:9px; font-size:14px; font-weight:700}
-.lp-risk-chip{background:var(--danger); color:#fff; font-size:11px; font-weight:700; letter-spacing:.06em; padding:3px 7px; border-radius:6px}
-.lp-chat{margin-top:14px}
-.lp-msg{font-size:14px; line-height:1.5; padding:12px 14px; border-radius:14px; max-width:88%}
-.lp-msg-them{background:#F1F5F9; color:var(--ink-2); border-bottom-left-radius:5px}
-.lp-risk-verdict{margin-top:16px; display:flex; align-items:center; gap:16px}
-.lp-risk-score{font-size:40px; font-weight:700; letter-spacing:-.03em; color:var(--danger); line-height:1; font-variant-numeric:tabular-nums} .lp-risk-score span{font-size:16px; color:var(--faint)}
-.lp-risk-flags{display:flex; flex-wrap:wrap; gap:6px}
-.lp-flag{font-size:11.5px; font-weight:600; color:#B91C1C; background:#FEE2E2; border:1px solid #FCA5A5; padding:4px 9px; border-radius:8px}
-.lp-risk-foot{margin-top:16px; padding-top:14px; border-top:1px solid var(--line-2); font-size:13.5px; font-weight:600; color:var(--danger)}
+
+/* desktop browser window — a real, wide desktop screenshot of the product */
+.lp-window{position:relative; border-radius:16px; overflow:hidden; background:var(--card); border:1px solid var(--border); box-shadow:var(--sh-lg)}
+.lp-window-bar{display:flex; align-items:center; gap:14px; padding:12px 16px; background:#F1F5F9; border-bottom:1px solid var(--border)}
+.lp-window-dots{display:inline-flex; gap:8px; flex-shrink:0} .lp-window-dots i{width:12px; height:12px; border-radius:50%; background:#CBD5E1} .lp-window-dots i:first-child{background:#F87171} .lp-window-dots i:nth-child(2){background:#FBBF24} .lp-window-dots i:nth-child(3){background:var(--safe)}
+.lp-window-url{display:inline-flex; align-items:center; gap:8px; max-width:340px; width:100%; margin:0 auto; font-size:13px; color:var(--muted); background:#fff; border:1px solid var(--border); border-radius:8px; padding:7px 14px; justify-content:center; font-variant-numeric:tabular-nums}
+.lp-window-spacer{width:44px; flex-shrink:0}
+.lp-window-wide{max-width:960px; margin:48px auto 0}
+.lp-window-screen{background:var(--bg); font-size:0}
+
+/* real captured screenshots fill their frames */
+.lp-shot{display:block; width:100%; height:auto}
 
 /* safety */
 .lp-safety{position:relative;
@@ -373,7 +380,8 @@ const css = `
   color:#fff}
 .lp-safety-h{color:#fff} .lp-safety-p{color:#9FB0C7}
 .lp-features{margin-top:46px; display:grid; grid-template-columns:1fr 1fr; gap:16px}
-.lp-feature{display:flex; gap:14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); border-radius:16px; padding:18px}
+.lp-feature{display:flex; gap:14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); border-radius:16px; padding:18px; transition:transform .24s var(--ease), background .24s var(--ease), border-color .24s var(--ease)}
+.lp-feature:hover{transform:translateY(-4px); background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.16)}
 .lp-featicon{width:40px; height:40px; border-radius:11px; background:rgba(5,150,105,.14); display:flex; align-items:center; justify-content:center; flex-shrink:0}
 .lp-feature h3{font-size:16px; font-weight:600}
 .lp-feature p{margin-top:6px; font-size:14px; color:#9FB0C7; line-height:1.55}
@@ -381,7 +389,8 @@ const css = `
 /* faq */
 .lp-faqwrap{max-width:760px}
 .lp-faq{margin-top:40px; display:flex; flex-direction:column; gap:12px}
-.lp-faqitem{background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--sh-sm); overflow:hidden}
+.lp-faqitem{background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--sh-sm); overflow:hidden; transition:border-color .2s var(--ease), box-shadow .2s var(--ease)}
+.lp-faqitem:hover{border-color:#CFEEDD; box-shadow:var(--sh)}
 .lp-faqitem summary{list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px; font-size:16px; font-weight:600}
 .lp-faqitem summary::-webkit-details-marker{display:none}
 .lp-faqchev{transition:transform .2s var(--ease); display:inline-flex}
@@ -401,15 +410,18 @@ const css = `
 
 /* footer */
 .lp-footer{border-top:1px solid var(--border); padding:32px 0}
-.lp-footrow{display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap}
+.lp-footrow{display:flex; flex-direction:column; align-items:flex-start; gap:16px}
 .lp-footnote{font-size:13.5px; color:var(--muted)}
 .lp-footlinks{display:flex; gap:20px; font-size:13.5px; font-weight:600} .lp-footlinks a{color:var(--ink-2)} .lp-footlinks a:hover{color:var(--safe)}
 
 /* responsive */
 @media (max-width:900px){
-  .lp-herogrid{grid-template-columns:1fr; gap:44px}
+  .lp-herocenter{grid-template-columns:1fr; gap:40px; justify-items:center; text-align:center}
   .lp-herocopy h1{font-size:42px}
-  .lp-aigrid{grid-template-columns:1fr; gap:36px}
+  .lp-herosub{margin-left:auto; margin-right:auto}
+  .lp-herobtns{justify-content:center}
+  .lp-livecount{justify-content:center}
+  .lp-window-wide{margin-top:36px}
   .lp-features{grid-template-columns:1fr}
   .lp-flow{grid-template-columns:1fr 1fr} .lp-flowline{display:none}
   .lp-navlinks{display:none}
@@ -417,11 +429,14 @@ const css = `
 @media (max-width:560px){
   .lp-hero{padding:44px 0 24px}
   .lp-herocopy h1{font-size:34px}
-  .lp-band{gap:12px} .lp-band span{font-size:13.5px}
+  .lp-herosub{font-size:16px}
+  .lp-herovis{margin-top:40px}
+  .lp-band{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:18px 14px}
+  .lp-band span{flex-direction:column; align-items:center; text-align:center; gap:7px; font-size:11.5px; line-height:1.25}
   .lp-flow{grid-template-columns:1fr}
-  .lp-head h2,.lp-ctacard h2{font-size:28px} .lp-aicopy h2{font-size:27px}
+  .lp-head h2,.lp-ctacard h2{font-size:28px}
   .lp-navcta{gap:12px} .lp-navcta .lp-link-sell{display:none}
-  .lp-verdict{left:0}
+  .lp-window-url{max-width:none} .lp-window-spacer{display:none}
   .lp-ctacard{padding:40px 22px}
 }
 `;
