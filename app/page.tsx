@@ -173,7 +173,14 @@ export default function Landing() {
             <div className="lp-phone">
               <span className="lp-phone-island" aria-hidden="true" />
               <div className="lp-phone-screen lp-locked">
-                <div className="lp-locked-status"><span>9:41</span><span className="lp-locked-sig" aria-hidden="true" /></div>
+                <div className="lp-locked-status">
+                  <span className="lp-locked-time">9:41</span>
+                  <span className="lp-locked-sysicons" aria-hidden="true">
+                    <svg width="18" height="11" viewBox="0 0 18 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="1" /><rect x="5" y="5" width="3" height="6" rx="1" /><rect x="10" y="2.5" width="3" height="8.5" rx="1" /><rect x="15" y="0" width="3" height="11" rx="1" /></svg>
+                    <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 10.2 8.01 10.2M2 4.2a9 9 0 0 1 12 0M4.4 6.7a5.5 5.5 0 0 1 7.2 0M8 9.4a1.4 1.4 0 0 1 0 0" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" /><circle cx="8" cy="9.6" r="1.1" fill="#fff" /></svg>
+                    <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#fff" strokeOpacity="0.5" /><rect x="2" y="2" width="18" height="8" rx="1.5" fill="#fff" /><rect x="23" y="4" width="2" height="4" rx="1" fill="#fff" fillOpacity="0.5" /></svg>
+                  </span>
+                </div>
                 <div className="lp-locked-body">
                   <div className="lp-vault" aria-hidden="true">
                     <span className="lp-vault-orb" />
@@ -227,54 +234,49 @@ export default function Landing() {
 
       {/* ---- AI in action ---- */}
       <section className="lp-section lp-aiwrap" id="ai">
-        <div className="lp-wrap lp-aigrid">
-          <div className="lp-aicopy lp-reveal">
+        <div className="lp-wrap">
+          <div className="lp-head lp-reveal">
             <h2>An AI reads the deal before your money moves.</h2>
             <p>Most fraud happens in the chat, before anyone pays. Paste the conversation and Zafe flags the pressure tactics and off-platform tricks. If it is risky, you cannot pay until you have seen why.</p>
-            <div className="lp-ailist">
-              <div><Icon d={I.check} color="#059669" size={17} />Names the specific scam tactic in the chat</div>
-              <div><Icon d={I.check} color="#059669" size={17} />Scores the seller from their past deals</div>
-              <div><Icon d={I.check} color="#059669" size={17} />Settles disputes fairly: pay, refund, or split</div>
-            </div>
           </div>
-          {/* The real app "Trust check" screen (app/_lib/TrustDetail.tsx): the
-              AI's read on a deal before the buyer funds, shown in a browser. */}
-          <div className="lp-aivis lp-reveal">
-            <div className="lp-window">
-              <div className="lp-window-bar" aria-hidden="true">
-                <span className="lp-window-dots"><i /><i /><i /></span>
-                <span className="lp-window-url">getzafe.vercel.app/trust-score</span>
-              </div>
-              <div className="lp-window-screen">
-                <div className="lp-trust" ref={scoreRef}>
-                  <div className="lp-trust-top">
-                    <span className="lp-trust-back" aria-hidden="true"><Icon d="M15 18l-6-6 6-6" color="#0F172A" size={18} /></span>
-                    <h3>Trust check</h3>
-                  </div>
-                  <div className="lp-trust-dialwrap">
-                    <div className="lp-trust-dial" style={{ background: `conic-gradient(#DC2626 ${score * 3.6}deg, #EEF2F6 0)` }}>
-                      <div className="lp-trust-hole">
-                        <div className="lp-trust-score">{score}</div>
-                        <div className="lp-trust-outof">out of 100</div>
-                      </div>
-                    </div>
-                    <div className="lp-trust-verdict">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" /></svg>
-                      High risk
-                    </div>
-                  </div>
-                  <div className="lp-trust-headline"><p>We found risk signals here. Read them carefully before you send any money.</p></div>
-                  <div className="lp-trust-signals">
-                    <div className="lp-trust-signals-head">What the AI reviewed</div>
-                    {TRUST_SIGNALS.map((s) => (
-                      <div className="lp-trust-signal" key={s}>
-                        <span className="lp-trust-signal-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v5M12 16h.01" /><circle cx="12" cy="12" r="9" /></svg></span>
-                        {s}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="lp-trust-cta">Review, then decide on payment</div>
+
+          {/* The real app "Trust check" page (app/_lib/TrustDetail.tsx) as it
+              renders on desktop: a centred read on the deal, shown in a browser. */}
+          <div className="lp-window lp-window-wide lp-reveal">
+            <div className="lp-window-bar" aria-hidden="true">
+              <span className="lp-window-dots"><i /><i /><i /></span>
+              <span className="lp-window-url"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" strokeLinecap="round" /></svg>getzafe.vercel.app/trust-score</span>
+              <span className="lp-window-spacer" />
+            </div>
+            <div className="lp-window-screen">
+              <div className="lp-trust" ref={scoreRef}>
+                <div className="lp-trust-top">
+                  <span className="lp-trust-back" aria-hidden="true"><Icon d="M15 18l-6-6 6-6" color="#0F172A" size={18} /></span>
+                  <h3>Trust check</h3>
                 </div>
+                <div className="lp-trust-dialwrap">
+                  <div className="lp-trust-dial" style={{ background: `conic-gradient(#DC2626 ${score * 3.6}deg, #EEF2F6 0)` }}>
+                    <div className="lp-trust-hole">
+                      <div className="lp-trust-score">{score}</div>
+                      <div className="lp-trust-outof">out of 100</div>
+                    </div>
+                  </div>
+                  <div className="lp-trust-verdict">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" /></svg>
+                    High risk
+                  </div>
+                </div>
+                <div className="lp-trust-headline"><p>We found risk signals here. Read them carefully before you send any money.</p></div>
+                <div className="lp-trust-signals">
+                  <div className="lp-trust-signals-head">What the AI reviewed</div>
+                  {TRUST_SIGNALS.map((s) => (
+                    <div className="lp-trust-signal" key={s}>
+                      <span className="lp-trust-signal-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v5M12 16h.01" /><circle cx="12" cy="12" r="9" /></svg></span>
+                      {s}
+                    </div>
+                  ))}
+                </div>
+                <div className="lp-trust-cta">Review, then decide on payment</div>
               </div>
             </div>
           </div>
@@ -421,8 +423,9 @@ const css = `
 
 /* the real "locked" screen (app/_screens/locked.ts) */
 .lp-locked{background:radial-gradient(120% 80% at 50% 10%, #14304A 0%, #0F172A 52%, #0A1524 100%); color:#fff; height:552px; display:flex; flex-direction:column}
-.lp-locked-status{height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 22px 0 24px; font-size:13px; font-weight:600; padding-top:12px}
-.lp-locked-sig{width:34px; height:11px; border-radius:3px; background:rgba(255,255,255,.5)}
+.lp-locked-status{height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:12px 20px 0 26px}
+.lp-locked-time{font-size:15px; font-weight:600; letter-spacing:.02em; font-variant-numeric:tabular-nums}
+.lp-locked-sysicons{display:inline-flex; align-items:center; gap:6px}
 .lp-locked-body{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 26px}
 .lp-vault{position:relative; width:124px; height:124px; margin-bottom:6px; animation:lpFloaty 5.5s ease-in-out infinite}
 .lp-vault svg{position:absolute; top:40px; left:40px}
@@ -458,36 +461,34 @@ const css = `
 
 /* AI in action */
 .lp-aiwrap{background:linear-gradient(180deg,#fff, #F4F8FB)}
-.lp-aigrid{display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center}
-.lp-aicopy h2{margin-top:16px; font-size:33px; line-height:1.12; letter-spacing:-.03em; font-weight:700; max-width:18ch}
-.lp-aicopy p{margin-top:16px; font-size:16.5px; color:var(--muted); line-height:1.65; max-width:52ch}
-.lp-ailist{margin-top:22px; display:flex; flex-direction:column; gap:12px}
-.lp-ailist div{display:flex; align-items:center; gap:10px; font-size:15px; font-weight:500; color:var(--ink-2)}
 
-/* desktop browser window — the AI scam check on the real product */
+/* desktop browser window — a real, wide desktop screenshot of the product */
 .lp-window{position:relative; border-radius:16px; overflow:hidden; background:var(--card); border:1px solid var(--border); box-shadow:var(--sh-lg)}
-.lp-window-bar{display:flex; align-items:center; gap:12px; padding:11px 14px; background:#F1F5F9; border-bottom:1px solid var(--border)}
-.lp-window-dots{display:inline-flex; gap:7px} .lp-window-dots i{width:11px; height:11px; border-radius:50%; background:#CBD5E1} .lp-window-dots i:first-child{background:#F87171} .lp-window-dots i:nth-child(2){background:#FBBF24} .lp-window-dots i:nth-child(3){background:var(--safe)}
-.lp-window-url{flex:1; text-align:center; font-size:12.5px; color:var(--muted); background:#fff; border:1px solid var(--border); border-radius:8px; padding:5px 12px; font-variant-numeric:tabular-nums}
-.lp-window-screen{padding:26px 24px 28px; background:var(--bg)}
+.lp-window-bar{display:flex; align-items:center; gap:14px; padding:12px 16px; background:#F1F5F9; border-bottom:1px solid var(--border)}
+.lp-window-dots{display:inline-flex; gap:8px; flex-shrink:0} .lp-window-dots i{width:12px; height:12px; border-radius:50%; background:#CBD5E1} .lp-window-dots i:first-child{background:#F87171} .lp-window-dots i:nth-child(2){background:#FBBF24} .lp-window-dots i:nth-child(3){background:var(--safe)}
+.lp-window-url{display:inline-flex; align-items:center; gap:8px; max-width:340px; width:100%; margin:0 auto; font-size:13px; color:var(--muted); background:#fff; border:1px solid var(--border); border-radius:8px; padding:7px 14px; justify-content:center; font-variant-numeric:tabular-nums}
+.lp-window-spacer{width:44px; flex-shrink:0}
+.lp-window-wide{max-width:960px; margin:48px auto 0}
+.lp-window-screen{background:var(--bg); padding:28px 24px 40px; min-height:560px}
 
-/* the real "Trust check" screen (app/_lib/TrustDetail.tsx), high-risk read */
-.lp-trust{max-width:420px; margin:0 auto}
-.lp-trust-top{display:flex; align-items:center; gap:14px}
-.lp-trust-back{width:38px; height:38px; border-radius:11px; background:#fff; border:1px solid var(--border); box-shadow:var(--sh-sm); display:flex; align-items:center; justify-content:center; flex-shrink:0}
-.lp-trust-top h3{font-size:19px; font-weight:700; letter-spacing:-.02em}
-.lp-trust-dialwrap{display:flex; flex-direction:column; align-items:center; margin-top:18px}
-.lp-trust-dial{width:170px; height:170px; border-radius:50%; display:flex; align-items:center; justify-content:center}
-.lp-trust-hole{width:136px; height:136px; border-radius:50%; background:#fff; box-shadow:inset 0 2px 10px rgba(15,23,42,.06); display:flex; flex-direction:column; align-items:center; justify-content:center}
-.lp-trust-score{font-size:52px; font-weight:700; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}
-.lp-trust-outof{font-size:12.5px; color:var(--faint); margin-top:2px}
-.lp-trust-verdict{margin-top:16px; display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:999px; background:#FEE2E2; border:1px solid #FCA5A5; color:#B91C1C; font-size:14px; font-weight:700; letter-spacing:.02em}
-.lp-trust-headline{margin-top:18px; padding:15px; border-radius:16px; background:#FEE2E2; border:1px solid #FCA5A5} .lp-trust-headline p{font-size:14px; line-height:1.55; color:var(--ink-2); font-weight:500}
-.lp-trust-signals{margin-top:18px}
-.lp-trust-signals-head{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); margin-bottom:6px}
-.lp-trust-signal{display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--line-2); font-size:14px; color:var(--ink-2)} .lp-trust-signal:last-child{border-bottom:none}
+/* the real "Trust check" page (app/_lib/TrustDetail.tsx) at desktop sizes:
+   a centred column on the app canvas, exactly as it renders in the product */
+.lp-trust{max-width:520px; margin:0 auto}
+.lp-trust-top{display:flex; align-items:center; gap:14px; padding:4px 0}
+.lp-trust-back{width:40px; height:40px; border-radius:12px; background:#fff; border:1px solid var(--border); box-shadow:var(--sh-sm); display:flex; align-items:center; justify-content:center; flex-shrink:0}
+.lp-trust-top h3{font-size:20px; font-weight:700; letter-spacing:-.02em}
+.lp-trust-dialwrap{display:flex; flex-direction:column; align-items:center; margin-top:22px}
+.lp-trust-dial{width:200px; height:200px; border-radius:50%; display:flex; align-items:center; justify-content:center}
+.lp-trust-hole{width:164px; height:164px; border-radius:50%; background:#fff; box-shadow:inset 0 2px 10px rgba(15,23,42,.06); display:flex; flex-direction:column; align-items:center; justify-content:center}
+.lp-trust-score{font-size:60px; font-weight:700; letter-spacing:-.05em; line-height:1; font-variant-numeric:tabular-nums}
+.lp-trust-outof{font-size:13px; color:var(--faint); margin-top:2px}
+.lp-trust-verdict{margin-top:18px; display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:999px; background:#FEE2E2; border:1px solid #FCA5A5; color:#B91C1C; font-size:14px; font-weight:700; letter-spacing:.02em}
+.lp-trust-headline{margin-top:22px; padding:16px; border-radius:16px; background:#FEE2E2; border:1px solid #FCA5A5} .lp-trust-headline p{font-size:14.5px; line-height:1.55; color:var(--ink-2); font-weight:500}
+.lp-trust-signals{margin-top:22px}
+.lp-trust-signals-head{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); margin-bottom:8px}
+.lp-trust-signal{display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--line-2); font-size:14px; color:var(--ink-2)} .lp-trust-signal:last-child{border-bottom:none}
 .lp-trust-signal-ic{width:28px; height:28px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#FEE2E2; color:#B91C1C}
-.lp-trust-cta{margin-top:20px; height:54px; border-radius:14px; background:#B91C1C; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px}
+.lp-trust-cta{margin-top:24px; height:56px; border-radius:14px; background:#B91C1C; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:16px}
 
 /* safety */
 .lp-safety{position:relative;
@@ -536,7 +537,7 @@ const css = `
 @media (max-width:900px){
   .lp-herogrid{grid-template-columns:1fr; gap:44px}
   .lp-herocopy h1{font-size:42px}
-  .lp-aigrid{grid-template-columns:1fr; gap:36px}
+  .lp-window-wide{margin-top:36px}
   .lp-features{grid-template-columns:1fr}
   .lp-flow{grid-template-columns:1fr 1fr} .lp-flowline{display:none}
   .lp-navlinks{display:none}
@@ -547,8 +548,11 @@ const css = `
   .lp-band{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:18px 14px}
   .lp-band span{flex-direction:column; align-items:center; text-align:center; gap:7px; font-size:11.5px; line-height:1.25}
   .lp-flow{grid-template-columns:1fr}
-  .lp-head h2,.lp-ctacard h2{font-size:28px} .lp-aicopy h2{font-size:27px}
+  .lp-head h2,.lp-ctacard h2{font-size:28px}
   .lp-navcta{gap:12px} .lp-navcta .lp-link-sell{display:none}
+  .lp-window-screen{padding:20px 14px 28px; min-height:0}
+  .lp-window-url{max-width:none} .lp-window-spacer{display:none}
+  .lp-trust-dial{width:170px; height:170px} .lp-trust-hole{width:136px; height:136px} .lp-trust-score{font-size:52px}
   .lp-ctacard{padding:40px 22px}
 }
 `;
