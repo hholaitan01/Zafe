@@ -98,9 +98,10 @@ export default function Landing() {
 
       {/* ---- Hero ---- */}
       <section className="lp-hero" id="top">
-        <div className="lp-wrap lp-herogrid">
+        <div className="lp-wrap lp-herocenter">
           <div className="lp-herocopy lp-reveal">
             <h1>Buy from strangers.<br />Keep your money safe.</h1>
+            <p className="lp-herosub">Pay into escrow, not the seller. An AI checks the deal for scams and your money is released only when you confirm the item arrived.</p>
             <div className="lp-herobtns">
               <Link href="/waitlist" className="lp-btn lp-btn-primary lp-btn-lg">Join the waitlist</Link>
               <a href="#how" className="lp-btn lp-btn-ghost lp-btn-lg">See how it works</a>
@@ -311,12 +312,16 @@ const css = `
 .lp-livecount{margin-top:22px; display:inline-flex; align-items:center; gap:9px; font-size:13.5px; font-weight:600; color:var(--ink-2)}
 .lp-livedot{width:8px; height:8px; border-radius:50%; background:var(--safe); box-shadow:0 0 0 0 rgba(5,150,105,.6); animation:lpPulseDot 2s infinite}
 @keyframes lpPulseDot{0%{box-shadow:0 0 0 0 rgba(5,150,105,.5)}70%{box-shadow:0 0 0 8px rgba(5,150,105,0)}100%{box-shadow:0 0 0 0 rgba(5,150,105,0)}}
-.lp-herogrid{display:grid; grid-template-columns:1.12fr .88fr; gap:52px; align-items:center}
-.lp-herocopy h1{margin:18px 0 0; font-size:42px; line-height:1.08; letter-spacing:-.03em; font-weight:700}
-.lp-herobtns{margin-top:28px; display:flex; gap:12px; flex-wrap:wrap}
+
+/* centred hero: message stacked over the product shot */
+.lp-herocenter{display:flex; flex-direction:column; align-items:center; text-align:center}
+.lp-herocopy{max-width:680px}
+.lp-herocopy h1{margin:8px 0 0; font-size:50px; line-height:1.06; letter-spacing:-.03em; font-weight:700}
+.lp-herosub{margin:20px auto 0; max-width:52ch; font-size:18px; line-height:1.6; color:var(--muted)}
+.lp-herobtns{margin-top:30px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center}
 
 /* hero visual */
-.lp-herovis{position:relative; width:328px; max-width:100%; margin:0 auto}
+.lp-herovis{position:relative; width:328px; max-width:100%; margin:52px auto 0}
 .lp-card{background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh)}
 
 /* phone frame — a real device: true 19.5:9 screen at native proportions */
@@ -411,7 +416,6 @@ const css = `
 
 /* responsive */
 @media (max-width:900px){
-  .lp-herogrid{grid-template-columns:1fr; gap:44px}
   .lp-herocopy h1{font-size:42px}
   .lp-window-wide{margin-top:36px}
   .lp-features{grid-template-columns:1fr}
@@ -421,6 +425,8 @@ const css = `
 @media (max-width:560px){
   .lp-hero{padding:44px 0 24px}
   .lp-herocopy h1{font-size:34px}
+  .lp-herosub{font-size:16px}
+  .lp-herovis{margin-top:40px}
   .lp-band{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:18px 14px}
   .lp-band span{flex-direction:column; align-items:center; text-align:center; gap:7px; font-size:11.5px; line-height:1.25}
   .lp-flow{grid-template-columns:1fr}
