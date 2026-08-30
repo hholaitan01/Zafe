@@ -38,6 +38,10 @@ const I = {
   arrow: "M5 12h14M13 6l6 6-6 6",
   chevron: "M6 9l6 6 6-6",
 };
+// Only show the waitlist count once it reads as real social proof. Below this,
+// a tiny number ("1 person") undersells the product, so we hide it entirely.
+const WAITLIST_MIN_TO_SHOW = 50;
+
 function Icon({ d, color = "#0F172A", size = 22 }: { d: string; color?: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -106,8 +110,8 @@ export default function Landing() {
               <Link href="/waitlist" className="lp-btn lp-btn-primary lp-btn-lg">Join the waitlist</Link>
               <a href="#how" className="lp-btn lp-btn-ghost lp-btn-lg">See how it works</a>
             </div>
-            {count != null && count > 0 && (
-              <div className="lp-livecount"><span className="lp-livedot" />{count.toLocaleString()} {count === 1 ? "person" : "people"} already on the waitlist</div>
+            {count != null && count >= WAITLIST_MIN_TO_SHOW && (
+              <div className="lp-livecount"><span className="lp-livedot" />{count.toLocaleString()} people already on the waitlist</div>
             )}
           </div>
 
