@@ -37,5 +37,6 @@ export const FAQS: { q: string; a: string }[] = [
   { q: "Is my money actually safe?", a: "Yes. Once you pay, the money sits in escrow. The seller cannot withdraw it. It only moves when you confirm delivery, or when a dispute is resolved." },
   { q: "What if the seller never ships?", a: "You open a dispute. If the item never arrives, the money is refunded to you. The seller is only paid for a deal they actually completed." },
   { q: "Do I need a Wema account?", a: "No. You can pay from any bank. We detect the transfer automatically, so there is no receipt to upload and no screenshot to send." },
+  { q: "What is a seller's Trust Score?", a: "A score from 0 to 100 that sums up how safe a seller is to deal with. It is built from verified identity, completed deals, past disputes, and how long the account has traded. You see it before you pay, and 70 or above reads as safe." },
   { q: "What does it cost?", a: "Setting up a protected deal is free. Escrow fees apply only when a deal completes, so trying it costs you nothing." },
 ];
