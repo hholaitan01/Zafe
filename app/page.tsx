@@ -89,6 +89,7 @@ export default function Landing() {
           <nav className="lp-navlinks" aria-label="Primary">
             <a href="#how">How it works</a>
             <a href="#ai">The AI</a>
+            <a href="#trust">Trust Score</a>
             <a href="#safety">Safety</a>
             <a href="#faq">FAQ</a>
           </nav>
@@ -188,6 +189,43 @@ export default function Landing() {
             <div className="lp-window-screen">
               <img className="lp-shot" src="/demo/trust-desktop.png" width={2080} height={1760} alt="The Zafe Trust check page flagging a deal as high risk with a score of 4 out of 100" />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---- Trust Score ---- */}
+      <section className="lp-section lp-trust" id="trust">
+        <div className="lp-wrap">
+          <div className="lp-head lp-reveal">
+            <h2>Every seller carries a Trust Score.</h2>
+            <p>One number from 0 to 100, built from the things that actually predict a safe deal. You see it before you pay, so you are never trusting a stranger blind.</p>
+          </div>
+          <div className="lp-trustgrid">
+            <div className="lp-trustdial lp-reveal" aria-hidden="true">
+              <div className="lp-dial">
+                <div className="lp-dial-num">87</div>
+                <div className="lp-dial-of">/ 100</div>
+              </div>
+              <div className="lp-dial-verdict"><span className="lp-dial-dot" />Safe to deal</div>
+              <div className="lp-dial-bands">
+                <span><i style={{ background: "var(--safe)" }} />70 and up. Safe</span>
+                <span><i style={{ background: "#A16207" }} />40 to 69. Caution</span>
+                <span><i style={{ background: "var(--danger)" }} />Under 40. Risky</span>
+              </div>
+            </div>
+            <ul className="lp-trustfactors lp-reveal">
+              {[
+                { d: I.shield, t: "Verified identity", b: "A seller who passed BVN or NIN checks lifts the score. A banned scammer cannot just reappear." },
+                { d: I.check, t: "Completed deals", b: "A real track record of finished deals on Zafe counts for more than any promise in the chat." },
+                { d: I.scale, t: "Past disputes", b: "Deals that ended in a dispute pull the score down. Repeat trouble is a clear warning." },
+                { d: I.bank, t: "Account age", b: "A brand-new account gets less benefit of the doubt than one that has been trading for months." },
+              ].map((f, i) => (
+                <li className="lp-trustfactor lp-reveal" key={f.t} style={{ transitionDelay: `${i * 60}ms` }}>
+                  <div className="lp-featicon"><Icon d={f.d} color="#059669" size={20} /></div>
+                  <div><h3>{f.t}</h3><p>{f.b}</p></div>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
@@ -375,6 +413,25 @@ const css = `
 /* real captured screenshots fill their frames */
 .lp-shot{display:block; width:100%; height:auto}
 
+/* trust score */
+.lp-trustgrid{margin-top:46px; display:grid; grid-template-columns:.82fr 1.18fr; gap:32px; align-items:center}
+.lp-trustdial{background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--sh); padding:32px 28px; display:flex; flex-direction:column; align-items:center; text-align:center}
+.lp-dial{position:relative; width:172px; height:172px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:conic-gradient(var(--safe) 0 87%, var(--line-2) 87% 100%)}
+.lp-dial::before{content:""; position:absolute; inset:14px; border-radius:50%; background:var(--card)}
+.lp-dial-num{position:relative; font-size:52px; font-weight:800; line-height:1; letter-spacing:-.03em; color:var(--ink)}
+.lp-dial-of{position:relative; margin-top:4px; font-size:14px; font-weight:600; color:var(--faint)}
+.lp-dial-verdict{margin-top:20px; display:inline-flex; align-items:center; gap:8px; font-size:14.5px; font-weight:600; color:var(--safe-2); background:var(--safe-tint); border:1px solid #C7F0DE; padding:7px 14px; border-radius:999px}
+.lp-dial-dot{width:8px; height:8px; border-radius:50%; background:var(--safe)}
+.lp-dial-bands{margin-top:20px; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--muted); text-align:left}
+.lp-dial-bands span{display:inline-flex; align-items:center; gap:9px}
+.lp-dial-bands i{width:9px; height:9px; border-radius:2px; flex-shrink:0}
+.lp-trustfactors{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:16px}
+.lp-trustfactor{display:flex; gap:14px; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh-sm); padding:18px; transition:transform .24s var(--ease), box-shadow .24s var(--ease)}
+.lp-trustfactor:hover{transform:translateY(-4px); box-shadow:var(--sh)}
+.lp-trustfactor h3{font-size:16px; font-weight:600; letter-spacing:-.01em}
+.lp-trustfactor p{margin-top:6px; font-size:14px; color:var(--muted); line-height:1.55}
+
 /* safety */
 .lp-safety{position:relative;
   background:
@@ -428,6 +485,7 @@ const css = `
   .lp-window-wide{margin-top:36px}
   .lp-features{grid-template-columns:1fr}
   .lp-flow{grid-template-columns:1fr 1fr} .lp-flowline{display:none}
+  .lp-trustgrid{grid-template-columns:1fr; gap:28px; max-width:520px; margin-left:auto; margin-right:auto}
   .lp-navlinks{display:none}
 }
 @media (max-width:560px){
@@ -438,6 +496,7 @@ const css = `
   .lp-band{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:18px 14px}
   .lp-band span{flex-direction:column; align-items:center; text-align:center; gap:7px; font-size:11.5px; line-height:1.25}
   .lp-flow{grid-template-columns:1fr}
+  .lp-trustfactors{grid-template-columns:1fr}
   .lp-head h2,.lp-ctacard h2{font-size:28px}
   .lp-navcta{gap:12px} .lp-navcta .lp-link-sell{display:none}
   .lp-window-url{max-width:none} .lp-window-spacer{display:none}
