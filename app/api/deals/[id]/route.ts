@@ -10,19 +10,19 @@
 import { jsonError, readJson } from "@/lib/ai/http";
 import { authorizeDeal, callerRoleOnDeal } from "@/lib/deals/access";
 import { setDealStatus } from "@/lib/deals/store";
-import type { DealStatus } from "@/lib/deals/types";
+import type { Deal, DealStatus } from "@/lib/deals/types";
 
 const PATCHABLE_STATUS: DealStatus[] = ["created", "shipped", "disputed"];
 const PROTECTED_STATUS: DealStatus[] = ["funded", "completed", "refunded", "resolved"];
 
-function publicDealForRole(deal: Awaited<ReturnType<typeof authorizeDeal>> extends { ok: true; deal: infer D } ? D : never, role: string) {
+function publicDealForRole(deal: Deal, role: string): Deal {
   if (role === "demo") return deal;
 
-  // The handover code is a buyer-only secret. Payout destinations are also
-  // private: each side only needs its own account details, never the other
-  // party's banking information.
+  // Keep the response type stable while removing secrets from the JSON payload.
+  // The UI can continue using the same Deal shape without exposing the opposite
+  // party's banking details.
   if (role === "buyer") {
-    return { ...deal, handoverCode: deal.handoverCode, sellerPayout: undefined };
+    return { ...deal, sellerPayout: undefined };
   }
   if (role === "seller") {
     return { ...deal, handoverCode: undefined, buyerPayout: undefined };
