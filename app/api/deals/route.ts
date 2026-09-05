@@ -44,18 +44,23 @@ export async function POST(req: Request): Promise<Response> {
     return jsonError("A 'seller' object is required.");
   }
 
-  // Who created this? The session is trusted for the creator's side.
+  // In live mode the session is mandatory. Never fall back to a client-supplied
+  // identity: doing so lets an unauthenticated caller impersonate a buyer or
+  // seller and create a deal they don't actually own.
   const user = await getServerUser();
+  if (authConfigured() && !user?.email) {
+    return jsonError("Sign in to create a deal.", 401);
+  }
+
   let seller = body.seller;
   let buyerEmail: string | undefined;
   if (body.initiatedBy === "seller") {
-    // Seller-initiated "request payment": the creator is the SELLER; the buyer
-    // is the counterparty they're requesting money from (resolve @username).
+    // Seller-initiated "request payment": the authenticated creator is the
+    // seller; the buyer is the counterparty they're requesting money from.
     seller = { ...body.seller, contact: user?.email || body.seller.contact, name: body.seller.name || user?.name };
     buyerEmail = body.buyerEmail ? await resolveContact(body.buyerEmail) : undefined;
   } else {
-    // Buyer-initiated (default): the creator is the buyer; resolve the seller's
-    // contact (email / phone / @username) to a canonical identity.
+    // Buyer-initiated (default): the authenticated creator is the buyer.
     if (body.seller.contact) seller = { ...body.seller, contact: await resolveContact(body.seller.contact) };
     buyerEmail = user?.email || body.buyerEmail;
   }
