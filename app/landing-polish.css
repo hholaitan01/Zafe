@@ -1,0 +1,204 @@
+.lp.lp{
+  --ink:#0b1220;
+  --ink-2:#334155;
+  --muted:#64748b;
+  --faint:#94a3b8;
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --border:#e2e8f0;
+  --line-2:#edf2f7;
+  --navy:#0b1220;
+  --safe:#10b981;
+  --safe-2:#047857;
+  --safe-tint:#ecfdf5;
+  --r-card:24px;
+  background:var(--bg) !important;
+  letter-spacing:-.01em;
+}
+
+.lp.lp .lp-wrap{max-width:1180px;padding-left:28px;padding-right:28px}
+
+/* Cleaner, premium navigation */
+.lp.lp .lp-nav{
+  background:rgba(246,248,251,.78) !important;
+  border-bottom:1px solid rgba(226,232,240,.72) !important;
+  box-shadow:0 8px 30px -28px rgba(15,23,42,.45);
+}
+.lp.lp .lp-navrow{height:72px}
+.lp.lp .lp-brand{font-size:20px;letter-spacing:-.035em}
+.lp.lp .lp-brand svg{filter:drop-shadow(0 4px 8px rgba(5,150,105,.10))}
+.lp.lp .lp-navlinks{gap:30px;font-size:14px}
+.lp.lp .lp-navlinks a{position:relative;padding:8px 0}
+.lp.lp .lp-navlinks a::after{content:"";position:absolute;left:0;right:100%;bottom:1px;height:2px;border-radius:99px;background:var(--safe);transition:right .25s var(--ease)}
+.lp.lp .lp-navlinks a:hover::after{right:0}
+.lp.lp .lp-link{font-size:14px}
+.lp.lp .lp-btn-primary{background:var(--navy);border-radius:13px;box-shadow:0 10px 24px -14px rgba(15,23,42,.7)}
+
+/* Hero: more editorial, more depth, stronger product focus */
+.lp.lp .lp-hero{
+  padding:82px 0 58px !important;
+  background:
+    radial-gradient(650px 430px at 78% 16%,rgba(16,185,129,.14),transparent 70%),
+    radial-gradient(500px 350px at 12% 0%,rgba(59,130,246,.07),transparent 70%),
+    linear-gradient(180deg,#f8fafc 0%,#f6f8fb 100%) !important;
+}
+.lp.lp .lp-hero::before{height:720px;opacity:.45}
+.lp.lp .lp-herocenter{grid-template-columns:minmax(0,1.03fr) minmax(330px,.72fr);gap:72px}
+.lp.lp .lp-herocopy h1{
+  font-size:clamp(46px,5.2vw,68px) !important;
+  line-height:1.01 !important;
+  letter-spacing:-.055em !important;
+  max-width:720px;
+}
+.lp.lp .lp-herocopy h1 br{display:block}
+.lp.lp .lp-herosub{max-width:56ch;font-size:18px;line-height:1.65;margin-top:24px}
+.lp.lp .lp-herobtns{margin-top:32px;gap:13px}
+.lp.lp .lp-btn-lg{height:56px;border-radius:14px;padding:0 25px}
+.lp.lp .lp-livecount{margin-top:20px}
+
+/* Add a subtle trust caption around the hero visual without new markup */
+.lp.lp .lp-herovis::before{
+  content:"PROTECTED BY ZAFE";
+  position:absolute;
+  z-index:4;
+  right:-18px;
+  top:8%;
+  padding:8px 11px;
+  border:1px solid rgba(16,185,129,.25);
+  border-radius:999px;
+  background:rgba(255,255,255,.88);
+  color:#047857;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.12em;
+  box-shadow:0 12px 28px -18px rgba(15,23,42,.5);
+  transform:rotate(4deg);
+}
+.lp.lp .lp-phone{
+  width:344px;
+  padding:12px;
+  border-radius:50px;
+  background:linear-gradient(145deg,#263244 0%,#090f1c 65%,#020617 100%);
+  box-shadow:0 38px 80px -30px rgba(15,23,42,.62),0 12px 28px -18px rgba(16,185,129,.30),inset 0 0 0 1px rgba(255,255,255,.08) !important;
+}
+.lp.lp .lp-phone-screen{border-radius:40px}
+.lp.lp .lp-phone-island{width:94px;height:25px;top:22px}
+
+/* Trust band becomes a floating proof bar */
+.lp.lp .lp-band{
+  position:relative;
+  z-index:5;
+  margin-top:12px !important;
+  padding:17px 22px !important;
+  border:1px solid rgba(226,232,240,.95) !important;
+  border-radius:18px;
+  background:rgba(255,255,255,.88);
+  box-shadow:0 20px 45px -32px rgba(15,23,42,.42);
+  justify-content:space-around;
+}
+.lp.lp .lp-band span{font-size:14px}
+
+/* Section rhythm and typography */
+.lp.lp .lp-section{padding:104px 0 !important}
+.lp.lp .lp-head{max-width:700px}
+.lp.lp .lp-head h2{
+  font-size:clamp(32px,4vw,48px) !important;
+  letter-spacing:-.045em !important;
+  line-height:1.05 !important;
+}
+.lp.lp .lp-head p{font-size:17px;line-height:1.7}
+
+/* How it works: numbered journey */
+.lp.lp .lp-flow{margin-top:56px;gap:16px}
+.lp.lp .lp-flowline{top:47px;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,#a7f3d0 15%,#a7f3d0 85%,transparent)}
+.lp.lp .lp-flowcard{
+  min-height:250px;
+  padding:27px 22px 23px;
+  border-radius:20px;
+  box-shadow:0 12px 35px -28px rgba(15,23,42,.55);
+}
+.lp.lp .lp-flowcard:hover{transform:translateY(-7px)}
+.lp.lp .lp-flownum{top:-13px;left:20px;width:29px;height:29px;font-size:12px;box-shadow:0 5px 12px -7px rgba(15,23,42,.7)}
+.lp.lp .lp-flowicon{width:48px;height:48px;border-radius:14px;background:#f0fdf4;border:1px solid #d1fae5}
+.lp.lp .lp-flowcard h3{font-size:18px;margin-top:18px}
+.lp.lp .lp-flowcard p{font-size:14px;line-height:1.65}
+
+/* AI section: stronger frame and contrast */
+.lp.lp .lp-aiwrap{background:linear-gradient(180deg,#fff 0%,#f1f7f5 100%) !important}
+.lp.lp .lp-window-wide{max-width:1010px;margin-top:56px}
+.lp.lp .lp-window{border-radius:20px;box-shadow:0 35px 80px -38px rgba(15,23,42,.42)}
+.lp.lp .lp-window-bar{padding:13px 17px;background:#eef2f7}
+.lp.lp .lp-window-url{border-radius:9px;color:#64748b}
+
+/* Trust score: turn the dial into the visual anchor */
+.lp.lp .lp-trustgrid{margin-top:58px;gap:42px}
+.lp.lp .lp-trustdial{border-radius:24px;padding:38px 30px;box-shadow:0 25px 55px -35px rgba(15,23,42,.5)}
+.lp.lp .lp-dial{width:190px;height:190px;background:conic-gradient(var(--safe) 0 87%,#e8eef3 87% 100%)}
+.lp.lp .lp-dial::before{inset:15px}
+.lp.lp .lp-dial-num{font-size:58px}
+.lp.lp .lp-trustfactors{gap:14px}
+.lp.lp .lp-trustfactor{border-radius:18px;padding:20px;box-shadow:0 12px 32px -28px rgba(15,23,42,.6)}
+
+/* Safety becomes a deliberate dark feature panel */
+.lp.lp .lp-safety{
+  background:
+    radial-gradient(600px 300px at 80% 10%,rgba(16,185,129,.18),transparent 70%),
+    linear-gradient(135deg,#07111f 0%,#0f172a 55%,#102b28 100%) !important;
+}
+.lp.lp .lp-safety .lp-head p{color:#a8b6c9}
+.lp.lp .lp-feature{border-radius:18px;background:rgba(255,255,255,.045);padding:21px}
+.lp.lp .lp-feature:hover{background:rgba(255,255,255,.075)}
+.lp.lp .lp-featicon{border-radius:12px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.12)}
+
+/* FAQ: quieter and more spacious */
+.lp.lp .lp-faq{margin-top:48px;gap:10px}
+.lp.lp .lp-faqitem{border-radius:16px;box-shadow:none}
+.lp.lp .lp-faqitem summary{padding:21px 22px;font-size:16px}
+.lp.lp .lp-faqitem p{padding:0 22px 21px;line-height:1.7}
+
+/* Final CTA: make it feel like a destination */
+.lp.lp .lp-cta{padding:26px 0 100px}
+.lp.lp .lp-ctacard{
+  border-radius:28px;
+  padding:72px 32px;
+  background:
+    radial-gradient(500px 260px at 50% -10%,rgba(16,185,129,.22),transparent 72%),
+    linear-gradient(135deg,#07111f,#0f172a 65%,#12352f) !important;
+  box-shadow:0 38px 80px -38px rgba(15,23,42,.65)
+}
+.lp.lp .lp-ctacard h2{font-size:clamp(34px,4vw,48px);letter-spacing:-.045em}
+.lp.lp .lp-ctacard p{font-size:17px}
+.lp.lp .lp-btn-safe{border-radius:14px}
+
+.lp.lp .lp-footer{background:#fff}
+.lp.lp .lp-footrow{flex-direction:row;align-items:center;justify-content:space-between}
+
+@media (max-width:900px){
+  .lp.lp .lp-hero{padding-top:64px !important}
+  .lp.lp .lp-herocenter{gap:54px}
+  .lp.lp .lp-herocopy h1{font-size:clamp(42px,8vw,58px) !important}
+  .lp.lp .lp-herovis::before{right:-8px}
+}
+@media (max-width:560px){
+  .lp.lp .lp-wrap{padding-left:18px;padding-right:18px}
+  .lp.lp .lp-navrow{height:62px}
+  .lp.lp .lp-navcta{gap:8px}
+  .lp.lp .lp-navcta .lp-btn{height:40px;padding:0 13px;font-size:13px}
+  .lp.lp .lp-hero{padding:48px 0 28px !important}
+  .lp.lp .lp-herocopy h1{font-size:38px !important;letter-spacing:-.045em !important}
+  .lp.lp .lp-herosub{font-size:16px;margin-top:19px}
+  .lp.lp .lp-herobtns{margin-top:25px}
+  .lp.lp .lp-btn-lg{height:52px;padding:0 20px}
+  .lp.lp .lp-herovis{margin-top:28px}
+  .lp.lp .lp-herovis::before{right:0;top:2%;font-size:9px}
+  .lp.lp .lp-phone{width:min(330px,94vw)}
+  .lp.lp .lp-band{grid-template-columns:repeat(3,1fr);gap:8px;padding:15px 10px !important}
+  .lp.lp .lp-section{padding:78px 0 !important}
+  .lp.lp .lp-head h2{font-size:30px !important}
+  .lp.lp .lp-flow{margin-top:44px}
+  .lp.lp .lp-flowcard{min-height:0}
+  .lp.lp .lp-window-wide{margin-top:36px}
+  .lp.lp .lp-trustgrid{margin-top:40px}
+  .lp.lp .lp-ctacard{padding:48px 20px}
+  .lp.lp .lp-footrow{flex-direction:column;align-items:flex-start}
+}
