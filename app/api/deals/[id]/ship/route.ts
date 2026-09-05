@@ -4,10 +4,9 @@
    starts the auto-release timer.
    ========================================================================== */
 
-import { jsonError, readJson } from "@/lib/ai/http";
+import { jsonError } from "@/lib/ai/http";
 import { authorizeDeal, callerRoleOnDeal } from "@/lib/deals/access";
 import { shipDeal } from "@/lib/deals/store";
-import type { PayoutAccount } from "@/lib/deals/types";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
@@ -19,8 +18,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return jsonError("Only the seller can mark this deal as shipped.", 403);
   }
 
-  const body = await readJson<{ sellerPayout?: PayoutAccount }>(req).catch(() => null);
-  const deal = await shipDeal(id, body?.sellerPayout);
+  // Never accept a bank account from this request. The lifecycle service looks
+  // up the seller's saved payout account server-side, preventing a client from
+  // redirecting the escrow to an arbitrary account.
+  const deal = await shipDeal(id);
   if (!deal) return jsonError("Deal not found", 404);
   return Response.json({ deal });
 }
