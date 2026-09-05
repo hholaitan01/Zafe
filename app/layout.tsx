@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./landing-polish.css";
 import PwaRegister from "./_lib/PwaRegister";
 import { ToastHost } from "./_lib/Toast";
 import { SiteStructuredData } from "./_lib/StructuredData";
