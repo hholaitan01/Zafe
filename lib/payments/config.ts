@@ -45,7 +45,20 @@ export function paystackLive(): boolean {
   return Boolean(PAYSTACK_SECRET_KEY);
 }
 
-export type PaymentProviderId = "paystack" | "alat" | "mock";
+/* --------------------------------------------------------------------------
+   Flutterwave — the other gateway we may move to. One secret key covers
+   collection and payout; webhooks are authenticated by a separate secret hash
+   (set in the dashboard) that Flutterwave echoes in the `verif-hash` header.
+   -------------------------------------------------------------------------- */
+export const FLW_SECRET_KEY = process.env.FLW_SECRET_KEY ?? "";
+export const FLW_SECRET_HASH = process.env.FLW_SECRET_HASH ?? "";
+
+/** True when Flutterwave can run for real (collection and payout both). */
+export function flutterwaveLive(): boolean {
+  return Boolean(FLW_SECRET_KEY);
+}
+
+export type PaymentProviderId = "paystack" | "flutterwave" | "alat" | "mock";
 
 /** Optional explicit override; otherwise we auto-detect by which keys are set. */
 const PAYMENTS_PROVIDER = (process.env.PAYMENTS_PROVIDER ?? "").toLowerCase();
@@ -53,16 +66,19 @@ const PAYMENTS_PROVIDER = (process.env.PAYMENTS_PROVIDER ?? "").toLowerCase();
 /**
  * The active provider for a money-move.
  * - explicit `PAYMENTS_PROVIDER` wins when that provider's keys are present;
- * - otherwise Paystack (if keyed), then ALAT (if keyed), else mock.
+ * - otherwise Paystack (if keyed), then Flutterwave (if keyed), then ALAT (if
+ *   keyed), else mock.
  * `kind` lets collection and payout resolve independently, matching ALAT's
  * split (collection can be live while payout is still mocked).
  */
 export function activeProvider(kind: "collection" | "payout"): PaymentProviderId {
   const alatLive = kind === "collection" ? collectionLive() : payoutLive();
   if (PAYMENTS_PROVIDER === "paystack" && paystackLive()) return "paystack";
+  if (PAYMENTS_PROVIDER === "flutterwave" && flutterwaveLive()) return "flutterwave";
   if (PAYMENTS_PROVIDER === "alat" && alatLive) return "alat";
   if (PAYMENTS_PROVIDER === "mock") return "mock";
   if (paystackLive()) return "paystack";
+  if (flutterwaveLive()) return "flutterwave";
   if (alatLive) return "alat";
   return "mock";
 }

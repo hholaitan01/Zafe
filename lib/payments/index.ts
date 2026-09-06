@@ -12,7 +12,7 @@ import type { Deal } from "@/lib/deals/types";
 import { generateVirtualAccount, isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus } from "./alatpay";
 import { accountNameEnquiry, debitWalletTransfer } from "./wallet";
 import { ALAT_ESCROW_POOL_ACCOUNT, activeProvider } from "./config";
-import { paystackProvider } from "./providers";
+import { getProvider } from "./providers";
 
 export { isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus };
 
@@ -49,8 +49,8 @@ export async function createCollectionAccount(deal: Deal): Promise<CollectionAcc
     return { accountNumber: "0" + String(Math.floor(1e9 + Math.random() * 9e9)), bankName: "Wema Bank (demo)", expiresAt, mode: "mock" };
   }
 
-  if (provider === "paystack") {
-    const acct = await paystackProvider.createCollection({
+  if (provider === "paystack" || provider === "flutterwave") {
+    const acct = await getProvider(provider).createCollection({
       amountNaira: deal.item.amount,
       reference: deal.reference,
       customerEmail: deal.buyerEmail || "buyer@zafe.ng",
@@ -87,10 +87,10 @@ export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promi
     return { ok: false, error: "Seller has no verified payout account on file.", mode: "live" };
   }
 
-  if (provider === "paystack") {
-    // Deterministic reference: a retry reuses it, so Paystack de-duplicates
+  if (provider === "paystack" || provider === "flutterwave") {
+    // Deterministic reference: a retry reuses it, so the provider de-duplicates
     // instead of sending the seller a second payout.
-    const r = await paystackProvider.transfer({
+    const r = await getProvider(provider).transfer({
       amountNaira: amount,
       bankCode: payout.bankCode,
       accountNumber: payout.accountNumber,
@@ -134,8 +134,8 @@ export async function refundBuyer(deal: Deal, amount = deal.item.amount): Promis
     return { ok: false, error: "Buyer has no refund account on file.", mode: "live" };
   }
 
-  if (provider === "paystack") {
-    const r = await paystackProvider.transfer({
+  if (provider === "paystack" || provider === "flutterwave") {
+    const r = await getProvider(provider).transfer({
       amountNaira: amount,
       bankCode: acct.bankCode,
       accountNumber: acct.accountNumber,
