@@ -6,8 +6,9 @@
 
 import { createHmac } from "node:crypto";
 
-// Set the secret BEFORE importing modules that read it at load time.
+// Set the secrets BEFORE importing modules that read them at load time.
 process.env.PAYSTACK_SECRET_KEY = "sk_test_zafe_check_secret";
+process.env.FLW_SECRET_HASH = "flw_test_zafe_verif_hash";
 
 let failures = 0;
 function assert(name: string, cond: boolean) {
@@ -47,6 +48,29 @@ async function main() {
   assert("parse: non-success event does not fund", p?.funded === false);
 
   assert("parse: garbage body returns null", paystackProvider.parseWebhook("{not json", new Headers()) === null);
+
+  // --- Flutterwave: verif-hash auth + event parsing ---
+  const { verifyHash, flutterwaveProvider } = await import("./flutterwave");
+  const flwHash = process.env.FLW_SECRET_HASH!;
+  assert("flw: correct hash verifies", verifyHash(flwHash) === true);
+  assert("flw: wrong hash rejected", verifyHash("nope") === false);
+  assert("flw: missing hash rejected", verifyHash(null) === false);
+
+  const flwBody = JSON.stringify({ event: "charge.completed", data: { tx_ref: "ZF-77", id: 42, status: "successful" } });
+  const flwGood = flutterwaveProvider.parseWebhook(flwBody, new Headers({ "verif-hash": flwHash }));
+  assert("flw: authenticated on correct hash", flwGood?.authenticated === true);
+  assert("flw: funded on successful charge.completed", flwGood?.funded === true);
+  assert("flw: reference from tx_ref", flwGood?.reference === "ZF-77");
+  assert("flw: stable event id", flwGood?.eventId === "flutterwave:42");
+
+  const flwForged = flutterwaveProvider.parseWebhook(flwBody, new Headers({ "verif-hash": "forged" }));
+  assert("flw: not authenticated on wrong hash", flwForged?.authenticated === false);
+
+  const flwPending = JSON.stringify({ event: "charge.completed", data: { tx_ref: "ZF-8", id: 2, status: "pending" } });
+  const flwP = flutterwaveProvider.parseWebhook(flwPending, new Headers({ "verif-hash": flwHash }));
+  assert("flw: non-success status does not fund", flwP?.funded === false);
+
+  assert("flw: garbage body returns null", flutterwaveProvider.parseWebhook("{bad", new Headers()) === null);
 
   // --- idempotency ---
   assert("claimOnce: first claim succeeds", (await claimOnce("evt-A")) === true);

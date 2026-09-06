@@ -8,17 +8,21 @@ with zero bank access.
 ## Provider seam (`providers/`)
 
 Every gateway implements one `PaymentProvider` interface (`providers/types.ts`),
-so the processor is replaceable. **Paystack** (`providers/paystack.ts`) is the
-provider we are moving to; **ALAT** is the original (`alatpay.ts` + `wallet.ts`);
-**Flutterwave** drops in by adding one file that implements the same interface.
-`activeProvider()` in `config.ts` picks the live one by which keys are set, or an
-explicit `PAYMENTS_PROVIDER` override.
+so the processor is replaceable. The two gateways we're moving to both live here
+— **Paystack** (`providers/paystack.ts`) and **Flutterwave**
+(`providers/flutterwave.ts`); **ALAT** is the original (`alatpay.ts` +
+`wallet.ts`). A further gateway is one more file implementing the same
+interface. `activeProvider()` in `config.ts` picks the live one by which keys are
+set, or an explicit `PAYMENTS_PROVIDER` override (`paystack` / `flutterwave` /
+`alat` / `mock`).
 
 Two guarantees the seam enforces:
 
-- **Webhook auth, fail closed.** A callback is acted on only after its signature
-  verifies (Paystack: HMAC-SHA512 of the raw body with the secret key). No
-  signature, no funding.
+- **Webhook auth, fail closed.** A callback is acted on only after it
+  authenticates — each provider its own way: Paystack signs the raw body
+  (HMAC-SHA512 with the secret key); Flutterwave echoes a fixed secret hash in
+  the `verif-hash` header (`FLW_SECRET_HASH`), compared in constant time. No
+  match, no funding.
 - **Exactly once.** `idempotency.ts` claims each event id so a re-delivered
   webhook is a no-op, and outbound transfers use a deterministic `reference` per
   operation so a retry never double-pays.
