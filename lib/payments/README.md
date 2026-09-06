@@ -21,7 +21,13 @@ Two guarantees the seam enforces:
   signature, no funding.
 - **Exactly once.** `idempotency.ts` claims each event id so a re-delivered
   webhook is a no-op, and outbound transfers use a deterministic `reference` per
-  operation so a retry never double-pays.
+  operation so a retry never double-pays. The claim store is durable when
+  Supabase is set (`supabase-idempotency.ts` + the `processed_events` table in
+  `schema.sql`): the claim is a single insert, and the table's primary key is
+  the lock, so the guarantee holds across instances and restarts. With no
+  Supabase it falls back to an in-memory store (fine for one instance and dev).
+  A store error is not a duplicate: it propagates, so the webhook returns
+  non-200 and the provider retries rather than the event being silently skipped.
 
 `npm run check:payments` exercises the signature and idempotency logic.
 

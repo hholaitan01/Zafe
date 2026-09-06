@@ -8,6 +8,10 @@ import { createHmac } from "node:crypto";
 
 // Set the secret BEFORE importing modules that read it at load time.
 process.env.PAYSTACK_SECRET_KEY = "sk_test_zafe_check_secret";
+// Keep this check hermetic: with no Supabase configured, idempotency resolves to
+// the in-memory store, so the base claims below hit no network.
+delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 let failures = 0;
 function assert(name: string, cond: boolean) {
@@ -48,10 +52,35 @@ async function main() {
 
   assert("parse: garbage body returns null", paystackProvider.parseWebhook("{not json", new Headers()) === null);
 
-  // --- idempotency ---
+  // --- idempotency (in-memory default) ---
   assert("claimOnce: first claim succeeds", (await claimOnce("evt-A")) === true);
   assert("claimOnce: repeat claim refused", (await claimOnce("evt-A")) === false);
   assert("claimOnce: distinct key succeeds", (await claimOnce("evt-B")) === true);
+
+  // --- durable-store seam ---
+  // A fake with the same semantics as the Supabase adapter (first insert true,
+  // duplicate false, real error throws). Proves claimOnce delegates to whatever
+  // store is active, and that a store error propagates so the webhook returns
+  // non-200 and the provider retries instead of silently skipping the event.
+  const { setStore } = await import("../idempotency");
+  const seen = new Set<string>();
+  setStore({
+    async claim(k: string) {
+      if (k === "boom") throw new Error("db down");
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    },
+  });
+  assert("durable: first claim true", (await claimOnce("dur-1")) === true);
+  assert("durable: repeat claim false", (await claimOnce("dur-1")) === false);
+  let propagated = false;
+  try {
+    await claimOnce("boom");
+  } catch {
+    propagated = true;
+  }
+  assert("durable: store error propagates (webhook will retry)", propagated === true);
 
   console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
   process.exit(failures === 0 ? 0 : 1);
