@@ -8,7 +8,7 @@ Pay a seller you have never met. Your money stays locked until you confirm the i
 is exactly what you paid for. Before you send a naira, an AI reads your chat for scam signs. If a
 deal goes wrong, an AI settles it. And every trader carries a reputation they actually earned.
 
-Built on Wema's ALAT rails.
+ALAT payment integration is built and code-complete, running in simulated mode pending CAC business registration.
 
 [**Open the live app**](https://getzafe.vercel.app) · [**View the design in Figma**](https://www.figma.com/design/Us0oRlytOQwSacJoGawZQV/WEMA-BANK-HACKATOBN)
 
@@ -162,16 +162,6 @@ SUPABASE_SERVICE_ROLE_KEY=      # server only. Never commit it, never paste it i
 
 Every backend layer has the same live/demo seam: the real service when its keys are present, a
 deterministic stand-in when they are not, so the app is never blocked on a backend.
-
-## The team
-
-One app, three lanes.
-
-| Person | Lane | Owns |
-| ------ | ---- | ---- |
-| **Jerry** | Back end (lead) | ALAT escrow and payments, database, KYC and anti-fraud |
-| **H2O** | Back end + front end | AI, deals, auth, reputation, and the responsive web + mobile UI |
-| **Deji** | Design | The original Figma screens the product is built from |
 
 ## Project structure
 
