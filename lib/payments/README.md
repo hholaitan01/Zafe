@@ -1,9 +1,29 @@
-# Payments — ALAT escrow rails (Jerry, integrated by H2O)
+# Payments — escrow rails
 
 The money-moves for the escrow: **collect** the buyer's funds, **hold** them,
-**pay out** to the seller, **refund** the buyer. Ported from Jerry's ALAT work
-onto the `deals` model, with the same **live / mock seam** as the rest of the
-backend so the whole flow demos with zero bank access.
+**pay out** to the seller, **refund** the buyer. Built on the `deals` model with
+the same **live / mock seam** as the rest of the backend, so the whole flow demos
+with zero bank access.
+
+## Provider seam (`providers/`)
+
+Every gateway implements one `PaymentProvider` interface (`providers/types.ts`),
+so the processor is replaceable. **Paystack** (`providers/paystack.ts`) is the
+provider we are moving to; **ALAT** is the original (`alatpay.ts` + `wallet.ts`);
+**Flutterwave** drops in by adding one file that implements the same interface.
+`activeProvider()` in `config.ts` picks the live one by which keys are set, or an
+explicit `PAYMENTS_PROVIDER` override.
+
+Two guarantees the seam enforces:
+
+- **Webhook auth, fail closed.** A callback is acted on only after its signature
+  verifies (Paystack: HMAC-SHA512 of the raw body with the secret key). No
+  signature, no funding.
+- **Exactly once.** `idempotency.ts` claims each event id so a re-delivered
+  webhook is a no-op, and outbound transfers use a deterministic `reference` per
+  operation so a retry never double-pays.
+
+`npm run check:payments` exercises the signature and idempotency logic.
 
 ## Live vs. mock
 

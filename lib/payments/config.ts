@@ -32,3 +32,37 @@ export function collectionLive(): boolean {
 export function payoutLive(): boolean {
   return Boolean(ALAT_WALLET_API_KEY && ALAT_ESCROW_POOL_ACCOUNT);
 }
+
+/* --------------------------------------------------------------------------
+   Paystack — the gateway we are moving to. One secret key covers both
+   collection (charge / dedicated account) and payout (transfers), and Paystack
+   signs webhooks with that same secret, so a single key flips both live.
+   -------------------------------------------------------------------------- */
+export const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY ?? "";
+
+/** True when Paystack can run for real (collection and payout both). */
+export function paystackLive(): boolean {
+  return Boolean(PAYSTACK_SECRET_KEY);
+}
+
+export type PaymentProviderId = "paystack" | "alat" | "mock";
+
+/** Optional explicit override; otherwise we auto-detect by which keys are set. */
+const PAYMENTS_PROVIDER = (process.env.PAYMENTS_PROVIDER ?? "").toLowerCase();
+
+/**
+ * The active provider for a money-move.
+ * - explicit `PAYMENTS_PROVIDER` wins when that provider's keys are present;
+ * - otherwise Paystack (if keyed), then ALAT (if keyed), else mock.
+ * `kind` lets collection and payout resolve independently, matching ALAT's
+ * split (collection can be live while payout is still mocked).
+ */
+export function activeProvider(kind: "collection" | "payout"): PaymentProviderId {
+  const alatLive = kind === "collection" ? collectionLive() : payoutLive();
+  if (PAYMENTS_PROVIDER === "paystack" && paystackLive()) return "paystack";
+  if (PAYMENTS_PROVIDER === "alat" && alatLive) return "alat";
+  if (PAYMENTS_PROVIDER === "mock") return "mock";
+  if (paystackLive()) return "paystack";
+  if (alatLive) return "alat";
+  return "mock";
+}
