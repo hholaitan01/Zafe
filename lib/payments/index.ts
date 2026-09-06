@@ -11,7 +11,8 @@
 import type { Deal } from "@/lib/deals/types";
 import { generateVirtualAccount, isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus } from "./alatpay";
 import { accountNameEnquiry, debitWalletTransfer } from "./wallet";
-import { ALAT_ESCROW_POOL_ACCOUNT, collectionLive, payoutLive } from "./config";
+import { ALAT_ESCROW_POOL_ACCOUNT, activeProvider } from "./config";
+import { paystackProvider } from "./providers";
 
 export { isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus };
 
@@ -41,10 +42,21 @@ function ref(prefix: string, dealId: string): string {
 /** A one-time account for the buyer to pay the escrow into (funds the deal). */
 export async function createCollectionAccount(deal: Deal): Promise<CollectionAccount> {
   const expiresAt = new Date(Date.now() + TEN_MIN_MS).toISOString();
+  const provider = activeProvider("collection");
 
-  if (!collectionLive()) {
+  if (provider === "mock") {
     // Mock: a believable NUBAN so the payment screen can show something on stage.
     return { accountNumber: "0" + String(Math.floor(1e9 + Math.random() * 9e9)), bankName: "Wema Bank (demo)", expiresAt, mode: "mock" };
+  }
+
+  if (provider === "paystack") {
+    const acct = await paystackProvider.createCollection({
+      amountNaira: deal.item.amount,
+      reference: deal.reference,
+      customerEmail: deal.buyerEmail || "buyer@zafe.ng",
+      customerName: deal.buyerEmail?.split("@")[0] || "Zafe buyer",
+    });
+    return { accountNumber: acct.accountNumber, bankName: acct.bankName, expiresAt: acct.expiresAt, alatTransactionId: acct.providerRef, mode: "live" };
   }
 
   const res = await generateVirtualAccount({
@@ -65,13 +77,28 @@ export async function createCollectionAccount(deal: Deal): Promise<CollectionAcc
 
 /** Release the escrowed money to the seller's payout account. */
 export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promise<TransferResult> {
-  if (!payoutLive()) {
+  const provider = activeProvider("payout");
+  if (provider === "mock") {
     return { ok: true, ref: ref("mock_payout", deal.id), mode: "mock" };
   }
 
   const payout = deal.sellerPayout;
   if (!payout?.bankCode || !payout.accountNumber) {
     return { ok: false, error: "Seller has no verified payout account on file.", mode: "live" };
+  }
+
+  if (provider === "paystack") {
+    // Deterministic reference: a retry reuses it, so Paystack de-duplicates
+    // instead of sending the seller a second payout.
+    const r = await paystackProvider.transfer({
+      amountNaira: amount,
+      bankCode: payout.bankCode,
+      accountNumber: payout.accountNumber,
+      accountName: payout.accountName,
+      reference: `zf_payout_${deal.id}`,
+      narration: `Zafe payout for ${deal.item.title}`,
+    });
+    return { ok: r.ok, ref: r.ref, error: r.error, mode: "live" };
   }
 
   try {
@@ -97,7 +124,8 @@ export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promi
 
 /** Refund the escrowed money (full or partial) to the buyer's account. */
 export async function refundBuyer(deal: Deal, amount = deal.item.amount): Promise<TransferResult> {
-  if (!payoutLive()) {
+  const provider = activeProvider("payout");
+  if (provider === "mock") {
     return { ok: true, ref: ref("mock_refund", deal.id), mode: "mock" };
   }
 
@@ -105,6 +133,19 @@ export async function refundBuyer(deal: Deal, amount = deal.item.amount): Promis
   if (!acct?.bankCode || !acct.accountNumber) {
     return { ok: false, error: "Buyer has no refund account on file.", mode: "live" };
   }
+
+  if (provider === "paystack") {
+    const r = await paystackProvider.transfer({
+      amountNaira: amount,
+      bankCode: acct.bankCode,
+      accountNumber: acct.accountNumber,
+      accountName: acct.accountName,
+      reference: `zf_refund_${deal.id}`,
+      narration: `Zafe refund for ${deal.item.title}`,
+    });
+    return { ok: r.ok, ref: r.ref, error: r.error, mode: "live" };
+  }
+
   try {
     const res = await debitWalletTransfer({
       sourceAccountNumber: ALAT_ESCROW_POOL_ACCOUNT,
