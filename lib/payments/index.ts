@@ -13,6 +13,8 @@ import { generateVirtualAccount, isValidAlatPayCallback, isAlatPayCallbackSignat
 import { accountNameEnquiry, debitWalletTransfer } from "./wallet";
 import { ALAT_ESCROW_POOL_ACCOUNT, activeProvider } from "./config";
 import { getProvider } from "./providers";
+import { payoutEntry, refundEntry } from "@/lib/ledger/entries";
+import { recordSafe } from "@/lib/ledger/store";
 
 export { isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus };
 
@@ -79,6 +81,7 @@ export async function createCollectionAccount(deal: Deal): Promise<CollectionAcc
 export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promise<TransferResult> {
   const provider = activeProvider("payout");
   if (provider === "mock") {
+    await recordSafe(payoutEntry(deal.id, amount));
     return { ok: true, ref: ref("mock_payout", deal.id), mode: "mock" };
   }
 
@@ -98,6 +101,7 @@ export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promi
       reference: `zf_payout_${deal.id}`,
       narration: `Zafe payout for ${deal.item.title}`,
     });
+    if (r.ok) await recordSafe(payoutEntry(deal.id, amount));
     return { ok: r.ok, ref: r.ref, error: r.error, mode: "live" };
   }
 
@@ -116,6 +120,7 @@ export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promi
       narration: `Zafe payout for ${deal.item.title}`,
       securityInfo: "", // TODO: populate once the encryption scheme is confirmed with the bank contact
     });
+    await recordSafe(payoutEntry(deal.id, amount));
     return { ok: true, ref: res.data?.reference ?? ref("payout", deal.id), mode: "live" };
   } catch (e) {
     return { ok: false, error: (e as Error).message, mode: "live" };
@@ -126,6 +131,7 @@ export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promi
 export async function refundBuyer(deal: Deal, amount = deal.item.amount): Promise<TransferResult> {
   const provider = activeProvider("payout");
   if (provider === "mock") {
+    await recordSafe(refundEntry(deal.id, amount));
     return { ok: true, ref: ref("mock_refund", deal.id), mode: "mock" };
   }
 
@@ -143,6 +149,7 @@ export async function refundBuyer(deal: Deal, amount = deal.item.amount): Promis
       reference: `zf_refund_${deal.id}`,
       narration: `Zafe refund for ${deal.item.title}`,
     });
+    if (r.ok) await recordSafe(refundEntry(deal.id, amount));
     return { ok: r.ok, ref: r.ref, error: r.error, mode: "live" };
   }
 
@@ -156,6 +163,7 @@ export async function refundBuyer(deal: Deal, amount = deal.item.amount): Promis
       narration: `Zafe refund for ${deal.item.title}`,
       securityInfo: "",
     });
+    await recordSafe(refundEntry(deal.id, amount));
     return { ok: true, ref: res.data?.reference ?? ref("refund", deal.id), mode: "live" };
   } catch (e) {
     return { ok: false, error: (e as Error).message, mode: "live" };
