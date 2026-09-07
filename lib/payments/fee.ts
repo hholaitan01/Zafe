@@ -50,3 +50,20 @@ export function collectionAmount(amount: number): number {
 export function sellerNet(amount: number): number {
   return amount - computeFee(amount).sellerShare;
 }
+
+/**
+ * The seller's fee on a DISPUTED outcome. Policy: on a dispute Zafe keeps the
+ * buyer's half (already paid, not refunded) plus half the fee rate (1% at the
+ * default 2%) of whatever the seller actually receives. Never more than the
+ * seller's normal capped half, so a large disputed deal is not overcharged.
+ *   - Seller wins outright: receipt = the whole amount, so this equals the
+ *     normal seller half and Zafe keeps the full fee.
+ *   - Split: charged only on the seller's portion.
+ *   - Buyer wins outright: receipt = 0, so this is 0 and Zafe keeps only the
+ *     buyer's half.
+ */
+export function disputeSellerFee(sellerReceipt: number, dealAmount: number): number {
+  const halfBps = Math.round(FEE_BPS / 2);
+  const raw = Math.round((sellerReceipt * halfBps) / 10000);
+  return Math.min(raw, computeFee(dealAmount).sellerShare);
+}

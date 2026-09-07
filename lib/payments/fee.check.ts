@@ -18,7 +18,7 @@ function assert(name: string, cond: boolean) {
 }
 
 async function main() {
-  const { computeFee, collectionAmount, sellerNet, FEE_CAP_NAIRA } = await import("./fee");
+  const { computeFee, collectionAmount, sellerNet, disputeSellerFee, FEE_CAP_NAIRA } = await import("./fee");
   const { fundEntry, payoutEntry, refundEntry } = await import("@/lib/ledger/entries");
   const { balancesOf } = await import("@/lib/ledger/store");
   const { ACCOUNTS } = await import("@/lib/ledger/types");
@@ -51,22 +51,40 @@ async function main() {
   assert("complete: escrow holds the fee", (b[ACCOUNTS.escrow] ?? 0) === fa.total);
   assert("complete: revenue is the fee", (b[ACCOUNTS.revenue] ?? 0) === -fa.total);
 
-  // --- lifecycle: full refund keeps no fee ---
+  // --- non-dispute refund (a cancelled deal) keeps no fee: buyer made whole ---
   b = bal([fundEntry("d2", A, fa.buyerShare), refundEntry("d2", A, fa.buyerShare)]);
-  assert("full refund: escrow back to 0", (b[ACCOUNTS.escrow] ?? 0) === 0);
-  assert("full refund: revenue back to 0", (b[ACCOUNTS.revenue] ?? 0) === 0);
-  assert("full refund: buyer_funds back to 0", (b[ACCOUNTS.buyerFunds] ?? 0) === 0);
+  assert("plain refund: escrow back to 0", (b[ACCOUNTS.escrow] ?? 0) === 0);
+  assert("plain refund: revenue back to 0", (b[ACCOUNTS.revenue] ?? 0) === 0);
+  assert("plain refund: buyer_funds back to 0", (b[ACCOUNTS.buyerFunds] ?? 0) === 0);
 
-  // --- lifecycle: 50/50 split keeps no fee ---
+  // --- dispute fee math ---
+  assert("dispute fee: 1% of the seller's split portion", disputeSellerFee(A / 2, A) === Math.round((A / 2) / 100));
+  assert("dispute fee: seller winning = their whole half", disputeSellerFee(A, A) === fa.sellerShare);
+  assert("dispute fee: buyer winning = 0", disputeSellerFee(0, A) === 0);
+
+  // --- dispute: buyer wins a full refund, Zafe keeps the buyer's half ---
+  b = bal([fundEntry("d3", A, fa.buyerShare), refundEntry("d3", A, 0)]); // fee NOT reversed
+  assert("dispute refund: escrow keeps the buyer half", (b[ACCOUNTS.escrow] ?? 0) === fa.buyerShare);
+  assert("dispute refund: revenue is the buyer half", (b[ACCOUNTS.revenue] ?? 0) === -fa.buyerShare);
+  assert("dispute refund: buyer_funds back to 0", (b[ACCOUNTS.buyerFunds] ?? 0) === 0);
+
+  // --- dispute: seller wins outright, Zafe keeps the whole fee ---
+  b = bal([fundEntry("d4", A, fa.buyerShare), payoutEntry("d4", A, fa.sellerShare)]);
+  assert("dispute release: escrow keeps the whole fee", (b[ACCOUNTS.escrow] ?? 0) === fa.total);
+  assert("dispute release: revenue is the whole fee", (b[ACCOUNTS.revenue] ?? 0) === -fa.total);
+
+  // --- dispute: 50/50 split, Zafe keeps buyer half + 1% of the seller's portion ---
   const buyerP = Math.round(A / 2);
+  const remainder = A - buyerP;
+  const dFee = disputeSellerFee(remainder, A);
   b = bal([
-    fundEntry("d3", A, fa.buyerShare),
-    refundEntry("d3", buyerP, fa.buyerShare), // buyer gets their share + full fee back
-    payoutEntry("d3", A - buyerP, 0), // seller gets the remainder, no fee
+    fundEntry("d5", A, fa.buyerShare),
+    refundEntry("d5", buyerP, 0), // buyer's principal only, fee kept
+    payoutEntry("d5", remainder, dFee), // seller remainder minus 1%
   ]);
-  assert("split: escrow back to 0", (b[ACCOUNTS.escrow] ?? 0) === 0);
-  assert("split: revenue back to 0 (no fee kept)", (b[ACCOUNTS.revenue] ?? 0) === 0);
-  assert("split: buyer_funds back to 0", (b[ACCOUNTS.buyerFunds] ?? 0) === 0);
+  assert("dispute split: escrow keeps buyer half + seller 1%", (b[ACCOUNTS.escrow] ?? 0) === fa.buyerShare + dFee);
+  assert("dispute split: revenue is buyer half + seller 1%", (b[ACCOUNTS.revenue] ?? 0) === -(fa.buyerShare + dFee));
+  assert("dispute split: buyer_funds back to 0", (b[ACCOUNTS.buyerFunds] ?? 0) === 0);
 
   console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
   process.exit(failures === 0 ? 0 : 1);

@@ -92,9 +92,9 @@ export async function createCollectionAccount(deal: Deal): Promise<CollectionAcc
 export async function payoutSeller(
   deal: Deal,
   amount = deal.item.amount,
-  opts?: { chargeFee?: boolean },
+  opts?: { chargeFee?: boolean; feeOverride?: number },
 ): Promise<TransferResult> {
-  const sellerFee = opts?.chargeFee === false ? 0 : computeFee(amount).sellerShare;
+  const sellerFee = opts?.feeOverride ?? (opts?.chargeFee === false ? 0 : computeFee(amount).sellerShare);
   const net = amount - sellerFee; // what the seller actually receives
 
   const provider = activeProvider("payout");

@@ -46,8 +46,14 @@ browser, so the fund screen shows the buyer the true total):
   `createCollectionAccount` charges and returns as `amountDue`.
 - The **seller's** half is deducted at payout: they receive `amount − sellerShare`
   (`sellerNet()`).
-- Zafe earns the fee **only on a completed deal**. On a full refund or a dispute
-  split, no fee is kept — the buyer's half is returned and the seller pays none.
+- On a **completed** deal Zafe keeps the whole fee.
+- On a **plain refund** (a cancelled deal, no dispute) no fee is kept — the buyer
+  is made whole, their half returned.
+- On a **dispute**, Zafe keeps the buyer's half (already paid, so a dispute
+  refund returns the principal only) plus 1% of whatever the seller receives
+  (`disputeSellerFee`): the seller winning keeps the whole fee, a full buyer
+  refund keeps just the buyer's half, a split keeps the buyer's half plus 1% of
+  the seller's portion.
 
 Rate and cap are configuration: `NEXT_PUBLIC_ZAFE_FEE_BPS` (default `200`) and
 `NEXT_PUBLIC_ZAFE_FEE_CAP_NAIRA` (default `10000`, `0` disables the cap). Every

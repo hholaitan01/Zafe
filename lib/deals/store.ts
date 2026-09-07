@@ -14,7 +14,7 @@ import { isSeedFlagged, type FraudFlag } from "@/lib/fraud";
 import { payoutSeller, refundBuyer } from "@/lib/payments";
 import { fundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
-import { computeFee } from "@/lib/payments/fee";
+import { computeFee, disputeSellerFee } from "@/lib/payments/fee";
 import { getSeller } from "@/lib/sellers/store";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
@@ -330,27 +330,36 @@ interface SettleMoney {
  * status the deal should land in and the payout ref — but does NOT patch the
  * deal, so callers can attach their own dispute bookkeeping. The buyer's share
  * is always the protective move: if it fails, we abort rather than settle.
+ *
+ * Dispute fee policy: Zafe keeps the buyer's half (already paid, so refunds here
+ * return the principal only, never the buyer's fee) plus a fee on whatever the
+ * seller receives (`disputeSellerFee`). So the seller winning keeps the whole
+ * fee, a full buyer refund keeps just the buyer's half, and a split keeps the
+ * buyer's half plus 1% of the seller's portion.
  */
 async function settleByDecision(deal: Deal, decision: DisputeDecision, splitBuyerPercent = 50): Promise<SettleMoney> {
   if (decision === "refund_buyer") {
-    const r = await refundBuyer(deal);
+    // Buyer wins: principal back, but their fee half is not returned.
+    const r = await refundBuyer(deal, deal.item.amount, { buyerFeeReversed: 0 });
     if (!r.ok) return { ok: false, error: r.error ?? "Refund to the buyer failed." };
     return { ok: true, status: "refunded", payoutRef: r.ref };
   }
   if (decision === "split") {
     const buyerShare = Math.round((deal.item.amount * splitBuyerPercent) / 100);
-    const r = await refundBuyer(deal, buyerShare);
+    // Buyer's principal share back, fee half kept (not reversed).
+    const r = await refundBuyer(deal, buyerShare, { buyerFeeReversed: 0 });
     if (!r.ok) return { ok: false, error: r.error ?? "Refund to the buyer failed." };
     const notes: string[] = [];
     const remainder = deal.item.amount - buyerShare;
     if (remainder > 0) {
-      // A split carries no fee, so the seller receives the full remainder.
-      const p = await payoutSeller(deal, remainder, { chargeFee: false });
+      // Seller keeps the remainder minus 1% of it (their dispute fee).
+      const fee = disputeSellerFee(remainder, deal.item.amount);
+      const p = await payoutSeller(deal, remainder, { feeOverride: fee });
       if (!p.ok) notes.push("Buyer's share refunded; the seller's remainder payout is pending and will retry.");
     }
     return { ok: true, status: "resolved", payoutRef: r.ref, partialRefundAmount: buyerShare, notes };
   }
-  const p = await payoutSeller(deal); // release_to_seller
+  const p = await payoutSeller(deal); // release_to_seller: seller wins, Zafe keeps the whole fee
   if (!p.ok) return { ok: false, error: p.error ?? "Payout to the seller failed." };
   return { ok: true, status: "completed", payoutRef: p.ref };
 }
