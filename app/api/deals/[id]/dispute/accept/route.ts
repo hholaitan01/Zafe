@@ -10,6 +10,7 @@
 import { jsonError } from "@/lib/ai/http";
 import { authorizeDeal, callerRoleOnDeal } from "@/lib/deals/access";
 import { acceptDispute } from "@/lib/deals/store";
+import { publicDeal, publicDeals } from "@/lib/deals/redact";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
@@ -22,5 +23,5 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const out = await acceptDispute(id, party);
   if (!out.ok) return jsonError(out.error ?? "Couldn't record your acceptance.", out.error === "not_found" ? 404 : 409);
-  return Response.json({ deal: out.deal, settled: out.settled });
+  return Response.json({ deal: publicDeal(out.deal), settled: out.settled });
 }

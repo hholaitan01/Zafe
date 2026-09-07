@@ -13,6 +13,7 @@ import type { CreateDealInput } from "@/lib/deals/types";
 import { getProfile, resolveContact } from "@/lib/profiles/store";
 import { getSeller } from "@/lib/sellers/store";
 import { notifySellerOfEscrow } from "@/lib/notifications";
+import { publicDeal, publicDeals } from "@/lib/deals/redact";
 
 export async function GET(req: Request): Promise<Response> {
   const buyer = new URL(req.url).searchParams.get("buyer")?.trim() || "";
@@ -23,12 +24,12 @@ export async function GET(req: Request): Promise<Response> {
   if (authConfigured()) {
     const user = await getServerUser();
     if (!user?.email) return jsonError("Sign in to view your deals.", 401);
-    return Response.json({ deals: await listDealsForUser(user.email) });
+    return Response.json({ deals: publicDeals(await listDealsForUser(user.email)) });
   }
 
   // DEMO: single local sandbox, no cross-tenant data to protect.
   const deals = buyer ? await listDealsForUser(buyer) : await listDeals();
-  return Response.json({ deals });
+  return Response.json({ deals: publicDeals(deals) });
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -71,5 +72,5 @@ export async function POST(req: Request): Promise<Response> {
     await notifySellerOfEscrow(deal, { isUser }).catch(() => {});
   }
 
-  return Response.json({ deal }, { status: 201 });
+  return Response.json({ deal: publicDeal(deal) }, { status: 201 });
 }

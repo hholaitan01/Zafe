@@ -9,8 +9,9 @@
 import { jsonError } from "@/lib/ai/http";
 import { isAdmin } from "@/lib/auth/server";
 import { listUnderReview } from "@/lib/deals/store";
+import { publicDeal, publicDeals } from "@/lib/deals/redact";
 
 export async function GET(): Promise<Response> {
   if (!(await isAdmin())) return jsonError("Not found", 404);
-  return Response.json({ deals: await listUnderReview() });
+  return Response.json({ deals: publicDeals(await listUnderReview()) });
 }
