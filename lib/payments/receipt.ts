@@ -5,6 +5,7 @@
    ========================================================================== */
 
 import type { Deal } from "@/lib/deals/types";
+import { computeFee } from "./fee";
 
 const RISK: Record<string, string> = { safe: "LOW", caution: "MEDIUM", risky: "HIGH" };
 
@@ -21,10 +22,17 @@ export interface ReceiptData {
   releasedAt: string | null;
   refundAmount: number | null;
   payoutRef: string | null;
+  /** The escrow fee (2% capped, split 50/50). */
+  fee: number;
+  /** What the buyer paid into escrow: amount + their half of the fee. */
+  buyerPaid: number;
+  /** What the seller receives on a completed deal: amount − their half. */
+  sellerReceives: number;
 }
 
 export function buildReceipt(deal: Deal): ReceiptData {
   const done = deal.status === "completed" || deal.status === "resolved" || deal.status === "refunded";
+  const fee = computeFee(deal.item.amount);
   return {
     reference: deal.reference,
     item: deal.item.title,
@@ -39,6 +47,9 @@ export function buildReceipt(deal: Deal): ReceiptData {
     refundAmount:
       deal.status === "refunded" ? deal.item.amount : deal.status === "resolved" ? (deal.partialRefundAmount ?? null) : null,
     payoutRef: deal.payoutRef ?? null,
+    fee: fee.total,
+    buyerPaid: deal.item.amount + fee.buyerShare,
+    sellerReceives: deal.item.amount - fee.sellerShare,
   };
 }
 
@@ -48,6 +59,7 @@ export function receiptToText(r: ReceiptData): string {
     `Zafe Receipt — ${r.reference}`,
     `Item: ${r.item}`,
     `Amount: ₦${r.amount.toLocaleString("en-NG")}`,
+    r.fee > 0 ? `Escrow fee: ₦${r.fee.toLocaleString("en-NG")} (split 50/50)` : null,
     `Status: ${r.status}`,
     r.trustScoreAtPurchase != null ? `Trust Score at purchase: ${r.trustScoreAtPurchase}/100 (${r.riskLevel})` : null,
     `Buyer: ${r.buyerName}`,

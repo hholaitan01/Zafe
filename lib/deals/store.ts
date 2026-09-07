@@ -14,6 +14,7 @@ import { isSeedFlagged, type FraudFlag } from "@/lib/fraud";
 import { payoutSeller, refundBuyer } from "@/lib/payments";
 import { fundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
+import { computeFee, disputeSellerFee } from "@/lib/payments/fee";
 import { getSeller } from "@/lib/sellers/store";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
@@ -165,7 +166,7 @@ export async function setDealStatus(id: string, status: DealStatus, note?: strin
   const ev = event(status, note);
   const updated = await backend().patch(id, { status, timeline: [...deal.timeline, ev], updatedAt: ev.at });
   // Money landed in escrow: post it to the ledger (best-effort, idempotent by ref).
-  if (status === "funded") await recordSafe(fundEntry(deal.id, deal.item.amount));
+  if (status === "funded") await recordSafe(fundEntry(deal.id, deal.item.amount, computeFee(deal.item.amount).buyerShare));
   return updated;
 }
 
@@ -268,7 +269,9 @@ export async function refundDeal(id: string, amount?: number): Promise<ReleaseRe
   // Buyer is protected; pay the seller their remainder. If that fails, still
   // settle (buyer already refunded) but flag the remainder as pending.
   if (isPartial && deal.item.amount - refundAmt > 0) {
-    const p = await payoutSeller(deal, deal.item.amount - refundAmt);
+    // A split carries no fee (the deal didn't complete cleanly), so the seller
+    // gets the full remainder and the buyer's fee was returned in the refund.
+    const p = await payoutSeller(deal, deal.item.amount - refundAmt, { chargeFee: false });
     if (!p.ok) timeline.push(event(status, "The seller's remainder payout is pending and will retry."));
   }
 
@@ -327,26 +330,36 @@ interface SettleMoney {
  * status the deal should land in and the payout ref — but does NOT patch the
  * deal, so callers can attach their own dispute bookkeeping. The buyer's share
  * is always the protective move: if it fails, we abort rather than settle.
+ *
+ * Dispute fee policy: Zafe keeps the buyer's half (already paid, so refunds here
+ * return the principal only, never the buyer's fee) plus a fee on whatever the
+ * seller receives (`disputeSellerFee`). So the seller winning keeps the whole
+ * fee, a full buyer refund keeps just the buyer's half, and a split keeps the
+ * buyer's half plus 1% of the seller's portion.
  */
 async function settleByDecision(deal: Deal, decision: DisputeDecision, splitBuyerPercent = 50): Promise<SettleMoney> {
   if (decision === "refund_buyer") {
-    const r = await refundBuyer(deal);
+    // Buyer wins: principal back, but their fee half is not returned.
+    const r = await refundBuyer(deal, deal.item.amount, { buyerFeeReversed: 0 });
     if (!r.ok) return { ok: false, error: r.error ?? "Refund to the buyer failed." };
     return { ok: true, status: "refunded", payoutRef: r.ref };
   }
   if (decision === "split") {
     const buyerShare = Math.round((deal.item.amount * splitBuyerPercent) / 100);
-    const r = await refundBuyer(deal, buyerShare);
+    // Buyer's principal share back, fee half kept (not reversed).
+    const r = await refundBuyer(deal, buyerShare, { buyerFeeReversed: 0 });
     if (!r.ok) return { ok: false, error: r.error ?? "Refund to the buyer failed." };
     const notes: string[] = [];
     const remainder = deal.item.amount - buyerShare;
     if (remainder > 0) {
-      const p = await payoutSeller(deal, remainder);
+      // Seller keeps the remainder minus 1% of it (their dispute fee).
+      const fee = disputeSellerFee(remainder, deal.item.amount);
+      const p = await payoutSeller(deal, remainder, { feeOverride: fee });
       if (!p.ok) notes.push("Buyer's share refunded; the seller's remainder payout is pending and will retry.");
     }
     return { ok: true, status: "resolved", payoutRef: r.ref, partialRefundAmount: buyerShare, notes };
   }
-  const p = await payoutSeller(deal); // release_to_seller
+  const p = await payoutSeller(deal); // release_to_seller: seller wins, Zafe keeps the whole fee
   if (!p.ok) return { ok: false, error: p.error ?? "Payout to the seller failed." };
   return { ok: true, status: "completed", payoutRef: p.ref };
 }

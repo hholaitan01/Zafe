@@ -11,6 +11,7 @@
     "eval:ai": "tsx lib/ai/eval/run.ts",
     "check:payments": "tsx lib/payments/providers/check.ts",
     "check:ledger": "tsx lib/ledger/check.ts",
+    "check:fees": "tsx lib/payments/fee.check.ts",
     "mobile:sync": "cap sync",
     "mobile:ios": "cap sync ios && cap open ios",
     "mobile:android": "cap sync android && cap open android"
