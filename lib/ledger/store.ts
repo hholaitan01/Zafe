@@ -106,8 +106,7 @@ export async function entriesForDeal(dealId: string): Promise<LedgerEntry[]> {
  * for reconciliation and the self-check — not a hot path.
  */
 export async function trialBalance(): Promise<{ balances: Record<string, number>; balanced: boolean }> {
-  const entries = ledgerLive() ? await allEntries() : [...memory.values()];
-  const balances = balancesOf(entries);
+  const balances = balancesOf(await allEntries());
   const total = Object.values(balances).reduce((s, v) => s + v, 0);
   return { balances, balanced: total === 0 };
 }
@@ -118,7 +117,67 @@ export async function escrowHeld(): Promise<number> {
   return balances[ACCOUNTS.escrow] ?? 0;
 }
 
+/** The most recent entries, newest first. For the admin reconciliation view. */
+export async function listEntries(limit = 100): Promise<LedgerEntry[]> {
+  if (!ledgerLive()) {
+    return [...memory.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
+  }
+  const { data, error } = await db()
+    .from("ledger_entries")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(fromRow);
+}
+
+export interface Reconciliation {
+  balances: Record<string, number>;
+  /** The core invariant: all account balances sum to zero. */
+  balanced: boolean;
+  escrowHeld: number; // cash currently held in the pool
+  funded: number; // total ever taken into escrow
+  paidOut: number; // total cash released to sellers
+  refunded: number; // total cash returned to buyers
+  revenue: number; // fees earned (carried as a credit; reported positive)
+  entryCount: number;
+}
+
+/**
+ * The money at a glance, derived from the ledger: what is held, what has moved,
+ * what Zafe earned, and whether the books balance. Reads all entries and
+ * reduces in memory, so it is a reconciliation/admin call, not a hot path.
+ */
+export async function reconciliation(): Promise<Reconciliation> {
+  const entries = await allEntries();
+  const balances = balancesOf(entries);
+  const legSum = (e: LedgerEntry, account: AccountId) =>
+    e.legs.filter((l) => l.account === account).reduce((s, l) => s + l.amount, 0);
+
+  let funded = 0;
+  let paidOut = 0;
+  let refunded = 0;
+  for (const e of entries) {
+    const escrowLeg = legSum(e, ACCOUNTS.escrow);
+    if (e.kind === "fund") funded += escrowLeg; // escrow goes up by the amount funded
+    else if (e.kind === "payout") paidOut += -escrowLeg; // escrow goes down by the cash out
+    else if (e.kind === "refund") refunded += -escrowLeg;
+  }
+
+  return {
+    balances,
+    balanced: Object.values(balances).reduce((s, v) => s + v, 0) === 0,
+    escrowHeld: balances[ACCOUNTS.escrow] ?? 0,
+    funded,
+    paidOut,
+    refunded,
+    revenue: -(balances[ACCOUNTS.revenue] ?? 0),
+    entryCount: entries.length,
+  };
+}
+
 async function allEntries(): Promise<LedgerEntry[]> {
+  if (!ledgerLive()) return [...memory.values()];
   const { data, error } = await db().from("ledger_entries").select("*");
   if (error) throw new Error(error.message);
   return (data ?? []).map(fromRow);
