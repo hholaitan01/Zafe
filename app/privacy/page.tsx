@@ -40,7 +40,7 @@ const sections: LegalSection[] = [
     body: [
       <>We share the minimum needed, with:
         <ul>
-          <li><b>Payment and banking partners</b> (including Wema Bank / ALAT) to fund escrow, verify accounts, and pay out.</li>
+          <li><b>Payment and banking partners</b> (which may include Wema Bank / ALAT, Paystack, or Flutterwave) to fund escrow, verify accounts, and pay out.</li>
           <li><b>Identity verification providers</b> to check your BVN/NIN and selfie.</li>
           <li><b>Infrastructure providers</b> that host our database and send our email and AI requests.</li>
           <li><b>Your counterparty</b> — the other side of a deal sees limited information needed to transact (such as a display name, verification status, and deal details), never your BVN or full bank number.</li>
@@ -106,7 +106,7 @@ export default function PrivacyPage() {
   return (
     <LegalDoc
       title="Privacy Policy"
-      updated="August 2026"
+      updated="September 2026"
       intro={
         <p>
           This policy explains what data Zafe collects, how we use it to run protected escrow,
