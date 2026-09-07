@@ -45,7 +45,10 @@ const sections: LegalSection[] = [
   {
     h: "Fees",
     body: [
-      <>Setting up a deal is free. An escrow fee applies to a deal when it completes. The fee is shown to the buyer up front, in the deal summary, before they fund. We will give reasonable notice before changing fees.</>,
+      <>Setting up a deal is free. A protected deal carries an <b>escrow fee of 2% of the deal amount, capped at ₦10,000</b>, split equally between the buyer and the seller.</>,
+      <>The buyer's half is added on top at funding, so the amount to transfer (deal amount plus the buyer's half) is shown in the deal summary before they pay. The seller's half is deducted from their payout, so the seller receives the deal amount minus their half.</>,
+      <>The fee is earned when a deal <b>completes</b>. If a deal is <b>refunded</b> without a dispute, no fee is kept and the buyer is made whole. On a <b>dispute</b>, Zafe keeps the buyer's half already paid, plus a fee on whatever the seller receives (currently 1% of the seller's amount): so a seller who wins bears the fee, a buyer who wins a full refund gets their money back less the half already paid, and a split shares it.</>,
+      <>We will give reasonable notice before changing fees.</>,
     ],
   },
   {
@@ -86,7 +89,7 @@ const sections: LegalSection[] = [
   {
     h: "Payments and third parties",
     body: [
-      <>Funding, payouts, and account checks are carried out over bank rails provided by our partners (including Wema Bank / ALAT). Your use of those rails is also subject to the partner's own terms. Bank account and identity details are verified through third-party providers.</>,
+      <>Funding, payouts, and account checks are carried out over rails provided by our payment partners (which may include Wema Bank / ALAT, Paystack, or Flutterwave). Your use of those rails is also subject to the partner's own terms. Bank account and identity details are verified through third-party providers.</>,
     ],
   },
   {
@@ -121,7 +124,7 @@ export default function TermsPage() {
   return (
     <LegalDoc
       title="Terms of Service"
-      updated="August 2026"
+      updated="September 2026"
       intro={
         <p>
           These terms are the agreement between you and Zafe when you use the app to protect a
