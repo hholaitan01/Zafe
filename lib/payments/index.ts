@@ -16,6 +16,7 @@ import { getProvider } from "./providers";
 import { payoutEntry, refundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
 import { collectionAmount, computeFee } from "./fee";
+import { beginSettlement, completeSettlement, failSettlement, settlementKey } from "./settlement";
 
 export { isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus };
 
@@ -94,10 +95,35 @@ export async function payoutSeller(
   amount = deal.item.amount,
   opts?: { chargeFee?: boolean; feeOverride?: number },
 ): Promise<TransferResult> {
+  const provider = activeProvider("payout");
+  const mode: PaymentMode = provider === "mock" ? "mock" : "live";
+  const key = settlementKey("payout", deal.id);
+
+  // Claim the operation before moving a naira. A second concurrent release, or a
+  // retry of one that already succeeded, never fires a second transfer.
+  const claim = await beginSettlement(key, { dealId: deal.id, kind: "payout" });
+  if (!claim.proceed) {
+    if (claim.reason === "succeeded") return { ok: true, ref: claim.ref, mode };
+    return { ok: false, error: "A payout for this deal is already in progress.", mode };
+  }
+
   const sellerFee = opts?.feeOverride ?? (opts?.chargeFee === false ? 0 : computeFee(amount).sellerShare);
   const net = amount - sellerFee; // what the seller actually receives
 
-  const provider = activeProvider("payout");
+  const result = await doPayout(deal, amount, net, sellerFee, provider);
+  if (result.ok) await completeSettlement(key, result.ref ?? key);
+  else await failSettlement(key, result.error ?? "payout failed");
+  return result;
+}
+
+/** The transfer itself, once the operation is claimed. Never throws. */
+async function doPayout(
+  deal: Deal,
+  amount: number,
+  net: number,
+  sellerFee: number,
+  provider: ReturnType<typeof activeProvider>,
+): Promise<TransferResult> {
   if (provider === "mock") {
     await recordSafe(payoutEntry(deal.id, amount, sellerFee));
     return { ok: true, ref: ref("mock_payout", deal.id), mode: "mock" };
@@ -134,12 +160,14 @@ export async function payoutSeller(
       destinationAccountNumber: payout.accountNumber,
       destinationBankCode: payout.bankCode,
       amount: net,
-      transactionReference: ref("payout", deal.id),
+      // Deterministic per deal: a retry reuses it so ALAT de-duplicates, and it
+      // matches the settlement claim key so the two never diverge.
+      transactionReference: `zf_payout_${deal.id}`,
       narration: `Zafe payout for ${deal.item.title}`,
       securityInfo: "", // TODO: populate once the encryption scheme is confirmed with the bank contact
     });
     await recordSafe(payoutEntry(deal.id, amount, sellerFee));
-    return { ok: true, ref: res.data?.reference ?? ref("payout", deal.id), mode: "live" };
+    return { ok: true, ref: res.data?.reference ?? `zf_payout_${deal.id}`, mode: "live" };
   } catch (e) {
     return { ok: false, error: (e as Error).message, mode: "live" };
   }
@@ -157,10 +185,34 @@ export async function refundBuyer(
   amount = deal.item.amount,
   opts?: { buyerFeeReversed?: number },
 ): Promise<TransferResult> {
+  const provider = activeProvider("payout");
+  const mode: PaymentMode = provider === "mock" ? "mock" : "live";
+  const key = settlementKey("refund", deal.id);
+
+  // Same claim as a payout: a retried or concurrent refund never pays twice.
+  const claim = await beginSettlement(key, { dealId: deal.id, kind: "refund" });
+  if (!claim.proceed) {
+    if (claim.reason === "succeeded") return { ok: true, ref: claim.ref, mode };
+    return { ok: false, error: "A refund for this deal is already in progress.", mode };
+  }
+
   const buyerFeeReversed = opts?.buyerFeeReversed ?? computeFee(deal.item.amount).buyerShare;
   const cashOut = amount + buyerFeeReversed; // principal back plus the buyer's fee back
 
-  const provider = activeProvider("payout");
+  const result = await doRefund(deal, amount, cashOut, buyerFeeReversed, provider);
+  if (result.ok) await completeSettlement(key, result.ref ?? key);
+  else await failSettlement(key, result.error ?? "refund failed");
+  return result;
+}
+
+/** The transfer itself, once the refund operation is claimed. Never throws. */
+async function doRefund(
+  deal: Deal,
+  amount: number,
+  cashOut: number,
+  buyerFeeReversed: number,
+  provider: ReturnType<typeof activeProvider>,
+): Promise<TransferResult> {
   if (provider === "mock") {
     await recordSafe(refundEntry(deal.id, amount, buyerFeeReversed));
     return { ok: true, ref: ref("mock_refund", deal.id), mode: "mock" };
@@ -190,12 +242,13 @@ export async function refundBuyer(
       destinationAccountNumber: acct.accountNumber,
       destinationBankCode: acct.bankCode,
       amount: cashOut,
-      transactionReference: ref("refund", deal.id),
+      // Deterministic per deal, matching the settlement claim key.
+      transactionReference: `zf_refund_${deal.id}`,
       narration: `Zafe refund for ${deal.item.title}`,
       securityInfo: "",
     });
     await recordSafe(refundEntry(deal.id, amount, buyerFeeReversed));
-    return { ok: true, ref: res.data?.reference ?? ref("refund", deal.id), mode: "live" };
+    return { ok: true, ref: res.data?.reference ?? `zf_refund_${deal.id}`, mode: "live" };
   } catch (e) {
     return { ok: false, error: (e as Error).message, mode: "live" };
   }

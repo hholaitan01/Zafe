@@ -37,8 +37,10 @@ async function handle(req: Request): Promise<Response> {
   const rl = rateLimit(req, "auto-release", 12, 60_000);
   if (!rl.ok) return tooManyRequests(rl.retryAfterSeconds);
   if (!authorized(req)) return Response.json({ error: "unauthorized" }, { status: 401 });
-  const released = await runAutoReleases();
-  return Response.json({ released });
+  const result = await runAutoReleases();
+  // `released` stays the headline count for the existing client helper; the
+  // operational counters (eligible/skipped/capped/enabled) ride alongside.
+  return Response.json(result);
 }
 
 export const GET = handle;

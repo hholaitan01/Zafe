@@ -283,25 +283,61 @@ export async function refundDeal(id: string, amount?: number): Promise<ReleaseRe
   return { ok: true, deal: updated ?? undefined };
 }
 
+export interface AutoReleaseResult {
+  released: number; // deals paid out and completed this sweep
+  eligible: number; // deals whose timer had run out
+  skipped: number; // eligible deals a payout failed on (left shipped for the next sweep)
+  capped: boolean; // true when the per-run cap stopped the sweep short
+  enabled: boolean; // false when the kill switch is off (nothing was released)
+}
+
+/** Auto-release is off when explicitly disabled — an ops kill switch for incidents. */
+function autoReleaseEnabled(): boolean {
+  return (process.env.ZAFE_AUTO_RELEASE_ENABLED ?? "true").toLowerCase() !== "false";
+}
+
+/** Most deals one sweep will release, so a backlog or bug can't fire unbounded payouts. */
+function autoReleaseMaxPerRun(): number {
+  const n = Number(process.env.ZAFE_AUTO_RELEASE_MAX_PER_RUN ?? "50");
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 50;
+}
+
 /**
  * Auto-release fairly: if the buyer neither confirms nor disputes before the
  * timer runs out, the money releases to the seller so it can't be frozen forever.
- * Returns the number of deals released.
+ *
+ * Operational controls (audit #20): a kill switch (ZAFE_AUTO_RELEASE_ENABLED)
+ * halts all automatic payouts during an incident, and a per-run cap
+ * (ZAFE_AUTO_RELEASE_MAX_PER_RUN) bounds how much one sweep can move. The
+ * settlement claim inside payoutSeller means a deal already paid is never paid
+ * twice, even if a prior sweep crashed after the transfer.
  */
-export async function runAutoReleases(): Promise<number> {
+export async function runAutoReleases(): Promise<AutoReleaseResult> {
+  if (!autoReleaseEnabled()) return { released: 0, eligible: 0, skipped: 0, capped: false, enabled: false };
+
   const now = Date.now();
+  const cap = autoReleaseMaxPerRun();
   const deals = await backend().list();
+  const due = deals.filter((d) => d.status === "shipped" && d.autoReleaseAt && new Date(d.autoReleaseAt).getTime() <= now);
+
   let released = 0;
-  for (const deal of deals) {
-    if (deal.status === "shipped" && deal.autoReleaseAt && new Date(deal.autoReleaseAt).getTime() <= now) {
-      const payout = await payoutSeller(deal);
-      if (!payout.ok) continue; // leave it shipped; the next sweep retries
-      const ev = event("completed", `Auto-released — the buyer didn't confirm or dispute in time; seller paid${payout.mode === "mock" ? " (demo)" : ""}.`);
-      await backend().patch(deal.id, { status: "completed", payoutRef: payout.ref, timeline: [...deal.timeline, ev], updatedAt: ev.at });
-      released += 1;
+  let skipped = 0;
+  let capped = false;
+  for (const deal of due) {
+    if (released >= cap) {
+      capped = true;
+      break; // the rest wait for the next sweep
     }
+    const payout = await payoutSeller(deal);
+    if (!payout.ok) {
+      skipped += 1;
+      continue; // leave it shipped; the next sweep retries
+    }
+    const ev = event("completed", `Auto-released — the buyer didn't confirm or dispute in time; seller paid${payout.mode === "mock" ? " (demo)" : ""}.`);
+    await backend().patch(deal.id, { status: "completed", payoutRef: payout.ref, timeline: [...deal.timeline, ev], updatedAt: ev.at });
+    released += 1;
   }
-  return released;
+  return { released, eligible: due.length, skipped, capped, enabled: true };
 }
 
 /** Human-readable summary of a decision, for the timeline. */
