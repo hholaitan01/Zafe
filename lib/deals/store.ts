@@ -12,6 +12,8 @@ import { getTrustScore } from "@/lib/ai/trust-score";
 import type { DisputeDecision, DisputeResult } from "@/lib/ai/types";
 import { isSeedFlagged, type FraudFlag } from "@/lib/fraud";
 import { payoutSeller, refundBuyer } from "@/lib/payments";
+import { fundEntry } from "@/lib/ledger/entries";
+import { recordSafe } from "@/lib/ledger/store";
 import { getSeller } from "@/lib/sellers/store";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
@@ -161,7 +163,10 @@ export async function setDealStatus(id: string, status: DealStatus, note?: strin
   const deal = await backend().get(id);
   if (!deal) return null;
   const ev = event(status, note);
-  return backend().patch(id, { status, timeline: [...deal.timeline, ev], updatedAt: ev.at });
+  const updated = await backend().patch(id, { status, timeline: [...deal.timeline, ev], updatedAt: ev.at });
+  // Money landed in escrow: post it to the ledger (best-effort, idempotent by ref).
+  if (status === "funded") await recordSafe(fundEntry(deal.id, deal.item.amount));
+  return updated;
 }
 
 /**
