@@ -7,12 +7,12 @@
    twice. This keeps a record of event ids we have already acted on and refuses
    the second attempt.
 
-   The default store is in-memory, which is correct for a single instance and
-   for demo/dev. In production behind multiple instances this MUST be backed by
-   a shared, durable store (a `processed_events` table keyed by `event_id`, with
-   a unique constraint) so the guarantee holds across instances and restarts —
-   swap `setStore` for that adapter. The interface is deliberately tiny so the
-   swap is a few lines.
+   The store is chosen by config, like the rest of the backend. When Supabase is
+   set, the durable `processed_events` store (supabase-idempotency.ts) is used
+   automatically, so the guarantee holds across instances and restarts. With no
+   Supabase, the in-memory store is the fallback, which is correct for a single
+   instance and for demo/dev. `setStore` still lets a caller inject any adapter
+   (e.g. a test double). The interface is deliberately tiny.
    ========================================================================== */
 
 export interface IdempotencyStore {
@@ -38,17 +38,37 @@ class MemoryStore implements IdempotencyStore {
   }
 }
 
-let store: IdempotencyStore = new MemoryStore();
+let store: IdempotencyStore | null = null;
+let resolving: Promise<IdempotencyStore> | null = null;
 
-/** Swap in a durable, shared store in production (e.g. Supabase-backed). */
+/**
+ * Pick the store once: the durable Supabase store when it is configured,
+ * otherwise the in-memory fallback. Resolved lazily (and memoised) so the
+ * Supabase module — and its client — load only when actually used, and never
+ * in the browser bundle.
+ */
+function resolveStore(): Promise<IdempotencyStore> {
+  if (store) return Promise.resolve(store);
+  if (!resolving) {
+    resolving = (async () => {
+      const mod = await import("./supabase-idempotency");
+      store = mod.supabaseIdempotencyConfigured() ? mod.supabaseIdempotencyStore : new MemoryStore();
+      return store;
+    })();
+  }
+  return resolving;
+}
+
+/** Override the store with any adapter (e.g. a durable store or a test double). */
 export function setStore(next: IdempotencyStore): void {
   store = next;
+  resolving = Promise.resolve(next);
 }
 
 /**
  * Returns true the first time `key` is claimed, false on every repeat.
  * Callers act only when this returns true.
  */
-export function claimOnce(key: string): Promise<boolean> {
-  return store.claim(key);
+export async function claimOnce(key: string): Promise<boolean> {
+  return (await resolveStore()).claim(key);
 }
