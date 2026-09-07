@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/app/_lib/AppShell";
 import { createEscrowAccount, getCurrentDealId, getDeal, getSellerStanding, naira } from "@/lib/client";
 import type { CollectionAccount } from "@/lib/payments";
+import { computeFee } from "@/lib/payments/fee";
 import type { Deal } from "@/lib/deals/types";
 import type { SellerStanding, StandingTone } from "@/lib/seller/standing";
 
@@ -104,7 +105,9 @@ export default function FundPage() {
     navigator.clipboard?.writeText(n).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1400); }).catch(() => {});
   }
 
-  const amount = deal ? naira(deal.item.amount) : "—";
+  const buyerFee = deal ? computeFee(deal.item.amount).buyerShare : 0;
+  const totalDue = acct?.amountDue ?? (deal ? deal.item.amount + buyerFee : 0);
+  const amount = deal ? naira(totalDue) : "—";
   const banner = deal ? trustBanner(deal) : null;
   const payLabel = busy ? "Working…" : awaiting ? "I've transferred, check status" : deal ? `Pay ${amount} into escrow` : "Pay into escrow";
 
@@ -141,7 +144,7 @@ export default function FundPage() {
                 <div className="tf-eyebrow">Payment method</div>
                 <div className="fn-method is-on">
                   <span className="fn-method-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M4 10h16M5 10 12 4l7 6M6 10v11M18 10v11M10 10v11M14 10v11" /></svg></span>
-                  <div className="fn-method-txt"><div className="fn-method-title">Bank transfer</div><div className="fn-method-sub">Pay to a dedicated escrow account. No fee.</div></div>
+                  <div className="fn-method-txt"><div className="fn-method-title">Bank transfer</div><div className="fn-method-sub">Pay to a dedicated escrow account.</div></div>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.2"><circle cx="12" cy="12" r="10" /><path d="M8 12l2.5 2.5L16 9" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </div>
                 <p className="fn-method-note">On &ldquo;Pay&rdquo;, we open a one-time escrow account for this deal. Your money is held safe and only released when you confirm delivery.</p>
@@ -177,8 +180,10 @@ export default function FundPage() {
         {/* order summary */}
         <aside className="fn-summary tf-card">
           <div className="tf-eyebrow">Pay into escrow</div>
-          <div className="fn-sum-amt tf-mono"><span>₦</span>{deal ? naira(deal.item.amount).replace("₦", "") : "—"}</div>
+          <div className="fn-sum-amt tf-mono"><span>₦</span>{deal ? naira(totalDue).replace("₦", "") : "—"}</div>
           <div className="fn-sum-rule" />
+          <div className="fn-sum-row"><span>Item price</span><span>{deal ? naira(deal.item.amount) : "—"}</span></div>
+          <div className="fn-sum-row"><span>Escrow fee (your half)</span><span>{deal ? naira(buyerFee) : "—"}</span></div>
           <div className="fn-sum-row"><span>Item</span><span>{deal?.item.title || "—"}</span></div>
           <div className="fn-sum-row"><span>Seller</span><span>{deal?.seller?.name || "—"}</span></div>
           <div className="fn-sum-row fn-sum-last"><span>Released</span><span>On your confirm</span></div>

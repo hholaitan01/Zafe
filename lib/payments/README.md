@@ -35,6 +35,26 @@ Two guarantees the seam enforces:
 
 `npm run check:payments` exercises the signature and idempotency logic.
 
+## Fee (`fee.ts`)
+
+The escrow fee is **2% of the deal amount, capped at ₦10,000, split 50/50**.
+`fee.ts` is the single source of truth (pure math, safe to import in the
+browser, so the fund screen shows the buyer the true total):
+
+- The **buyer** pays their half on top at funding: they transfer
+  `amount + buyerShare` (`collectionAmount()`), which is what
+  `createCollectionAccount` charges and returns as `amountDue`.
+- The **seller's** half is deducted at payout: they receive `amount − sellerShare`
+  (`sellerNet()`).
+- Zafe earns the fee **only on a completed deal**. On a full refund or a dispute
+  split, no fee is kept — the buyer's half is returned and the seller pays none.
+
+Rate and cap are configuration: `NEXT_PUBLIC_ZAFE_FEE_BPS` (default `200`) and
+`NEXT_PUBLIC_ZAFE_FEE_CAP_NAIRA` (default `10000`, `0` disables the cap). Every
+move posts to the internal ledger, so the fee shows up as revenue and the books
+still balance. `npm run check:fees` exercises the math and full-lifecycle
+conservation (complete, refund, split).
+
 ## Live vs. mock
 
 Collection (ALATPay) and payout (ALAT Wallet) are separate ALAT products with

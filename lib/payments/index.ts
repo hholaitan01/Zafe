@@ -15,6 +15,7 @@ import { ALAT_ESCROW_POOL_ACCOUNT, activeProvider } from "./config";
 import { getProvider } from "./providers";
 import { payoutEntry, refundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
+import { collectionAmount, computeFee } from "./fee";
 
 export { isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus };
 
@@ -26,6 +27,8 @@ export interface CollectionAccount {
   expiresAt: string;
   alatTransactionId?: string;
   mode: PaymentMode;
+  /** What the buyer must transfer: the deal amount plus their half of the fee. */
+  amountDue: number;
 }
 
 export interface TransferResult {
@@ -45,24 +48,26 @@ function ref(prefix: string, dealId: string): string {
 export async function createCollectionAccount(deal: Deal): Promise<CollectionAccount> {
   const expiresAt = new Date(Date.now() + TEN_MIN_MS).toISOString();
   const provider = activeProvider("collection");
+  // The buyer pays the deal amount plus their half of the fee.
+  const amountDue = collectionAmount(deal.item.amount);
 
   if (provider === "mock") {
     // Mock: a believable NUBAN so the payment screen can show something on stage.
-    return { accountNumber: "0" + String(Math.floor(1e9 + Math.random() * 9e9)), bankName: "Wema Bank (demo)", expiresAt, mode: "mock" };
+    return { accountNumber: "0" + String(Math.floor(1e9 + Math.random() * 9e9)), bankName: "Wema Bank (demo)", expiresAt, mode: "mock", amountDue };
   }
 
   if (provider === "paystack" || provider === "flutterwave") {
     const acct = await getProvider(provider).createCollection({
-      amountNaira: deal.item.amount,
+      amountNaira: amountDue,
       reference: deal.reference,
       customerEmail: deal.buyerEmail || "buyer@zafe.ng",
       customerName: deal.buyerEmail?.split("@")[0] || "Zafe buyer",
     });
-    return { accountNumber: acct.accountNumber, bankName: acct.bankName, expiresAt: acct.expiresAt, alatTransactionId: acct.providerRef, mode: "live" };
+    return { accountNumber: acct.accountNumber, bankName: acct.bankName, expiresAt: acct.expiresAt, alatTransactionId: acct.providerRef, mode: "live", amountDue };
   }
 
   const res = await generateVirtualAccount({
-    amount: deal.item.amount,
+    amount: amountDue,
     transactionRef: deal.reference,
     buyerEmail: deal.buyerEmail || "buyer@zafe.ng",
     buyerPhone: "",
@@ -74,14 +79,27 @@ export async function createCollectionAccount(deal: Deal): Promise<CollectionAcc
     expiresAt,
     alatTransactionId: res.data?.transactionId,
     mode: "live",
+    amountDue,
   };
 }
 
-/** Release the escrowed money to the seller's payout account. */
-export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promise<TransferResult> {
+/**
+ * Release the escrowed money to the seller's payout account, minus the seller's
+ * half of the fee. `amount` is the principal being released (default: the whole
+ * deal). Pass `chargeFee: false` for a move that carries no fee — a dispute
+ * split remainder — so the seller receives the full principal.
+ */
+export async function payoutSeller(
+  deal: Deal,
+  amount = deal.item.amount,
+  opts?: { chargeFee?: boolean },
+): Promise<TransferResult> {
+  const sellerFee = opts?.chargeFee === false ? 0 : computeFee(amount).sellerShare;
+  const net = amount - sellerFee; // what the seller actually receives
+
   const provider = activeProvider("payout");
   if (provider === "mock") {
-    await recordSafe(payoutEntry(deal.id, amount));
+    await recordSafe(payoutEntry(deal.id, amount, sellerFee));
     return { ok: true, ref: ref("mock_payout", deal.id), mode: "mock" };
   }
 
@@ -94,14 +112,14 @@ export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promi
     // Deterministic reference: a retry reuses it, so the provider de-duplicates
     // instead of sending the seller a second payout.
     const r = await getProvider(provider).transfer({
-      amountNaira: amount,
+      amountNaira: net,
       bankCode: payout.bankCode,
       accountNumber: payout.accountNumber,
       accountName: payout.accountName,
       reference: `zf_payout_${deal.id}`,
       narration: `Zafe payout for ${deal.item.title}`,
     });
-    if (r.ok) await recordSafe(payoutEntry(deal.id, amount));
+    if (r.ok) await recordSafe(payoutEntry(deal.id, amount, sellerFee));
     return { ok: r.ok, ref: r.ref, error: r.error, mode: "live" };
   }
 
@@ -115,23 +133,36 @@ export async function payoutSeller(deal: Deal, amount = deal.item.amount): Promi
       sourceAccountNumber: ALAT_ESCROW_POOL_ACCOUNT,
       destinationAccountNumber: payout.accountNumber,
       destinationBankCode: payout.bankCode,
-      amount,
+      amount: net,
       transactionReference: ref("payout", deal.id),
       narration: `Zafe payout for ${deal.item.title}`,
       securityInfo: "", // TODO: populate once the encryption scheme is confirmed with the bank contact
     });
-    await recordSafe(payoutEntry(deal.id, amount));
+    await recordSafe(payoutEntry(deal.id, amount, sellerFee));
     return { ok: true, ref: res.data?.reference ?? ref("payout", deal.id), mode: "live" };
   } catch (e) {
     return { ok: false, error: (e as Error).message, mode: "live" };
   }
 }
 
-/** Refund the escrowed money (full or partial) to the buyer's account. */
-export async function refundBuyer(deal: Deal, amount = deal.item.amount): Promise<TransferResult> {
+/**
+ * Refund the escrowed money (full or partial) to the buyer's account. Zafe keeps
+ * no fee on a refund, so the buyer's half of the fee is returned too: the buyer
+ * receives `amount + buyerFeeReversed`. `amount` is the principal refunded
+ * (default: the whole deal); `buyerFeeReversed` defaults to the buyer's fee half
+ * for the deal, which is what they paid on top at funding.
+ */
+export async function refundBuyer(
+  deal: Deal,
+  amount = deal.item.amount,
+  opts?: { buyerFeeReversed?: number },
+): Promise<TransferResult> {
+  const buyerFeeReversed = opts?.buyerFeeReversed ?? computeFee(deal.item.amount).buyerShare;
+  const cashOut = amount + buyerFeeReversed; // principal back plus the buyer's fee back
+
   const provider = activeProvider("payout");
   if (provider === "mock") {
-    await recordSafe(refundEntry(deal.id, amount));
+    await recordSafe(refundEntry(deal.id, amount, buyerFeeReversed));
     return { ok: true, ref: ref("mock_refund", deal.id), mode: "mock" };
   }
 
@@ -142,14 +173,14 @@ export async function refundBuyer(deal: Deal, amount = deal.item.amount): Promis
 
   if (provider === "paystack" || provider === "flutterwave") {
     const r = await getProvider(provider).transfer({
-      amountNaira: amount,
+      amountNaira: cashOut,
       bankCode: acct.bankCode,
       accountNumber: acct.accountNumber,
       accountName: acct.accountName,
       reference: `zf_refund_${deal.id}`,
       narration: `Zafe refund for ${deal.item.title}`,
     });
-    if (r.ok) await recordSafe(refundEntry(deal.id, amount));
+    if (r.ok) await recordSafe(refundEntry(deal.id, amount, buyerFeeReversed));
     return { ok: r.ok, ref: r.ref, error: r.error, mode: "live" };
   }
 
@@ -158,12 +189,12 @@ export async function refundBuyer(deal: Deal, amount = deal.item.amount): Promis
       sourceAccountNumber: ALAT_ESCROW_POOL_ACCOUNT,
       destinationAccountNumber: acct.accountNumber,
       destinationBankCode: acct.bankCode,
-      amount,
+      amount: cashOut,
       transactionReference: ref("refund", deal.id),
       narration: `Zafe refund for ${deal.item.title}`,
       securityInfo: "",
     });
-    await recordSafe(refundEntry(deal.id, amount));
+    await recordSafe(refundEntry(deal.id, amount, buyerFeeReversed));
     return { ok: true, ref: res.data?.reference ?? ref("refund", deal.id), mode: "live" };
   } catch (e) {
     return { ok: false, error: (e as Error).message, mode: "live" };

@@ -14,6 +14,7 @@ import { isSeedFlagged, type FraudFlag } from "@/lib/fraud";
 import { payoutSeller, refundBuyer } from "@/lib/payments";
 import { fundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
+import { computeFee } from "@/lib/payments/fee";
 import { getSeller } from "@/lib/sellers/store";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
@@ -165,7 +166,7 @@ export async function setDealStatus(id: string, status: DealStatus, note?: strin
   const ev = event(status, note);
   const updated = await backend().patch(id, { status, timeline: [...deal.timeline, ev], updatedAt: ev.at });
   // Money landed in escrow: post it to the ledger (best-effort, idempotent by ref).
-  if (status === "funded") await recordSafe(fundEntry(deal.id, deal.item.amount));
+  if (status === "funded") await recordSafe(fundEntry(deal.id, deal.item.amount, computeFee(deal.item.amount).buyerShare));
   return updated;
 }
 
@@ -268,7 +269,9 @@ export async function refundDeal(id: string, amount?: number): Promise<ReleaseRe
   // Buyer is protected; pay the seller their remainder. If that fails, still
   // settle (buyer already refunded) but flag the remainder as pending.
   if (isPartial && deal.item.amount - refundAmt > 0) {
-    const p = await payoutSeller(deal, deal.item.amount - refundAmt);
+    // A split carries no fee (the deal didn't complete cleanly), so the seller
+    // gets the full remainder and the buyer's fee was returned in the refund.
+    const p = await payoutSeller(deal, deal.item.amount - refundAmt, { chargeFee: false });
     if (!p.ok) timeline.push(event(status, "The seller's remainder payout is pending and will retry."));
   }
 
@@ -341,7 +344,8 @@ async function settleByDecision(deal: Deal, decision: DisputeDecision, splitBuye
     const notes: string[] = [];
     const remainder = deal.item.amount - buyerShare;
     if (remainder > 0) {
-      const p = await payoutSeller(deal, remainder);
+      // A split carries no fee, so the seller receives the full remainder.
+      const p = await payoutSeller(deal, remainder, { chargeFee: false });
       if (!p.ok) notes.push("Buyer's share refunded; the seller's remainder payout is pending and will retry.");
     }
     return { ok: true, status: "resolved", payoutRef: r.ref, partialRefundAmount: buyerShare, notes };
