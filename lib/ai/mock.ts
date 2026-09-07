@@ -104,6 +104,17 @@ function sellerAdjustment(seller?: SellerProfile): { delta: number; reasons: Tru
     delta -= 6;
     reasons.push({ label: "A past dispute", detail: `${disputes} past dispute on record.`, weight: "neutral" });
   }
+  // The RATE of disputes matters more than the count: a seller who disputes 1 in
+  // 5 deals is riskier than the raw number suggests. Penalise a high ratio on
+  // top of the count above.
+  if (deals > 0 && disputes > 0) {
+    const rate = disputes / deals;
+    if (rate >= 0.2) {
+      delta -= 12;
+      flags.push(`${Math.round(rate * 100)}% of this seller's deals ended in a dispute`);
+      reasons.push({ label: "High dispute rate", detail: `${disputes} disputes across ${deals} deals (${Math.round(rate * 100)}%) is high.`, weight: "negative" });
+    }
+  }
 
   const age = seller.accountAgeDays ?? 0;
   if (age >= 180) {
@@ -115,13 +126,18 @@ function sellerAdjustment(seller?: SellerProfile): { delta: number; reasons: Tru
     reasons.push({ label: "Very new account", detail: "This account was created only days ago.", weight: "negative" });
   }
 
-  if (typeof seller.rating === "number") {
+  // Rating only counts once a seller has ratings (rating 0 means "none yet",
+  // handled by the little-history signal, not treated as a terrible score).
+  if (typeof seller.rating === "number" && seller.rating > 0) {
     if (seller.rating >= 4.5) {
       delta += 6;
       reasons.push({ label: "Highly rated", detail: `Buyers rate this seller ${seller.rating.toFixed(1)}/5.`, weight: "positive" });
     } else if (seller.rating < 3) {
       delta -= 8;
       reasons.push({ label: "Low rating", detail: `Buyers rate this seller ${seller.rating.toFixed(1)}/5.`, weight: "negative" });
+    } else if (seller.rating < 4) {
+      delta -= 5;
+      reasons.push({ label: "Middling rating", detail: `Buyers rate this seller ${seller.rating.toFixed(1)}/5 — not a strong signal.`, weight: "neutral" });
     }
   }
 
