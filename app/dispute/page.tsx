@@ -47,6 +47,8 @@ export default function DisputePage() {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("item-not-as-described");
   const [statement, setStatement] = useState("");
+  const [evidence, setEvidence] = useState<string[]>([]);
+  const [evInput, setEvInput] = useState("");
   const [reco, setReco] = useState<Reco | null>(null);
   const [busy, setBusy] = useState(false);
   const [acting, setActing] = useState<"accept" | "escalate" | null>(null);
@@ -96,11 +98,25 @@ export default function DisputePage() {
 
   // When the selection changes, reset the case to the selected deal's reality.
   useEffect(() => {
-    if (!selected) { setReco(null); setStatement(""); return; }
+    if (!selected) { setReco(null); setStatement(""); setEvidence([]); setEvInput(""); return; }
     const dp = selected.dispute;
     setStatement(dp?.buyer?.claim || "");
+    setEvidence(dp?.buyer?.evidence ?? []);
+    setEvInput("");
     setReco(dp?.resolution ? recoFrom(selected.item.amount, dp.resolution) : null);
   }, [selId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function addEvidence() {
+    const v = evInput.trim();
+    if (!v || evidence.includes(v)) { setEvInput(""); return; }
+    setEvidence((list) => [...list, v]);
+    setEvInput("");
+    setReco(null);
+  }
+  function removeEvidence(i: number) {
+    setEvidence((list) => list.filter((_, j) => j !== i));
+    setReco(null);
+  }
 
   // File the dispute: the AI SUGGESTS a resolution (no money moves yet) and the
   // suggestion is recorded on the deal for both sides to accept or escalate.
@@ -112,7 +128,7 @@ export default function DisputePage() {
       const reasonLabel = REASONS.find((r) => r.v === reason)?.label;
       const { deal, resolution } = await disputeDeal(selected.id, {
         reason: reasonLabel,
-        buyer: { claim: statement, evidence: ["Photo", "Chat log"] },
+        buyer: { claim: statement, evidence },
         seller: { claim: sellerClaim, evidence: selected.dispute?.seller?.evidence },
       });
       patchDeal(deal);
@@ -228,11 +244,35 @@ export default function DisputePage() {
                   <label className="dp-label">What happened</label>
                   <textarea value={statement} onChange={(e) => { setStatement(e.target.value); setReco(null); }} placeholder="Describe what went wrong with this order." className="dp-textarea" />
 
-                  <label className="dp-label">Attach evidence</label>
-                  <div className="dp-drop">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" /></svg>
-                    <div className="dp-drop-t">Drop screenshots, delivery photos, or invoices here</div>
-                    <div className="dp-drop-s">PNG / JPG / PDF up to 8MB each</div>
+                  <label className="dp-label">Evidence</label>
+                  <p className="dp-ev-hint">Add each piece of proof: a tracking number, the handover code, or a link to a photo or video. The AI weighs these alongside your statement.</p>
+                  {evidence.length > 0 && (
+                    <ul className="dp-ev-list">
+                      {evidence.map((e, i) => {
+                        const isLink = /^https?:\/\//i.test(e);
+                        return (
+                          <li className="dp-ev-item" key={`${e}-${i}`}>
+                            {isLink
+                              ? <a href={e} target="_blank" rel="noopener noreferrer" className="dp-ev-text dp-ev-link">{e}</a>
+                              : <span className="dp-ev-text">{e}</span>}
+                            <button type="button" className="dp-ev-x" aria-label="Remove evidence" onClick={() => removeEvidence(i)}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <div className="dp-ev-add">
+                    <input
+                      value={evInput}
+                      onChange={(e) => setEvInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEvidence(); } }}
+                      placeholder="e.g. Tracking NG12345, or https://…/unboxing.mp4"
+                      className="dp-input dp-ev-input"
+                      disabled={underReview || settled}
+                    />
+                    <button type="button" className="dp-ev-btn" onClick={addEvidence} disabled={!evInput.trim() || underReview || settled}>Add</button>
                   </div>
 
                   <button className="tf-btn tf-btn--primary dp-analyze" disabled={busy || !statement.trim() || underReview || settled} onClick={() => void analyze()}>
@@ -362,9 +402,18 @@ const css = `
 .dp-caret{ position:absolute; right:14px; top:50%; transform:translateY(-25%); pointer-events:none }
 .dp-textarea{ margin-top:7px; width:100%; box-sizing:border-box; border-radius:12px; background:var(--bg); border:1px solid var(--line); padding:13px; min-height:120px; font-size:14px; line-height:1.55; color:var(--ink); outline:none; resize:vertical; font-family:inherit; transition:border-color .16s var(--ease) }
 .dp-textarea:focus{ border-color:var(--safe) }
-.dp-drop{ margin-top:7px; border:1.5px dashed #CBD5E1; border-radius:12px; padding:20px 16px; text-align:center; background:var(--bg) }
-.dp-drop-t{ font-size:13px; color:var(--muted); margin-top:7px }
-.dp-drop-s{ font-size:12px; color:var(--faint); margin-top:4px }
+.dp-ev-hint{ margin:7px 0 0; font-size:12px; color:var(--faint); line-height:1.5 }
+.dp-ev-list{ list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:7px }
+.dp-ev-item{ display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:9px 11px }
+.dp-ev-text{ flex:1; min-width:0; font-size:13px; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.dp-ev-link{ color:var(--safe); font-weight:600; text-decoration:none } .dp-ev-link:hover{ text-decoration:underline }
+.dp-ev-x{ flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border:none; border-radius:7px; background:none; color:var(--faint); cursor:pointer; transition:background .14s var(--ease), color .14s var(--ease) }
+.dp-ev-x:hover{ background:#FEE2E2; color:#B91C1C }
+.dp-ev-add{ margin-top:10px; display:flex; gap:8px }
+.dp-ev-input{ margin-top:0; flex:1; height:46px }
+.dp-ev-btn{ flex-shrink:0; height:46px; padding:0 16px; border-radius:12px; border:1px solid var(--line); background:#fff; font-family:inherit; font-size:14px; font-weight:700; color:var(--ink-2); cursor:pointer; transition:border-color .16s var(--ease), color .16s var(--ease) }
+.dp-ev-btn:hover:not(:disabled){ border-color:var(--safe); color:var(--safe) }
+.dp-ev-btn:disabled{ opacity:.5; cursor:not-allowed }
 .dp-analyze{ margin-top:16px; width:100%; height:50px }
 .dp-analyze:disabled{ opacity:.5; cursor:not-allowed }
 .dp-quote{ background:var(--bg); border:1px solid var(--line-2); border-radius:12px; padding:13px 14px; font-size:13px; line-height:1.6; color:var(--muted) } .dp-quote b{ color:var(--ink) }
