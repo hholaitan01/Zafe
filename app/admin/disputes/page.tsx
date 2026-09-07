@@ -21,6 +21,31 @@ const SUGGESTION: Record<DisputeDecision, string> = {
   split: "Split",
 };
 
+// Uploaded-file evidence is stored as "zafe-file:<name>|<path>" (lib/deals/evidence.ts).
+const FILE_MARKER = "zafe-file:";
+function parseFile(entry: string): { name: string; path: string } | null {
+  if (!entry.startsWith(FILE_MARKER)) return null;
+  const rest = entry.slice(FILE_MARKER.length);
+  const bar = rest.indexOf("|");
+  return bar < 0 ? null : { name: rest.slice(0, bar), path: rest.slice(bar + 1) };
+}
+
+/** The evidence a party submitted, as viewable links (files via the access-checked route). */
+function EvidenceList({ dealId, items }: { dealId: string; items?: string[] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <ul className="ad-ev">
+      {items.map((e, i) => {
+        const file = parseFile(e);
+        const isLink = /^https?:\/\//i.test(e);
+        if (file) return <li key={i}><a href={`/api/deals/${dealId}/evidence?path=${encodeURIComponent(file.path)}`} target="_blank" rel="noopener noreferrer" className="ad-ev-link">{file.name}</a></li>;
+        if (isLink) return <li key={i}><a href={e} target="_blank" rel="noopener noreferrer" className="ad-ev-link">{e}</a></li>;
+        return <li key={i} className="ad-ev-text">{e}</li>;
+      })}
+    </ul>
+  );
+}
+
 function ReviewCard({ deal, onResolved }: { deal: Deal; onResolved: (id: string) => void }) {
   const dp = deal.dispute;
   const suggested = dp?.resolution;
@@ -61,11 +86,13 @@ function ReviewCard({ deal, onResolved }: { deal: Deal; onResolved: (id: string)
         <div className="ad-party">
           <div className="ad-party-h">Buyer{dp?.buyerAccepted ? " · accepted AI" : ""}</div>
           <p>{dp?.buyer?.claim || "No statement provided."}</p>
+          <EvidenceList dealId={deal.id} items={dp?.buyer?.evidence} />
           <div className="ad-contact">{deal.buyerEmail || "buyer"}</div>
         </div>
         <div className="ad-party">
           <div className="ad-party-h">Seller{dp?.sellerAccepted ? " · accepted AI" : ""}</div>
           <p>{dp?.seller?.claim || "No response provided."}</p>
+          <EvidenceList dealId={deal.id} items={dp?.seller?.evidence} />
           <div className="ad-contact">{deal.seller?.name || deal.seller?.contact || "seller"}</div>
         </div>
       </div>
@@ -188,6 +215,10 @@ const css = `
 .ad-party{ background:var(--bg); border:1px solid var(--border); border-radius:13px; padding:13px 14px }
 .ad-party-h{ font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-2) }
 .ad-party p{ margin-top:6px; font-size:13.5px; color:var(--ink-2); line-height:1.5 }
+.ad-ev{ list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:4px }
+.ad-ev li{ font-size:12.5px; line-height:1.45 }
+.ad-ev-link{ color:var(--safe); font-weight:600; word-break:break-all } .ad-ev-link:hover{ text-decoration:underline }
+.ad-ev-text{ color:var(--ink-2) }
 .ad-contact{ margin-top:7px; font-size:12px; color:var(--faint); font-variant-numeric:tabular-nums }
 
 .ad-ai{ margin-top:14px; display:flex; gap:10px; align-items:flex-start; background:#EDE9FE; border:1px solid #DDD6FE; border-radius:12px; padding:12px 14px }

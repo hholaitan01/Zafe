@@ -16,7 +16,7 @@ import AppShell from "@/app/_lib/AppShell";
 import { Skeleton, Spinner } from "@/app/_lib/States";
 import { getCurrentUser } from "@/lib/auth";
 import { toast } from "@/app/_lib/Toast";
-import { acceptDisputeResolution, disputeDeal, escalateDispute, getCurrentDealId, getMyReputation, listMyDeals, listMySales, naira } from "@/lib/client";
+import { acceptDisputeResolution, disputeDeal, escalateDispute, getCurrentDealId, getMyReputation, listMyDeals, listMySales, naira, uploadDisputeEvidence } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 import type { DisputeResult } from "@/lib/ai/types";
 
@@ -32,6 +32,17 @@ const STATUS: Record<DealStatus, string> = {
   created: "Awaiting payment", funded: "Funded", shipped: "Delivered", completed: "Released",
   disputed: "In dispute", under_review: "Under review", refunded: "Refunded", resolved: "Resolved",
 };
+
+// Evidence entries that point at an uploaded file are stored as
+// "zafe-file:<name>|<storage path>" (see lib/deals/evidence.ts).
+const FILE_MARKER = "zafe-file:";
+function parseFile(entry: string): { name: string; path: string } | null {
+  if (!entry.startsWith(FILE_MARKER)) return null;
+  const rest = entry.slice(FILE_MARKER.length);
+  const bar = rest.indexOf("|");
+  if (bar < 0) return null;
+  return { name: rest.slice(0, bar), path: rest.slice(bar + 1) };
+}
 
 interface Reco { label: string; toBuyer: string; toSeller: string; rationale: string }
 
@@ -49,6 +60,8 @@ export default function DisputePage() {
   const [statement, setStatement] = useState("");
   const [evidence, setEvidence] = useState<string[]>([]);
   const [evInput, setEvInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [reco, setReco] = useState<Reco | null>(null);
   const [busy, setBusy] = useState(false);
   const [acting, setActing] = useState<"accept" | "escalate" | null>(null);
@@ -116,6 +129,21 @@ export default function DisputePage() {
   function removeEvidence(i: number) {
     setEvidence((list) => list.filter((_, j) => j !== i));
     setReco(null);
+  }
+  async function uploadFile(file: File | undefined) {
+    if (!file || !selected || uploading) return;
+    setUploading(true);
+    try {
+      const { token } = await uploadDisputeEvidence(selected.id, file);
+      setEvidence((list) => (list.includes(token) ? list : [...list, token]));
+      setReco(null);
+    } catch (e) {
+      // Storage may not be set up yet — the server says so, so fall back to links.
+      toast.error((e as Error).message || "Couldn't upload the file. You can paste a link instead.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
   }
 
   // File the dispute: the AI SUGGESTS a resolution (no money moves yet) and the
@@ -245,16 +273,24 @@ export default function DisputePage() {
                   <textarea value={statement} onChange={(e) => { setStatement(e.target.value); setReco(null); }} placeholder="Describe what went wrong with this order." className="dp-textarea" />
 
                   <label className="dp-label">Evidence</label>
-                  <p className="dp-ev-hint">Add each piece of proof: a tracking number, the handover code, or a link to a photo or video. The AI weighs these alongside your statement.</p>
+                  <p className="dp-ev-hint">Add each piece of proof: upload a photo or PDF, or add a tracking number, the handover code, or a link. The AI and any reviewer weigh these alongside your statement.</p>
                   {evidence.length > 0 && (
                     <ul className="dp-ev-list">
                       {evidence.map((e, i) => {
+                        const file = parseFile(e);
                         const isLink = /^https?:\/\//i.test(e);
                         return (
                           <li className="dp-ev-item" key={`${e}-${i}`}>
-                            {isLink
-                              ? <a href={e} target="_blank" rel="noopener noreferrer" className="dp-ev-text dp-ev-link">{e}</a>
-                              : <span className="dp-ev-text">{e}</span>}
+                            {file ? (
+                              <a href={`/api/deals/${selected.id}/evidence?path=${encodeURIComponent(file.path)}`} target="_blank" rel="noopener noreferrer" className="dp-ev-text dp-ev-link dp-ev-file">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                                {file.name}
+                              </a>
+                            ) : isLink ? (
+                              <a href={e} target="_blank" rel="noopener noreferrer" className="dp-ev-text dp-ev-link">{e}</a>
+                            ) : (
+                              <span className="dp-ev-text">{e}</span>
+                            )}
                             <button type="button" className="dp-ev-x" aria-label="Remove evidence" onClick={() => removeEvidence(i)}>
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                             </button>
@@ -274,6 +310,11 @@ export default function DisputePage() {
                     />
                     <button type="button" className="dp-ev-btn" onClick={addEvidence} disabled={!evInput.trim() || underReview || settled}>Add</button>
                   </div>
+                  <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf" hidden onChange={(e) => void uploadFile(e.target.files?.[0])} />
+                  <button type="button" className="dp-ev-upload" onClick={() => fileRef.current?.click()} disabled={uploading || underReview || settled}>
+                    {uploading ? <Spinner size={14} /> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" /></svg>}
+                    {uploading ? "Uploading…" : "Upload a photo or PDF"}
+                  </button>
 
                   <button className="tf-btn tf-btn--primary dp-analyze" disabled={busy || !statement.trim() || underReview || settled} onClick={() => void analyze()}>
                     {busy ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Spinner light size={15} />Analysing the case…</span> : underReview ? "Under human review" : settled ? "Dispute settled" : reco ? "Re-run recommendation" : "File dispute & get AI suggestion"}
@@ -414,6 +455,10 @@ const css = `
 .dp-ev-btn{ flex-shrink:0; height:46px; padding:0 16px; border-radius:12px; border:1px solid var(--line); background:#fff; font-family:inherit; font-size:14px; font-weight:700; color:var(--ink-2); cursor:pointer; transition:border-color .16s var(--ease), color .16s var(--ease) }
 .dp-ev-btn:hover:not(:disabled){ border-color:var(--safe); color:var(--safe) }
 .dp-ev-btn:disabled{ opacity:.5; cursor:not-allowed }
+.dp-ev-file{ display:inline-flex; align-items:center; gap:7px }
+.dp-ev-upload{ margin-top:8px; display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:11px; border:1px dashed #CBD5E1; background:var(--bg); font-family:inherit; font-size:13px; font-weight:600; color:var(--ink-2); cursor:pointer; transition:border-color .16s var(--ease), color .16s var(--ease) }
+.dp-ev-upload:hover:not(:disabled){ border-color:var(--safe); color:var(--safe) }
+.dp-ev-upload:disabled{ opacity:.5; cursor:not-allowed }
 .dp-analyze{ margin-top:16px; width:100%; height:50px }
 .dp-analyze:disabled{ opacity:.5; cursor:not-allowed }
 .dp-quote{ background:var(--bg); border:1px solid var(--line-2); border-radius:12px; padding:13px 14px; font-size:13px; line-height:1.6; color:var(--muted) } .dp-quote b{ color:var(--ink) }
