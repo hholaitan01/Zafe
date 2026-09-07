@@ -11,6 +11,7 @@ import { jsonError, readJson } from "@/lib/ai/http";
 import { getServerUser, isAdmin } from "@/lib/auth/server";
 import { adminResolveDispute } from "@/lib/deals/store";
 import type { DisputeDecision } from "@/lib/ai/types";
+import { publicDeal, publicDeals } from "@/lib/deals/redact";
 
 const DECISIONS: DisputeDecision[] = ["release_to_seller", "refund_buyer", "split"];
 
@@ -28,5 +29,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const reviewer = (await getServerUser())?.email ?? "Zafe reviewer";
   const out = await adminResolveDispute(id, body.decision as DisputeDecision, { splitBuyerPercent: split, note: body.note, reviewer });
   if (!out.ok) return jsonError(out.error ?? "Couldn't resolve the dispute.", out.error === "not_found" ? 404 : 409);
-  return Response.json({ deal: out.deal });
+  return Response.json({ deal: publicDeal(out.deal) });
 }

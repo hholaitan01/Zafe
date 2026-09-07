@@ -9,6 +9,7 @@
 import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
 import { authorizeDeal } from "@/lib/deals/access";
 import { openDispute, type DisputeInput } from "@/lib/deals/store";
+import { publicDeal, publicDeals } from "@/lib/deals/redact";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
@@ -22,5 +23,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const outcome = await openDispute(id, { reason: body.reason, buyer: body.buyer, seller: body.seller });
   if (!outcome.ok) return jsonError(outcome.error === "not_found" ? "Deal not found" : (outcome.error ?? "Couldn't open the dispute."), outcome.error === "not_found" ? 404 : 400);
-  return Response.json({ deal: outcome.deal, resolution: outcome.resolution });
+  return Response.json({ deal: publicDeal(outcome.deal), resolution: outcome.resolution });
 }

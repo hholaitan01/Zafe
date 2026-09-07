@@ -7,11 +7,12 @@
 
 import { getServerUser } from "@/lib/auth/server";
 import { listDealsBySellerContacts } from "@/lib/deals/store";
+import { publicDeal, publicDeals } from "@/lib/deals/redact";
 
 export async function GET(req: Request): Promise<Response> {
   const contacts = new URL(req.url).searchParams.getAll("c").map((s) => s.trim()).filter(Boolean);
   const user = await getServerUser();
   if (user?.email) contacts.push(user.email);
   const deals = await listDealsBySellerContacts(contacts);
-  return Response.json({ deals });
+  return Response.json({ deals: publicDeals(deals) });
 }

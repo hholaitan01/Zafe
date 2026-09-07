@@ -40,15 +40,14 @@ export async function getDealByReference(reference: string): Promise<Deal | null
   return all.find((d) => d.reference === reference) ?? null;
 }
 
-/** List deals — but first release any that quietly ran past their timer. */
+/** List deals. (Auto-release is a money-move; it runs only from the scheduled
+    job, never as a side effect of reading — see /api/deals/auto-release.) */
 export async function listDeals(): Promise<Deal[]> {
-  await runAutoReleases();
   return backend().list();
 }
 
 /** List one buyer's own deals (per-user scoping for the dashboard + reputation). */
 export async function listDealsForUser(email: string): Promise<Deal[]> {
-  await runAutoReleases();
   return backend().listByBuyer(email);
 }
 
@@ -79,7 +78,6 @@ export async function listDealsBySeller(contact: string): Promise<Deal[]> {
 export async function listDealsBySellerContacts(contacts: string[]): Promise<Deal[]> {
   const set = new Set(contacts.map(normalizeContact).filter(Boolean));
   if (!set.size) return [];
-  await runAutoReleases();
   const all = await backend().list();
   return all
     .filter((d) => d.seller?.contact && set.has(normalizeContact(d.seller.contact)))

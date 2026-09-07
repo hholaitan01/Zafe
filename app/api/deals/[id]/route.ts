@@ -15,6 +15,7 @@ import { jsonError, readJson } from "@/lib/ai/http";
 import { authorizeDeal } from "@/lib/deals/access";
 import { setDealStatus } from "@/lib/deals/store";
 import type { DealStatus } from "@/lib/deals/types";
+import { publicDeal, publicDeals } from "@/lib/deals/redact";
 
 // Non-money transitions a client may set directly.
 const PATCHABLE_STATUS: DealStatus[] = ["created", "shipped", "disputed"];
@@ -26,7 +27,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // Only a party to the deal may read it (guards against IDOR).
   const access = await authorizeDeal(id);
   if (!access.ok) return jsonError(access.status === 401 ? "Sign in to view this deal." : "Deal not found", access.status);
-  return Response.json({ deal: access.deal });
+  return Response.json({ deal: publicDeal(access.deal) });
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
@@ -46,5 +47,5 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const deal = await setDealStatus(id, body.status as DealStatus, body.note);
   if (!deal) return jsonError("Deal not found", 404);
-  return Response.json({ deal });
+  return Response.json({ deal: publicDeal(deal) });
 }
