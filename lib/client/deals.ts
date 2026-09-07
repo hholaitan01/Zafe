@@ -42,6 +42,19 @@ export function getDeal(id: string): Promise<Deal> {
   return apiFetch<{ deal: Deal }>(`/api/deals/${id}`).then((r) => r.deal);
 }
 
+/** Upload one evidence file for a dispute; returns the marker to add to the
+    evidence list. Multipart, so it bypasses the JSON apiFetch helper. */
+export async function uploadDisputeEvidence(dealId: string, file: File): Promise<{ token: string }> {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch(`/api/deals/${dealId}/dispute/evidence`, { method: "POST", body });
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(detail?.error || `Upload failed (${res.status})`);
+  }
+  return res.json() as Promise<{ token: string }>;
+}
+
 /** New Escrow — create a deal. The response's deal.trust is the Trust Score. */
 export function createDeal(input: CreateDealInput): Promise<Deal> {
   return apiFetch<{ deal: Deal }>("/api/deals", { method: "POST", body: JSON.stringify(input) }).then((r) => r.deal);
