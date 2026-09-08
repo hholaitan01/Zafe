@@ -47,8 +47,12 @@ export async function POST(req: Request): Promise<Response> {
     return jsonError("A 'seller' object is required.");
   }
 
-  // Who created this? The session is trusted for the creator's side.
+  // Who created this? The session is trusted for the creator's side. In live
+  // mode a deal can only be created by a signed-in user, and the creator's
+  // identity comes ONLY from that session — never a client-supplied email
+  // (audit #7). Demo mode is the open local sandbox.
   const user = await getServerUser();
+  if (authConfigured() && !user?.email) return jsonError("Sign in to create a deal.", 401);
   let seller = body.seller;
   let buyerEmail: string | undefined;
   // Stamp the buyer's stable id only when the creator IS the buyer (dual-key).

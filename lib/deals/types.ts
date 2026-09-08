@@ -98,9 +98,14 @@ export interface Deal {
   payoutRef?: string;
   /** Buyer's share paid back on a split ruling. */
   partialRefundAmount?: number;
-  /** Where the seller is paid; where the buyer is refunded. */
+  /** Where the seller is paid; where the buyer is refunded. Server-only — these
+      full bank accounts are stripped from every API response (see redact.ts). */
   sellerPayout?: PayoutAccount;
   buyerPayout?: PayoutAccount;
+  /** Display-only masked hint of the seller's payout account (e.g. "GTBank
+      ****3344"), set on the redacted public projection so a receipt can show
+      where funds went without exposing the full account number. */
+  sellerPayoutMask?: string;
 
   createdAt: string;
   updatedAt: string;
