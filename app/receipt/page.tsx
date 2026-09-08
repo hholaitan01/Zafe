@@ -44,9 +44,9 @@ export default function ReceiptPage() {
   const releasedAt = deal ? [...deal.timeline].reverse().find((e) => e.status === "completed" || e.status === "resolved")?.at || deal.updatedAt : undefined;
   const ref = deal?.reference || deal?.id.slice(0, 12) || "";
   const seller = deal?.seller?.name || "Seller";
-  const payoutAcct = deal?.sellerPayout?.accountNumber;
-  const payoutBank = deal?.sellerPayout ? (deal.sellerPayout as { bankCode?: string }).bankCode : undefined;
-  const beneficiary = payoutAcct ? `${payoutBank || "Bank"} - ${payoutAcct}` : "Escrow release account";
+  // The full payout account is stripped from API responses (redact.ts); the
+  // deal carries a masked hint ("GTBank ****3344") for the receipt instead.
+  const beneficiary = deal?.sellerPayoutMask || "Escrow release account";
 
   function share() {
     if (!deal) return;

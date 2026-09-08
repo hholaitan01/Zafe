@@ -18,6 +18,7 @@
     "check:config": "tsx lib/config/check.ts",
     "check:security": "tsx lib/deals/adversarial.check.ts",
     "check:lifecycle": "tsx lib/deals/transitions.check.ts",
+    "check:redact": "tsx lib/deals/redact.check.ts",
     "check:identity": "tsx lib/auth/identity.check.ts",
     "check:payout": "tsx lib/sellers/payout-guard.check.ts",
     "check:prodguard": "tsx lib/payments/prod-guard.check.ts",
