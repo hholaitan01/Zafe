@@ -26,6 +26,10 @@ create table if not exists public.deals (
 
 create index if not exists deals_created_at_idx on public.deals (created_at desc);
 create index if not exists deals_buyer_id_idx on public.deals (buyer_id);
+-- The reference is a crypto-random public identifier; enforce uniqueness at the
+-- database so a collision (or a forged duplicate) can never create two deals
+-- that share a reference (audit #14).
+create unique index if not exists deals_reference_key on public.deals (reference);
 
 -- If the table predates the canonical-id migration, add the column:
 alter table public.deals add column if not exists buyer_id text;

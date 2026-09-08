@@ -51,6 +51,13 @@ async function main() {
   assert("correct code + account verifies", await otp.verifyPayoutOtp(email, fpB, code));
   assert("code is single-use (second try fails)", !(await otp.verifyPayoutOtp(email, fpB, code)));
 
+  // --- attempt limiter: wrong tries burn the code (audit #12) ---
+  otp._resetPayoutOtps();
+  const code2 = await otp.createPayoutOtp(email, fpB);
+  const bad = code2 === "000000" ? "999999" : "000000";
+  for (let i = 0; i < 5; i++) await otp.verifyPayoutOtp(email, fpB, bad);
+  assert("code is invalidated after 5 wrong attempts (even the right code then fails)", !(await otp.verifyPayoutOtp(email, fpB, code2)));
+
   console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
   process.exit(failures === 0 ? 0 : 1);
 }

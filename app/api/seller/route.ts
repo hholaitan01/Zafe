@@ -16,6 +16,7 @@ import { payoutChanged, payoutFingerprint } from "@/lib/sellers/payout-guard";
 import { createPayoutOtp, verifyPayoutOtp } from "@/lib/sellers/payout-otp";
 import { sendPayoutOtpEmail } from "@/lib/notifications";
 import { screenParty } from "@/lib/compliance/screening";
+import { rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 
 // A seller profile carries the payout account (sensitive), so GET only ever
 // returns the CALLER's own profile. In live mode that's the session email and
@@ -33,6 +34,10 @@ export async function GET(req: Request): Promise<Response> {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  // Cap saves per client so payout-change OTP codes can't be brute-forced by
+  // looping this endpoint (defence in depth alongside the per-code attempt cap).
+  const rl = rateLimit(req, "seller-save", 10, 60_000);
+  if (!rl.ok) return tooManyRequests(rl.retryAfterSeconds);
   const body = await readJson<{ email?: string; fullName?: string; phone?: string; payout?: SellerPayout; idType?: "bvn" | "vnin"; idNumber?: string; selfie?: string; otp?: string }>(req);
   if (!body) return jsonError("Invalid JSON body");
 
@@ -61,10 +66,10 @@ export async function POST(req: Request): Promise<Response> {
       const sent = delivery.ok && delivery.mode === "live"; // a real email, not the demo outbox
       if (sent) return Response.json({ requiresOtp: true, sent: true });
       // No mailer wired: the local sandbox surfaces the code so the flow is
-      // testable; a live deploy without a mailer can't 2FA, so it falls through
-      // and relies on the post-change cooldown alone (a documented config gap).
+      // testable. In LIVE mode we cannot deliver the confirmation code, so we
+      // FAIL CLOSED — never save an unverified payout destination (audit #11).
       if (!authConfigured()) return Response.json({ requiresOtp: true, sent: false, devCode: code });
-      console.warn("payout change: no mailer configured; saving without OTP (cooldown still applies)");
+      return jsonError("We can't send the confirmation code needed to change your payout account right now. Please try again later or contact support.", 503);
     } else {
       const ok = await verifyPayoutOtp(email, fingerprint, body.otp);
       if (!ok) return jsonError("That confirmation code is wrong or expired.", 401);
