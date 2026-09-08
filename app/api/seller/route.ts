@@ -12,6 +12,9 @@ import { authConfigured } from "@/lib/auth/config";
 import { getServerUser, requireCaller } from "@/lib/auth/server";
 import { verifySellerIdentity } from "@/lib/sellers/kyc";
 import { getSeller, upsertSeller, type SellerPayout } from "@/lib/sellers/store";
+import { payoutChanged, payoutFingerprint } from "@/lib/sellers/payout-guard";
+import { createPayoutOtp, verifyPayoutOtp } from "@/lib/sellers/payout-otp";
+import { sendPayoutOtpEmail } from "@/lib/notifications";
 import { screenParty } from "@/lib/compliance/screening";
 
 // A seller profile carries the payout account (sensitive), so GET only ever
@@ -30,7 +33,7 @@ export async function GET(req: Request): Promise<Response> {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const body = await readJson<{ email?: string; fullName?: string; phone?: string; payout?: SellerPayout; idType?: "bvn" | "vnin"; idNumber?: string; selfie?: string }>(req);
+  const body = await readJson<{ email?: string; fullName?: string; phone?: string; payout?: SellerPayout; idType?: "bvn" | "vnin"; idNumber?: string; selfie?: string; otp?: string }>(req);
   if (!body) return jsonError("Invalid JSON body");
 
   // The payout account is where escrow money lands, so the identity here MUST be
@@ -42,6 +45,30 @@ export async function POST(req: Request): Promise<Response> {
   const email = caller.email;
   if (!body.payout?.accountNumber || !body.payout?.accountName) {
     return jsonError("A payout account (number + name) is required to get paid.");
+  }
+
+  // Changing an EXISTING payout account is the highest-value action an attacker
+  // can take with a hijacked session, so it takes a second factor: an email OTP.
+  // (A first-time set has no prior account to protect, so it skips this.)
+  const existing = await getSeller(email);
+  const isChange = !!payoutFingerprint(existing?.payout) && payoutChanged(existing?.payout, body.payout);
+  const fingerprint = payoutFingerprint(body.payout);
+  if (isChange) {
+    if (!body.otp) {
+      // Issue and send a code; nothing changes until it is confirmed.
+      const code = await createPayoutOtp(email, fingerprint);
+      const delivery = await sendPayoutOtpEmail(email, code);
+      const sent = delivery.ok && delivery.mode === "live"; // a real email, not the demo outbox
+      if (sent) return Response.json({ requiresOtp: true, sent: true });
+      // No mailer wired: the local sandbox surfaces the code so the flow is
+      // testable; a live deploy without a mailer can't 2FA, so it falls through
+      // and relies on the post-change cooldown alone (a documented config gap).
+      if (!authConfigured()) return Response.json({ requiresOtp: true, sent: false, devCode: code });
+      console.warn("payout change: no mailer configured; saving without OTP (cooldown still applies)");
+    } else {
+      const ok = await verifyPayoutOtp(email, fingerprint, body.otp);
+      if (!ok) return jsonError("That confirmation code is wrong or expired.", 401);
+    }
   }
 
   // Identity verification is a real check, not a side effect of saving a payout
@@ -65,6 +92,9 @@ export async function POST(req: Request): Promise<Response> {
     phone: body.phone,
     idVerified: cleared,
     payout: body.payout,
+    // Stamp the change so the cooldown starts; preserve the prior stamp when the
+    // account didn't change (so re-saving other details doesn't reset it).
+    payoutUpdatedAt: isChange ? new Date().toISOString() : existing?.payoutUpdatedAt,
     updatedAt: new Date().toISOString(),
   });
   return Response.json({ seller, screening: { clear: screening.clear, needsReview: screening.needsReview, hits: screening.hits } });

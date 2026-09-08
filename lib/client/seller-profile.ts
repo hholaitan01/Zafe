@@ -7,7 +7,7 @@
    paid" banner) and offline fallback.
    ========================================================================== */
 
-import { apiFetch } from "./api";
+import { apiFetch, ApiError } from "./api";
 
 export interface SellerPayout {
   bankName?: string;
@@ -63,33 +63,48 @@ function toData(r: SellerRecord | null): SellerProfileData | null {
   return { verified: r.idVerified, fullName: r.fullName, phone: r.phone, payout: r.payout };
 }
 
+/** The result of a save: either it persisted, or changing the payout account
+    needs an emailed confirmation code first (2FA). */
+export type SaveSellerResult =
+  | { status: "saved"; profile: SellerProfileData }
+  | { status: "otp_required"; sent: boolean; devCode?: string };
+
 /** Persist the seller profile server-side (verify) when we can, and always keep
     a local cache so the flow never hard-breaks (e.g. offline, or no session
-    email yet — it will sync to the server once signed in). */
+    email yet — it will sync to the server once signed in).
+
+    Changing an existing payout account returns `otp_required`: the caller must
+    resubmit with the emailed `otp` to confirm the change. A wrong/expired code
+    throws an ApiError the caller can show. */
 export async function saveSellerProfile(
   profile: SellerProfileData,
   email?: string,
   /** The BVN / vNIN + selfie to verify. Sent to the server for the KYC check and never cached. */
   id?: { idNumber?: string; idType?: "bvn" | "vnin"; selfie?: string },
-): Promise<SellerProfileData> {
+  /** The emailed confirmation code, when resubmitting a payout-account change. */
+  otp?: string,
+): Promise<SaveSellerResult> {
   try {
-    const r = await apiFetch<{ seller: SellerRecord }>("/api/seller", {
+    const r = await apiFetch<{ seller?: SellerRecord; requiresOtp?: boolean; sent?: boolean; devCode?: string }>("/api/seller", {
       method: "POST",
-      body: JSON.stringify({ email, fullName: profile.fullName, phone: profile.phone, payout: profile.payout, idNumber: id?.idNumber, idType: id?.idType, selfie: id?.selfie }),
+      body: JSON.stringify({ email, fullName: profile.fullName, phone: profile.phone, payout: profile.payout, idNumber: id?.idNumber, idType: id?.idType, selfie: id?.selfie, otp }),
     });
-    const server = toData(r.seller);
+    if (r.requiresOtp) return { status: "otp_required", sent: !!r.sent, devCode: r.devCode };
+    const server = toData(r.seller ?? null);
     if (server) {
       // The server decides `verified` via the real KYC check — trust it, not the form.
       cache(server);
-      return server;
+      return { status: "saved", profile: server };
     }
-  } catch {
-    /* server rejected (e.g. no email) or offline — keep a local cache, unverified */
+  } catch (e) {
+    // A real server rejection (a wrong code, a missing email) must surface so the
+    // caller can react; only a network/offline error falls through to the cache.
+    if (e instanceof ApiError) throw e;
   }
   // Offline / no-session fallback: cache the details but never claim verified.
   const local: SellerProfileData = { ...profile, verified: false };
   cache(local);
-  return local;
+  return { status: "saved", profile: local };
 }
 
 /** Load the seller profile from the server and refresh the cache. If the server

@@ -17,6 +17,8 @@ import { payoutEntry, refundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
 import { collectionAmount, computeFee } from "./fee";
 import { beginSettlement, completeSettlement, failSettlement, settlementKey } from "./settlement";
+import { getSeller } from "@/lib/sellers/store";
+import { cooldownUntil } from "@/lib/sellers/payout-guard";
 
 export { isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus };
 
@@ -98,6 +100,15 @@ export async function payoutSeller(
   const provider = activeProvider("payout");
   const mode: PaymentMode = provider === "mock" ? "mock" : "live";
   const key = settlementKey("payout", deal.id);
+
+  // Cooldown: a payout account changed within the window is held before it can
+  // receive money (a fraud window after a possible account takeover). Checked
+  // before the claim so the payout stays cleanly retryable once it lifts.
+  const seller = deal.seller?.contact ? await getSeller(deal.seller.contact) : null;
+  const until = cooldownUntil(seller?.payoutUpdatedAt);
+  if (until) {
+    return { ok: false, error: `The seller's payout account changed recently. Payout is on hold until ${new Date(until).toLocaleString("en-NG")}.`, mode };
+  }
 
   // Claim the operation before moving a naira. A second concurrent release, or a
   // retry of one that already succeeded, never fires a second transfer.
