@@ -3,7 +3,7 @@
    ========================================================================== */
 
 import type { DisputeResult } from "@/lib/ai/types";
-import type { CreateDealInput, Deal, DealStatus, PayoutAccount } from "@/lib/deals/types";
+import type { CreateDealInput, Deal, DealStatus } from "@/lib/deals/types";
 import type { CollectionAccount } from "@/lib/payments";
 import { apiFetch } from "./api";
 
@@ -73,9 +73,10 @@ export function setDealStatus(id: string, status: DealStatus, note?: string): Pr
 }
 
 /** Seller ships → mints the buyer's handover code + starts the auto-release
-    timer. Optionally attaches the seller's payout account for the release. */
-export function shipDeal(id: string, sellerPayout?: PayoutAccount): Promise<Deal> {
-  return apiFetch<{ deal: Deal }>(`/api/deals/${id}/ship`, { method: "POST", body: JSON.stringify(sellerPayout ? { sellerPayout } : {}) }).then((r) => r.deal);
+    timer. The payout account is resolved server-side from the seller's saved
+    account (never sent from the browser, so it can't be redirected). */
+export function shipDeal(id: string): Promise<Deal> {
+  return apiFetch<{ deal: Deal }>(`/api/deals/${id}/ship`, { method: "POST" }).then((r) => r.deal);
 }
 
 /** Code screen — buyer confirms with the handover code to pay the seller. */
