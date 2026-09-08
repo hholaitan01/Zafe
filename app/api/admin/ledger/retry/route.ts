@@ -11,12 +11,14 @@
    ========================================================================== */
 
 import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
-import { isAdmin } from "@/lib/auth/server";
+import { requireCapability } from "@/lib/auth/server";
 import { getDeal, refundDeal, releaseToSeller } from "@/lib/deals/store";
 import { publicDeal } from "@/lib/deals/redact";
+import { recordAudit } from "@/lib/audit/log";
 
 export async function POST(req: Request): Promise<Response> {
-  if (!(await isAdmin())) return jsonError("Not found", 404);
+  const caller = await requireCapability("reconciliation.retry");
+  if (!caller) return jsonError("Not found", 404);
   const body = await readJson<{ key?: string }>(req);
   if (!body || !isNonEmptyString(body.key)) return jsonError("A settlement 'key' is required.");
 
@@ -38,5 +40,12 @@ export async function POST(req: Request): Promise<Response> {
     : await refundDeal(dealId);
 
   if (!result.ok) return jsonError(result.error ?? "The retry did not go through.", 422);
+  await recordAudit({
+    actorEmail: caller.email,
+    actorRole: caller.role,
+    action: "settlement.retry",
+    target: body.key,
+    meta: { kind, dealId, newStatus: result.deal?.status },
+  });
   return Response.json({ ok: true, deal: publicDeal(result.deal) });
 }

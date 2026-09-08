@@ -10,14 +10,14 @@
    ========================================================================== */
 
 import { jsonError } from "@/lib/ai/http";
-import { isAdmin } from "@/lib/auth/server";
+import { requireCapability } from "@/lib/auth/server";
 import { listDeals } from "@/lib/deals/store";
 import { allLedgerEntries, listEntries, reconciliation } from "@/lib/ledger/store";
 import { reconcileDeals } from "@/lib/ledger/reconcile";
 import { listSettlementExceptions } from "@/lib/payments/settlement";
 
 export async function GET(): Promise<Response> {
-  if (!(await isAdmin())) return jsonError("Not found", 404);
+  if (!(await requireCapability("reconciliation.view"))) return jsonError("Not found", 404);
   const [summary, entries, allEntries, deals, exceptions] = await Promise.all([
     reconciliation(),
     listEntries(100),

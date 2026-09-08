@@ -20,6 +20,7 @@ import { authConfigured } from "@/lib/auth/config";
 import { deactivateAuthUser, getServerUser } from "@/lib/auth/server";
 import { listDealsBySellerContacts, listDealsForUser } from "@/lib/deals/store";
 import { deactivateProfile } from "@/lib/profiles/store";
+import { recordAudit } from "@/lib/audit/log";
 
 // Money is in play at these statuses — the account can't be closed until they settle.
 const OPEN_STATUSES = ["funded", "shipped", "disputed", "under_review"];
@@ -59,6 +60,9 @@ export async function DELETE(): Promise<Response> {
   // Block sign-in for good. If this fails, report it rather than half-closing.
   const deactivated = await deactivateAuthUser(user.id);
   if (!deactivated) return jsonError("We couldn't close your account. Please try again.", 500);
+
+  // A deactivation is a sensitive, retained action: record it on the audit trail.
+  await recordAudit({ actorEmail: email, action: "account.deactivate", target: user.id, meta: { retainUntil: until, self: true } });
 
   return Response.json({ ok: true, retainUntil: until });
 }

@@ -15,6 +15,7 @@ import { cookies } from "next/headers";
 import { SERVICE_ROLE_KEY } from "@/lib/deals/config";
 import { authConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "./config";
 import { nameFromEmail } from "./demo";
+import { roleForEmail, roleHasCapability, type AdminRole, type Capability } from "./roles";
 import type { TrustUser } from "./types";
 
 export async function getServerUser(): Promise<TrustUser | null> {
@@ -59,21 +60,41 @@ export async function requireCaller(demoFallback?: { email?: string; name?: stri
   return getServerUser();
 }
 
+export interface AdminCaller {
+  email: string;
+  role: AdminRole;
+}
+
 /**
- * Whether the caller may act as a Zafe reviewer (the dispute review queue).
- *  - demo mode: allowed (single local sandbox, so the queue is explorable).
- *  - live mode: the session email must be in ADMIN_EMAILS (comma-separated).
- * Fails closed: no session or no allowlist in live mode → not an admin.
+ * The caller's admin identity + role, or null if they are not an admin.
+ *  - demo mode: the single local sandbox is superadmin, so every admin surface
+ *    is explorable (isAdmin was open before).
+ *  - live mode: the session email is resolved against the role allowlists
+ *    (roles.ts). Fails closed: no session, or an email in no list → null.
+ */
+export async function roleForCaller(): Promise<AdminCaller | null> {
+  if (!authConfigured()) return { email: "demo@zafe.ng", role: "superadmin" };
+  const user = await getServerUser();
+  const role = roleForEmail(user?.email);
+  return role && user?.email ? { email: user.email, role } : null;
+}
+
+/**
+ * Whether the caller is any kind of admin (reviewer, finance, or superadmin).
+ * Read-only admin surfaces still gate on this; privileged actions gate on a
+ * specific capability via requireCapability.
  */
 export async function isAdmin(): Promise<boolean> {
-  if (!authConfigured()) return true;
-  const allow = (process.env.ADMIN_EMAILS || "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  if (!allow.length) return false;
-  const user = await getServerUser();
-  return !!user?.email && allow.includes(user.email.trim().toLowerCase());
+  return (await roleForCaller()) !== null;
+}
+
+/**
+ * The caller if they hold `cap`, else null — the gate for a privileged action.
+ * Returns the actor so the route can name them in the audit log.
+ */
+export async function requireCapability(cap: Capability): Promise<AdminCaller | null> {
+  const caller = await roleForCaller();
+  return caller && roleHasCapability(caller.role, cap) ? caller : null;
 }
 
 /**
