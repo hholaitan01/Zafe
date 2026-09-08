@@ -59,6 +59,21 @@ async function main() {
     assert("redaction: publicDeal strips the handover code", publicDeal(shipped!).handoverCode === undefined);
   }
 
+  // --- The payout account comes ONLY from the seller's server-side record ---
+  // (audit P0): shipDeal takes no payout argument, so a client can't choose or
+  // override where escrow funds land — the destination is resolved from the
+  // seller's saved account alone.
+  {
+    const { upsertSeller } = await import("@/lib/sellers/store");
+    const sellerContact = `srv${Math.random().toString(36).slice(2)}@x.com`;
+    await upsertSeller({ email: sellerContact, idVerified: true, payout: { bankName: "GTBank", accountNumber: "0011223344", accountName: "Real Seller" }, updatedAt: new Date().toISOString() });
+    const deal = await store.createDeal({ item: { title: "Server payout", amount: 50000 }, seller: { name: "Seller", contact: sellerContact }, buyerEmail: `b${Math.random().toString(36).slice(2)}@x.com` });
+    await store.setDealStatus(deal.id, "funded");
+    const shipped = await store.shipDeal(deal.id);
+    assert("ship: payout resolved from the seller's saved account", shipped?.sellerPayout?.accountNumber === "0011223344");
+    assert("ship: payout carries the server-side verified flag", shipped?.sellerPayout?.verified === true);
+  }
+
   // --- A full lifecycle leaves the books balanced and buyer_funds at zero ---
   {
     const deal = await mkDeal(120000);

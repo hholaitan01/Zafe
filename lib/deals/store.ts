@@ -193,14 +193,17 @@ export async function setDealStatus(id: string, status: DealStatus, note?: strin
  * Seller ships. We mint the buyer's secret handover code and start the
  * auto-release timer — the two anti-cheat mechanisms from the plan.
  */
-export async function shipDeal(id: string, sellerPayout?: PayoutAccount): Promise<Deal | null> {
+export async function shipDeal(id: string): Promise<Deal | null> {
   const deal = await backend().get(id);
   if (!deal) return null;
 
-  // Resolve the seller's payout account: an explicit one wins, else look it up
-  // server-side from the seller's saved account (so we don't trust the client).
-  let payout = sellerPayout;
-  if (!payout && deal.seller?.contact) {
+  // Resolve the seller's payout account ONLY from their server-side saved
+  // account — never from the client. The payout destination decides where
+  // escrow funds land, so a browser must not be able to choose or override it
+  // (that would let a caller redirect the seller's money). `verified` is the
+  // real KYC result on the seller record, not a client-asserted flag.
+  let payout: PayoutAccount | undefined;
+  if (deal.seller?.contact) {
     const seller = await getSeller(deal.seller.contact);
     if (seller?.payout?.accountNumber) {
       payout = { accountNumber: seller.payout.accountNumber, accountName: seller.payout.accountName, verified: seller.idVerified };

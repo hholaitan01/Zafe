@@ -80,10 +80,10 @@ export default function SellingPage() {
 
   async function ship(id: string) {
     setShipping(id);
-    const payout = getSellerProfile()?.payout;
-    const sellerPayout = payout ? { accountNumber: payout.accountNumber, accountName: payout.accountName, verified: true } : undefined;
     try {
-      await shipDeal(id, sellerPayout);
+      // The payout account is resolved server-side from the seller's saved
+      // account; the browser never sends it (it can't be trusted to).
+      await shipDeal(id);
       toast.success("Marked as shipped. Handover code sent to the buyer.");
     } catch {
       toast.error("Couldn't mark as shipped. Please try again.");
