@@ -7,6 +7,7 @@
    a live demo and local development.
    ========================================================================== */
 
+import { identityMatches } from "@/lib/auth/identity";
 import { newId, newReference, statusLabel } from "./helpers";
 import { seedDeals } from "./seed";
 import type { CreateDealInput, Deal, DealTrust } from "./types";
@@ -32,6 +33,11 @@ export const demoStore = {
     return (await this.list()).filter((d) => d.buyerEmail === email);
   },
 
+  /** A buyer's deals matched by stable id OR email (the dual-key read). */
+  async listByBuyerIdentity(who: { id?: string; email: string }): Promise<Deal[]> {
+    return (await this.list()).filter((d) => identityMatches({ userId: d.buyerId, email: d.buyerEmail }, who));
+  },
+
   async get(id: string): Promise<Deal | null> {
     return db().deals.find((d) => d.id === id) ?? null;
   },
@@ -48,6 +54,7 @@ export const demoStore = {
       },
       seller: input.seller,
       buyerEmail: input.buyerEmail,
+      buyerId: input.buyerId,
       chat: input.chat,
       status: "created",
       trust,

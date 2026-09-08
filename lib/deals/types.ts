@@ -74,6 +74,9 @@ export interface Deal {
   item: { title: string; amount: number; currency: string };
   seller: SellerProfile & { id?: string };
   buyerEmail?: string;
+  /** The buyer's stable user id (canonical identity), carried alongside the email
+      during the id migration. Reads prefer it; old deals are backfilled. */
+  buyerId?: string;
   /** The pasted buyer/seller chat, kept for the Trust Score and any dispute. */
   chat?: string;
   status: DealStatus;
@@ -109,6 +112,8 @@ export interface CreateDealInput {
   seller: SellerProfile & { id?: string };
   chat?: string;
   buyerEmail?: string;
+  /** The buyer's stable user id, when the creator is the buyer (dual-key). */
+  buyerId?: string;
 }
 
 export type DealBackend = "supabase" | "demo";

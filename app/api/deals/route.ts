@@ -7,8 +7,9 @@
 
 import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
 import { getServerUser } from "@/lib/auth/server";
+import { callerIdentity } from "@/lib/auth/identity";
 import { authConfigured } from "@/lib/auth/config";
-import { createDeal, listDeals, listDealsForUser } from "@/lib/deals/store";
+import { createDeal, listDeals, listDealsForUser, listDealsForIdentity } from "@/lib/deals/store";
 import type { CreateDealInput } from "@/lib/deals/types";
 import { getProfile, resolveContact } from "@/lib/profiles/store";
 import { getSeller } from "@/lib/sellers/store";
@@ -22,9 +23,10 @@ export async function GET(req: Request): Promise<Response> {
   // unauthenticated request is rejected — so nobody can read another trader's
   // deals (or the whole table) by passing an arbitrary email or none at all.
   if (authConfigured()) {
-    const user = await getServerUser();
-    if (!user?.email) return jsonError("Sign in to view your deals.", 401);
-    return Response.json({ deals: publicDeals(await listDealsForUser(user.email)) });
+    const who = await callerIdentity();
+    if (!who) return jsonError("Sign in to view your deals.", 401);
+    // Dual-key read: matched by stable id OR email, backfilling id as we go.
+    return Response.json({ deals: publicDeals(await listDealsForIdentity(who)) });
   }
 
   // DEMO: single local sandbox, no cross-tenant data to protect.
@@ -49,9 +51,12 @@ export async function POST(req: Request): Promise<Response> {
   const user = await getServerUser();
   let seller = body.seller;
   let buyerEmail: string | undefined;
+  // Stamp the buyer's stable id only when the creator IS the buyer (dual-key).
+  let buyerId: string | undefined;
   if (body.initiatedBy === "seller") {
     // Seller-initiated "request payment": the creator is the SELLER; the buyer
-    // is the counterparty they're requesting money from (resolve @username).
+    // is the counterparty they're requesting money from (resolve @username). We
+    // don't know the buyer's id yet — it backfills when they first view the deal.
     seller = { ...body.seller, contact: user?.email || body.seller.contact, name: body.seller.name || user?.name };
     buyerEmail = body.buyerEmail ? await resolveContact(body.buyerEmail) : undefined;
   } else {
@@ -59,9 +64,10 @@ export async function POST(req: Request): Promise<Response> {
     // contact (email / phone / @username) to a canonical identity.
     if (body.seller.contact) seller = { ...body.seller, contact: await resolveContact(body.seller.contact) };
     buyerEmail = user?.email || body.buyerEmail;
+    if (user?.email && buyerEmail === user.email) buyerId = user.id;
   }
 
-  const deal = await createDeal({ item: body.item, seller, chat: body.chat, buyerEmail });
+  const deal = await createDeal({ item: body.item, seller, chat: body.chat, buyerEmail, buyerId });
 
   // Buyer-initiated: tell the seller an escrow is waiting. If they're already a
   // user they also see it in-app; if not, the email invites them to register and

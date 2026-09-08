@@ -12,6 +12,7 @@ create table if not exists public.deals (
   item        jsonb       not null,          -- { title, amount, currency }
   seller      jsonb       not null,          -- SellerProfile + optional id
   buyer_email text,
+  buyer_id    text,                           -- buyer's stable user id (dual-key identity)
   chat        text,
   status        text        not null default 'created',
   trust         jsonb,                       -- { score, verdict, headline }
@@ -24,6 +25,10 @@ create table if not exists public.deals (
 );
 
 create index if not exists deals_created_at_idx on public.deals (created_at desc);
+create index if not exists deals_buyer_id_idx on public.deals (buyer_id);
+
+-- If the table predates the canonical-id migration, add the column:
+alter table public.deals add column if not exists buyer_id text;
 
 -- ALAT payments (Jerry's rails). The money-move columns live on the deal so the
 -- lifecycle stays one row. Safe to run on an existing table.
