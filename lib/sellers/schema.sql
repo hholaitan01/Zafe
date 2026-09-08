@@ -34,6 +34,9 @@ create table if not exists public.payout_change_otps (
   email       text primary key,                 -- normalised seller email
   code_hash   text        not null,             -- sha256(email:code)
   fingerprint text        not null,             -- the new account this code authorises
-  expires_at  timestamptz not null
+  expires_at  timestamptz not null,
+  attempts    int         not null default 0    -- wrong tries; the code self-invalidates past the cap
 );
+-- If the table predates the attempt limiter, add the column:
+alter table public.payout_change_otps add column if not exists attempts int not null default 0;
 alter table public.payout_change_otps enable row level security;

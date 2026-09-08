@@ -9,10 +9,15 @@
 import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
 import { authorizeDeal } from "@/lib/deals/access";
 import { openDispute, type DisputeInput } from "@/lib/deals/store";
-import { publicDeal, publicDeals } from "@/lib/deals/redact";
+import { publicDeal } from "@/lib/deals/redact";
+import { rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
+  // Opening a dispute invokes the AI judge, so cap it per deal + client to stop
+  // anyone looping it to burn the AI budget.
+  const rl = rateLimit(req, `dispute:${id}`, 6, 60_000);
+  if (!rl.ok) return tooManyRequests(rl.retryAfterSeconds);
   // Only a party to the deal may open a dispute on it (guards against IDOR).
   const access = await authorizeDeal(id);
   if (!access.ok) return jsonError(access.status === 401 ? "Sign in to dispute this deal." : "Deal not found", access.status);

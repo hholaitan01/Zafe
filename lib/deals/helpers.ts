@@ -5,10 +5,21 @@
 
 import type { DealStatus } from "./types";
 
-/** A short, readable reference like "TF-8A3K" for the UI and receipts. */
+// Unambiguous alphabet (no 0/O/1/I/L) for a readable but hard-to-guess reference.
+const REF_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+/**
+ * A reference like "TF-7QH2K9MP" for the UI and receipts. Cryptographically
+ * random over 8 symbols (~30^8 ≈ 6.5e11 space), so it can't be guessed or
+ * enumerated — the old 4-char Math.random() value was both short and
+ * predictable. Uniqueness is also enforced at the database (schema.sql).
+ */
 export function newReference(): string {
-  const s = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, "");
-  return `TF-${s.slice(0, 4).padEnd(4, "0")}`;
+  const buf = new Uint8Array(8);
+  globalThis.crypto.getRandomValues(buf);
+  let s = "";
+  for (const b of buf) s += REF_ALPHABET[b % REF_ALPHABET.length];
+  return `TF-${s}`;
 }
 
 export function newId(): string {
@@ -34,9 +45,13 @@ export function statusLabel(status: DealStatus): string {
 /** The order a normal deal moves through, for validating transitions. */
 export const HAPPY_PATH: DealStatus[] = ["created", "funded", "shipped", "completed"];
 
-/** A 6-digit handover code the buyer keeps secret until they've got the item. */
+/** A 6-digit handover code the buyer keeps secret until they've got the item.
+    Uses the CSPRNG (not Math.random) so it can't be predicted; the release route
+    also rate-limits attempts so the 1e6 space can't be brute-forced. */
 export function newHandoverCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  const buf = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(buf);
+  return String(100000 + (buf[0]! % 900000));
 }
 
 /** How long after shipment the money auto-releases if the buyer never confirms. */

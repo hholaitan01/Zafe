@@ -8,9 +8,15 @@ import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
 import { authorizeDeal, callerRoleOnDeal } from "@/lib/deals/access";
 import { releaseWithCode } from "@/lib/deals/store";
 import { publicDeal } from "@/lib/deals/redact";
+import { rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
+  // Brute-force guard: the handover code is a 6-digit secret, so cap attempts
+  // per deal + client. A few tries a minute makes guessing the 1e6 space
+  // infeasible while never getting in a legitimate buyer's way.
+  const rl = rateLimit(req, `release:${id}`, 5, 60_000);
+  if (!rl.ok) return tooManyRequests(rl.retryAfterSeconds);
   // Only a party to the deal may release it (guards against IDOR); the handover
   // code is the second factor that actually authorizes the payout.
   const access = await authorizeDeal(id);

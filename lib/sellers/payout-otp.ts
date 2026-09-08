@@ -32,7 +32,11 @@ interface OtpRecord {
   codeHash: string;
   fingerprint: string;
   expiresAt: number; // epoch ms
+  attempts: number; // wrong tries so far; the code self-invalidates past the cap
 }
+
+/** Wrong tries before a code is burned, so it can't be brute-forced (audit #12). */
+const MAX_ATTEMPTS = 5;
 
 // Demo store: one active code per email.
 const g = globalThis as unknown as { __zafePayoutOtps?: Map<string, OtpRecord> };
@@ -61,13 +65,13 @@ function safeEqualHex(a: string, b: string): boolean {
 export async function createPayoutOtp(email: string, fingerprint: string): Promise<string> {
   const key = normalizeContact(email);
   const code = sixDigits();
-  const rec: OtpRecord = { codeHash: hash(code, key), fingerprint, expiresAt: Date.now() + TTL_MS };
+  const rec: OtpRecord = { codeHash: hash(code, key), fingerprint, expiresAt: Date.now() + TTL_MS, attempts: 0 };
   if (!live()) {
     mem().set(key, rec);
     return code;
   }
   await db().from("payout_change_otps").upsert(
-    { email: key, code_hash: rec.codeHash, fingerprint, expires_at: new Date(rec.expiresAt).toISOString() },
+    { email: key, code_hash: rec.codeHash, fingerprint, expires_at: new Date(rec.expiresAt).toISOString(), attempts: 0 },
     { onConflict: "email" },
   );
   return code;
@@ -85,18 +89,28 @@ export async function verifyPayoutOtp(email: string, fingerprint: string, code: 
   if (!live()) {
     const rec = mem().get(key);
     if (!rec || rec.expiresAt < Date.now() || rec.fingerprint !== fingerprint) return false;
-    if (!safeEqualHex(rec.codeHash, want)) return false;
-    mem().delete(key); // single-use
-    return true;
+    if (safeEqualHex(rec.codeHash, want)) {
+      mem().delete(key); // single-use
+      return true;
+    }
+    // Wrong code: count it and burn the code once the cap is hit.
+    rec.attempts += 1;
+    if (rec.attempts >= MAX_ATTEMPTS) mem().delete(key);
+    return false;
   }
 
   const { data } = await db().from("payout_change_otps").select("*").eq("email", key).maybeSingle();
   if (!data) return false;
   const expired = Date.parse(String(data.expires_at)) < Date.now();
   if (expired || data.fingerprint !== fingerprint) return false;
-  if (!safeEqualHex(String(data.code_hash), want)) return false;
-  await db().from("payout_change_otps").delete().eq("email", key); // single-use
-  return true;
+  if (safeEqualHex(String(data.code_hash), want)) {
+    await db().from("payout_change_otps").delete().eq("email", key); // single-use
+    return true;
+  }
+  const attempts = Number(data.attempts ?? 0) + 1;
+  if (attempts >= MAX_ATTEMPTS) await db().from("payout_change_otps").delete().eq("email", key);
+  else await db().from("payout_change_otps").update({ attempts }).eq("email", key);
+  return false;
 }
 
 /** Test-only: clear the in-memory demo store. */
