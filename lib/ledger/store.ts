@@ -183,6 +183,11 @@ async function allEntries(): Promise<LedgerEntry[]> {
   return (data ?? []).map(fromRow);
 }
 
+/** Every ledger entry — for the deal-vs-ledger reconciliation cross-check. */
+export async function allLedgerEntries(): Promise<LedgerEntry[]> {
+  return allEntries();
+}
+
 function fromRow(row: Record<string, unknown>): LedgerEntry {
   return {
     ref: String(row.ref),
