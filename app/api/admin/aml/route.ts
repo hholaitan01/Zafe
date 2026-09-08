@@ -7,12 +7,12 @@
    ========================================================================== */
 
 import { jsonError } from "@/lib/ai/http";
-import { isAdmin } from "@/lib/auth/server";
+import { requireCapability } from "@/lib/auth/server";
 import { listDeals } from "@/lib/deals/store";
 import { assessDeal } from "@/lib/compliance/monitoring";
 
 export async function GET(): Promise<Response> {
-  if (!(await isAdmin())) return jsonError("Not found", 404);
+  if (!(await requireCapability("aml.review"))) return jsonError("Not found", 404);
   const deals = await listDeals();
   const flagged = deals
     .map((d) => ({ deal: d, flags: assessDeal(d) }))
