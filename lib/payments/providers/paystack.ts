@@ -127,7 +127,7 @@ export const paystackProvider: PaymentProvider = {
   },
 
   parseWebhook(rawBody: string, reqHeaders: Headers): WebhookEvent | null {
-    let evt: { event?: string; data?: { reference?: string; id?: number | string; status?: string } };
+    let evt: { event?: string; data?: { reference?: string; id?: number | string; status?: string; amount?: number | string; currency?: string } };
     try {
       evt = JSON.parse(rawBody);
     } catch {
@@ -137,12 +137,16 @@ export const paystackProvider: PaymentProvider = {
 
     const authenticated = verifySignature(rawBody, reqHeaders.get("x-paystack-signature"));
     const reference = String(evt.data.reference ?? "");
+    // Paystack amounts are in kobo; convert to whole Naira for verification.
+    const kobo = evt.data.amount != null ? Number(evt.data.amount) : NaN;
     return {
       authenticated,
       funded: evt.event === "charge.success" && evt.data.status === "success",
       reference,
       providerRef: reference,
       eventId: `paystack:${evt.data.id ?? reference}`,
+      amountNaira: Number.isFinite(kobo) ? kobo / 100 : undefined,
+      currency: evt.data.currency ? String(evt.data.currency) : undefined,
     };
   },
 };

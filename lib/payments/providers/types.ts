@@ -53,6 +53,8 @@ export interface WebhookEvent {
   reference: string;      // our deal reference (maps the event back to a deal)
   providerRef?: string;   // the provider's transaction id
   eventId: string;        // stable id used to process each event exactly once (idempotency)
+  amountNaira?: number;   // amount collected, whole Naira — verified against the deal before funding
+  currency?: string;      // currency collected — verified against the deal before funding
 }
 
 export interface PaymentProvider {

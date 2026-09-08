@@ -14,8 +14,9 @@
 import { jsonError, readJson } from "@/lib/ai/http";
 import { authorizeDeal } from "@/lib/deals/access";
 import { setDealStatus } from "@/lib/deals/store";
+import { canTransition } from "@/lib/deals/transitions";
 import type { DealStatus } from "@/lib/deals/types";
-import { publicDeal, publicDeals } from "@/lib/deals/redact";
+import { publicDeal } from "@/lib/deals/redact";
 
 // Non-money transitions a client may set directly.
 const PATCHABLE_STATUS: DealStatus[] = ["created", "shipped", "disputed"];
@@ -44,8 +45,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!body.status || !PATCHABLE_STATUS.includes(body.status as DealStatus)) {
     return jsonError(`status must be one of: ${PATCHABLE_STATUS.join(", ")}`);
   }
+  // Enforce the lifecycle matrix against the deal's CURRENT state, so a client
+  // can't push it backward or skip states (e.g. shipping a settled deal).
+  const target = body.status as DealStatus;
+  if (!canTransition(access.deal.status, target)) {
+    return jsonError(`A ${access.deal.status} deal can't move to ${target}.`, 409);
+  }
 
-  const deal = await setDealStatus(id, body.status as DealStatus, body.note);
+  const deal = await setDealStatus(id, target, body.note);
   if (!deal) return jsonError("Deal not found", 404);
   return Response.json({ deal: publicDeal(deal) });
 }
