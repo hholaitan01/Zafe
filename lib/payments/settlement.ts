@@ -50,11 +50,17 @@ export interface SettlementMeta {
   kind: SettlementKind;
 }
 
+export interface SettlementFilter {
+  /** Restrict to these states (any, when omitted). */
+  states?: SettlementState[];
+}
+
 export interface SettlementStore {
   begin(key: string, meta: SettlementMeta): Promise<BeginResult>;
   complete(key: string, ref: string): Promise<void>;
   fail(key: string, error: string): Promise<void>;
   get(key: string): Promise<SettlementRecord | null>;
+  list(filter?: SettlementFilter): Promise<SettlementRecord[]>;
 }
 
 /** A "pending" claim older than this is treated as abandoned (crashed mid-move)
@@ -117,6 +123,12 @@ class MemorySettlementStore implements SettlementStore {
     return this.ops.get(key) ?? null;
   }
 
+  async list(filter?: SettlementFilter): Promise<SettlementRecord[]> {
+    let rows = [...this.ops.values()];
+    if (filter?.states?.length) rows = rows.filter((r) => filter.states!.includes(r.state));
+    return rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
   _reset(): void {
     this.ops.clear();
   }
@@ -171,4 +183,26 @@ export async function failSettlement(key: string, error: string): Promise<void> 
 /** Read the current state of a settlement operation (admin/verification). */
 export async function getSettlement(key: string): Promise<SettlementRecord | null> {
   return (await resolveStore()).get(key);
+}
+
+/** List settlement operations, newest first (admin/reconciliation). */
+export async function listSettlements(filter?: SettlementFilter): Promise<SettlementRecord[]> {
+  return (await resolveStore()).list(filter);
+}
+
+/** True when a pending claim has sat past the stale window (a crashed attempt). */
+export function isStalePending(rec: SettlementRecord, now = Date.now()): boolean {
+  return rec.state === "pending" && now - Date.parse(rec.updatedAt) >= STALE_PENDING_MS;
+}
+
+/**
+ * The exception queue: money-moves that need an operator's eye. A `failed`
+ * attempt did not go through; a `pending` attempt past the stale window is a
+ * transfer whose process died mid-flight and whose true outcome is unknown.
+ * Both are surfaced so a human can verify with the provider and re-drive.
+ */
+export async function listSettlementExceptions(): Promise<SettlementRecord[]> {
+  const now = Date.now();
+  const rows = await listSettlements({ states: ["failed", "pending"] });
+  return rows.filter((r) => r.state === "failed" || isStalePending(r, now));
 }

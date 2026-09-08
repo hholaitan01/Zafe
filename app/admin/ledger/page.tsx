@@ -20,7 +20,35 @@ interface Summary {
   entryCount: number;
 }
 
+interface Exception {
+  key: string;
+  dealId: string;
+  kind: "payout" | "refund";
+  state: "pending" | "succeeded" | "failed";
+  error?: string;
+  attempts: number;
+  updatedAt: string;
+}
+
+interface Discrepancy {
+  dealId: string;
+  status: string;
+  code: string;
+  detail: string;
+}
+
 const KIND: Record<string, string> = { fund: "Funded", payout: "Payout", refund: "Refund" };
+
+/** A short, human age like "3m" / "2h" / "1d" for how long an exception has sat. */
+function ageOf(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 60_000) return "just now";
+  const m = Math.floor(ms / 60_000);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
 
 /** The escrow movement for a row: +in on funding, −out on payout/refund. */
 function escrowDelta(entry: LedgerEntry): number {
@@ -30,16 +58,22 @@ function escrowDelta(entry: LedgerEntry): number {
 export default function LedgerPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [entries, setEntries] = useState<LedgerEntry[] | null>(null);
+  const [exceptions, setExceptions] = useState<Exception[]>([]);
+  const [discrepancies, setDiscrepancies] = useState<Discrepancy[]>([]);
   const [error, setError] = useState(false);
+  const [retrying, setRetrying] = useState<string | null>(null);
+  const [retryMsg, setRetryMsg] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setError(false);
     try {
       const res = await fetch("/api/admin/ledger");
       if (!res.ok) throw new Error(String(res.status));
-      const data = (await res.json()) as { summary: Summary; entries: LedgerEntry[] };
+      const data = (await res.json()) as { summary: Summary; entries: LedgerEntry[]; exceptions?: Exception[]; discrepancies?: Discrepancy[] };
       setSummary(data.summary);
       setEntries(data.entries);
+      setExceptions(data.exceptions ?? []);
+      setDiscrepancies(data.discrepancies ?? []);
     } catch {
       setError(true);
       setEntries([]);
@@ -47,6 +81,29 @@ export default function LedgerPage() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const retry = useCallback(async (key: string) => {
+    setRetrying(key);
+    setRetryMsg((m) => ({ ...m, [key]: "" }));
+    try {
+      const res = await fetch("/api/admin/ledger/retry", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.ok) {
+        setRetryMsg((m) => ({ ...m, [key]: "Re-driven. Reloading…" }));
+        await load();
+      } else {
+        setRetryMsg((m) => ({ ...m, [key]: data.error || "Could not re-drive this move." }));
+      }
+    } catch {
+      setRetryMsg((m) => ({ ...m, [key]: "Network error. Try again." }));
+    } finally {
+      setRetrying(null);
+    }
+  }, [load]);
 
   return (
     <main className="lg">
@@ -97,6 +154,53 @@ export default function LedgerPage() {
               <div className="lg-tval">{naira(summary.revenue)}</div>
             </div>
           </div>
+        )}
+
+        {(exceptions.length > 0 || discrepancies.length > 0) && (
+          <section className="lg-attn">
+            <h2 className="lg-h2 lg-h2-attn">Needs attention</h2>
+
+            {exceptions.length > 0 && (
+              <>
+                <div className="lg-attn-label">Settlement exceptions — a money-move that failed or is stuck</div>
+                <div className="lg-list">
+                  {exceptions.map((x) => (
+                    <div className="lg-xrow" key={x.key}>
+                      <div className="lg-rmain">
+                        <span className={`lg-kind lg-${x.kind}`}>{KIND[x.kind] ?? x.kind}</span>
+                        <span className="lg-memo">
+                          {x.state === "failed" ? "Failed" : "Stuck (pending)"} · {x.attempts} attempt{x.attempts === 1 ? "" : "s"} · {ageOf(x.updatedAt)}
+                          {x.error ? ` · ${x.error}` : ""}
+                        </span>
+                      </div>
+                      <div className="lg-rside">
+                        <button className="lg-retry" onClick={() => void retry(x.key)} disabled={retrying === x.key}>
+                          {retrying === x.key ? "Re-driving…" : "Retry"}
+                        </button>
+                      </div>
+                      {retryMsg[x.key] && <div className="lg-xmsg">{retryMsg[x.key]}</div>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {discrepancies.length > 0 && (
+              <>
+                <div className="lg-attn-label">Ledger discrepancies — a deal and the ledger disagree</div>
+                <div className="lg-list">
+                  {discrepancies.map((d, i) => (
+                    <div className="lg-xrow" key={`${d.dealId}-${d.code}-${i}`}>
+                      <div className="lg-rmain">
+                        <span className="lg-kind lg-warn">{d.status}</span>
+                        <span className="lg-memo">{d.detail}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
         )}
 
         <h2 className="lg-h2">Recent entries</h2>
@@ -166,4 +270,14 @@ const css = `
 .lg-amt{ font-size:15px; font-weight:800; letter-spacing:-.01em; font-variant-numeric:tabular-nums }
 .lg-amt.in{ color:var(--safe) } .lg-amt.out{ color:var(--ink) }
 .lg-when{ font-size:12px; color:var(--faint); min-width:52px; text-align:right }
+.lg-attn{ margin-top:38px }
+.lg-h2-attn{ margin-top:0; color:var(--bad) }
+.lg-attn-label{ margin-top:16px; font-size:12.5px; font-weight:600; color:var(--muted) }
+.lg-xrow{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; background:var(--bad-bg); border:1px solid #F5C2C2; border-radius:12px; padding:13px 16px }
+.lg-warn{ color:var(--bad); background:#fff }
+.lg-retry{ flex-shrink:0; font-family:inherit; font-size:12.5px; font-weight:700; color:#fff; background:var(--ink); border:none; border-radius:9px; padding:8px 14px; cursor:pointer; transition:transform .18s cubic-bezier(.22,1,.36,1),opacity .18s ease }
+.lg-retry:hover:not(:disabled){ transform:translateY(-1px) }
+.lg-retry:active:not(:disabled){ transform:scale(.98) }
+.lg-retry:disabled{ opacity:.55; cursor:default }
+.lg-xmsg{ flex-basis:100%; font-size:12.5px; color:var(--ink-2); margin-top:2px }
 `;

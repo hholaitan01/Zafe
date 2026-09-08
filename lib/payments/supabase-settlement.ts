@@ -18,7 +18,7 @@
    ========================================================================== */
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { BeginResult, SettlementMeta, SettlementRecord, SettlementStore, SettlementState } from "./settlement";
+import type { BeginResult, SettlementFilter, SettlementMeta, SettlementRecord, SettlementStore, SettlementState } from "./settlement";
 import { STALE_PENDING_MS } from "./settlement";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -113,5 +113,13 @@ export const supabaseSettlementStore: SettlementStore = {
 
   async get(key: string): Promise<SettlementRecord | null> {
     return read(key);
+  },
+
+  async list(filter?: SettlementFilter): Promise<SettlementRecord[]> {
+    let q = db().from("settlement_operations").select("*");
+    if (filter?.states?.length) q = q.in("state", filter.states);
+    const { data, error } = await q.order("updated_at", { ascending: false });
+    if (error) throw new Error(`settlement list failed: ${error.message}`);
+    return (data ?? []).map(fromRow);
   },
 };
