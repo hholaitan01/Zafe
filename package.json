@@ -17,6 +17,7 @@
     "check:admin": "tsx lib/auth/roles.check.ts",
     "check:config": "tsx lib/config/check.ts",
     "check:security": "tsx lib/deals/adversarial.check.ts",
+    "check:payout": "tsx lib/sellers/payout-guard.check.ts",
     "mobile:sync": "cap sync",
     "mobile:ios": "cap sync ios && cap open ios",
     "mobile:android": "cap sync android && cap open android"

@@ -24,6 +24,11 @@ export default function SellerPage() {
   const [accountName, setAccountName] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  // Changing an existing payout account needs an emailed code (2FA). When the
+  // server asks for one, we drop into this step and resubmit with the code.
+  const [otpMode, setOtpMode] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpNote, setOtpNote] = useState("");
   const [shell, setShell] = useState({ name: "You", initials: "" });
   // Becoming a seller means saving a payout identity, so it needs a signed-in
   // user. `ready` gates the form until we've confirmed one; a signed-out visitor
@@ -42,7 +47,7 @@ export default function SellerPage() {
     return () => { alive = false; };
   }, [router]);
 
-  async function verify() {
+  async function verify(code?: string) {
     if (busy) return;
     if (!fullName.trim() || idNumber.trim().length !== 11 || !bankName.trim() || accountNumber.trim().length < 10 || !accountName.trim()) {
       setErr("Fill in your name, your 11-digit BVN, and your full bank account details.");
@@ -52,16 +57,28 @@ export default function SellerPage() {
     setBusy(true);
     try {
       const me = await getCurrentUser().catch(() => null);
-      const saved = await saveSellerProfile(
+      const result = await saveSellerProfile(
         { fullName: fullName.trim(), payout: { bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountName: accountName.trim() } },
         me?.email,
         { idNumber: idNumber.trim(), idType: "bvn", selfie },
+        code,
       );
-      if (saved.verified) toast.success("Identity verified. You can receive payouts.");
+      if (result.status === "otp_required") {
+        // A payout-account change: confirm with the emailed code before it takes effect.
+        setOtpMode(true);
+        setOtpNote(result.sent
+          ? "We emailed a 6-digit code to confirm your new payout account. Enter it to continue."
+          : result.devCode
+            ? `Demo mode: your confirmation code is ${result.devCode}.`
+            : "Enter the 6-digit code we sent to confirm your new payout account.");
+        setBusy(false);
+        return;
+      }
+      if (result.profile.verified) toast.success("Identity verified. You can receive payouts.");
       else toast("Details saved. We couldn't verify you, so payouts stay locked until your BVN and selfie match.");
       router.push("/selling");
-    } catch {
-      const msg = "Couldn't save your details. Please try again.";
+    } catch (e) {
+      const msg = otpMode ? (e as Error)?.message || "That code didn't work. Try again." : "Couldn't save your details. Please try again.";
       setErr(msg);
       toast.error(msg);
       setBusy(false);
@@ -122,9 +139,30 @@ export default function SellerPage() {
 
           {err && <p className="sl-err">{err}</p>}
 
-          <button className="tf-btn tf-btn--primary sl-cta" disabled={!done || busy} onClick={() => void verify()}>
-            {busy ? "Verifying…" : "Finish verification"}
-          </button>
+          {otpMode ? (
+            <div className="sl-otp">
+              <p className="sl-otp-note">{otpNote}</p>
+              <input
+                className="tf-input sl-otp-input"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="6-digit code"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                aria-label="Confirmation code"
+              />
+              <button className="tf-btn tf-btn--primary sl-cta" disabled={otp.length !== 6 || busy} onClick={() => void verify(otp)}>
+                {busy ? "Confirming…" : "Confirm account change"}
+              </button>
+              <button className="sl-otp-cancel" disabled={busy} onClick={() => { setOtpMode(false); setOtp(""); setOtpNote(""); setErr(""); }}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button className="tf-btn tf-btn--primary sl-cta" disabled={!done || busy} onClick={() => void verify()}>
+              {busy ? "Verifying…" : "Finish verification"}
+            </button>
+          )}
         </div>
 
         <aside className="sl-side tf-card">
@@ -165,6 +203,11 @@ const css = `
 .sl-err{ font-size:13px; color:var(--danger); font-weight:500; line-height:1.4 }
 .sl-cta{ height:56px; font-size:16px; width:100% }
 .sl-cta:disabled{ opacity:.45; cursor:not-allowed }
+.sl-otp{ display:flex; flex-direction:column; gap:12px }
+.sl-otp-note{ font-size:13.5px; color:var(--ink-2); line-height:1.5; margin:0 }
+.sl-otp-input{ letter-spacing:.4em; font-size:18px; text-align:center; font-variant-numeric:tabular-nums }
+.sl-otp-cancel{ background:none; border:none; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; padding:4px; align-self:center }
+.sl-otp-cancel:disabled{ opacity:.5; cursor:not-allowed }
 
 .sl-side{ padding:20px; height:fit-content }
 .sl-why{ list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:14px }

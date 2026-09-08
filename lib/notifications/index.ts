@@ -14,7 +14,7 @@
    ========================================================================== */
 
 import type { Deal } from "@/lib/deals/types";
-import { sendEmail } from "./email";
+import { sendEmail, type EmailResult } from "./email";
 
 export function appUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL || "https://getzafe.vercel.app").replace(/\/$/, "");
@@ -83,4 +83,32 @@ export async function notifySellerOfEscrow(deal: Deal, opts: { isUser: boolean }
   </div>`;
 
   await sendEmail({ to: to as string, subject, html, text });
+}
+
+/**
+ * Email a seller the one-time code that confirms a change to their payout bank
+ * account (audit #19). Returns the send result: the caller reads `mode` to tell
+ * a real delivery ("live") from the demo outbox ("mock"), and degrades to the
+ * cooldown-only control when no mailer is configured.
+ */
+export async function sendPayoutOtpEmail(to: string, code: string): Promise<EmailResult> {
+  const subject = "Confirm your Zafe payout account change";
+  const text = [
+    "Someone asked to change the bank account your Zafe payouts go to.",
+    "",
+    `Your confirmation code is ${code}. It expires in 10 minutes.`,
+    "",
+    "If this wasn't you, do not share this code and sign in to review your account. Payouts are held for a short cooldown after any change.",
+  ].join("\n");
+  const html = `
+  <div style="font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0F172A">
+    <div style="font-weight:800;font-size:18px;letter-spacing:-.02em;color:#0F172A;margin-bottom:18px">Zafe</div>
+    <div style="background:#ECFDF5;border:1px solid #C7EAD9;border-radius:14px;padding:18px 20px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#059669">Confirm payout change</div>
+      <div style="font-size:30px;font-weight:800;letter-spacing:.12em;margin-top:8px;font-variant-numeric:tabular-nums">${escapeHtml(code)}</div>
+      <div style="font-size:13px;color:#334155;margin-top:6px">Expires in 10 minutes</div>
+    </div>
+    <p style="font-size:13px;line-height:1.6;color:#94A3B8;margin-top:20px">If this wasn't you, do not share this code. Sign in to review your account. Your payouts are held for a short cooldown after any change.</p>
+  </div>`;
+  return sendEmail({ to, subject, html, text });
 }
