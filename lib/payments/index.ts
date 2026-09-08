@@ -16,7 +16,7 @@ import { getProvider } from "./providers";
 import { payoutEntry, refundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
 import { collectionAmount, computeFee } from "./fee";
-import { beginSettlement, completeSettlement, failSettlement, settlementKey } from "./settlement";
+import { beginSettlement, completeSettlement, failSettlement, reconcileAction, settlementKey, type BeginResult } from "./settlement";
 import { getSeller } from "@/lib/sellers/store";
 import { cooldownUntil } from "@/lib/sellers/payout-guard";
 
@@ -87,6 +87,40 @@ export async function createCollectionAccount(deal: Deal): Promise<CollectionAcc
 }
 
 /**
+ * Before re-transferring a RECLAIMED settlement, ask the provider what really
+ * happened to the prior attempt — looked up by the deterministic reference — so
+ * a transfer that already went through (but whose success we never recorded, or
+ * that a timeout left ambiguous) is never sent a second time.
+ *
+ * Returns a terminal result to hand straight back, or null to go ahead and
+ * transfer. A no-op for a fresh claim, and for mock/ALAT (no status endpoint):
+ * those keep the prior behaviour.
+ */
+async function reconcileReclaim(
+  claim: BeginResult,
+  provider: ReturnType<typeof activeProvider>,
+  reference: string,
+  key: string,
+  mode: PaymentMode,
+): Promise<TransferResult | null> {
+  if (!claim.proceed || !claim.reclaimedFrom) return null; // fresh first claim → nothing to reconcile
+  if (provider !== "paystack" && provider !== "flutterwave") return null; // no status lookup for mock/ALAT
+  const action = reconcileAction(await getProvider(provider).getTransferStatus(reference));
+  if (action === "settled") {
+    // The money already went out. Record success; do NOT re-transfer.
+    await completeSettlement(key, reference);
+    return { ok: true, ref: reference, mode };
+  }
+  if (action === "hold") {
+    // Pending or unknown at the provider. Leave the claim pending so the next
+    // stale window re-checks it (and the reconciliation exception queue surfaces
+    // it), and never re-transfer on an ambiguous status.
+    return { ok: false, error: "A prior transfer for this deal is unresolved at the provider; held for reconciliation.", mode };
+  }
+  return null; // "retry" → the prior attempt definitively failed; safe to transfer
+}
+
+/**
  * Release the escrowed money to the seller's payout account, minus the seller's
  * half of the fee. `amount` is the principal being released (default: the whole
  * deal). Pass `chargeFee: false` for a move that carries no fee — a dispute
@@ -117,6 +151,10 @@ export async function payoutSeller(
     if (claim.reason === "succeeded") return { ok: true, ref: claim.ref, mode };
     return { ok: false, error: "A payout for this deal is already in progress.", mode };
   }
+  // If this claim took over an earlier attempt, reconcile with the provider
+  // before re-sending, so a payout that already went through isn't sent twice.
+  const reconciled = await reconcileReclaim(claim, provider, `zf_payout_${deal.id}`, key, mode);
+  if (reconciled) return reconciled;
 
   const sellerFee = opts?.feeOverride ?? (opts?.chargeFee === false ? 0 : computeFee(amount).sellerShare);
   const net = amount - sellerFee; // what the seller actually receives
@@ -206,6 +244,9 @@ export async function refundBuyer(
     if (claim.reason === "succeeded") return { ok: true, ref: claim.ref, mode };
     return { ok: false, error: "A refund for this deal is already in progress.", mode };
   }
+  // Reconcile a reclaimed refund with the provider before re-sending.
+  const reconciled = await reconcileReclaim(claim, provider, `zf_refund_${deal.id}`, key, mode);
+  if (reconciled) return reconciled;
 
   const buyerFeeReversed = opts?.buyerFeeReversed ?? computeFee(deal.item.amount).buyerShare;
   const cashOut = amount + buyerFeeReversed; // principal back plus the buyer's fee back

@@ -89,7 +89,7 @@ export const supabaseSettlementStore: SettlementStore = {
         .eq("updated_at", rec.updatedAt)
         .select();
       if (upErr) throw new Error(`settlement reclaim failed: ${upErr.message}`);
-      if (data && data.length === 1) return { proceed: true };
+      if (data && data.length === 1) return { proceed: true, reclaimedFrom: rec.state };
       // Lost the race; the row moved. Loop re-reads and re-decides.
     }
     return { proceed: false, reason: "in_flight" };

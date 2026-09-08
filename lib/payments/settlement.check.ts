@@ -32,7 +32,7 @@ function deal(id: string, amount = 100000): Deal {
 
 async function main() {
   const settlement = await import("./settlement");
-  const { beginSettlement, completeSettlement, failSettlement, getSettlement, settlementKey, _resetSettlements } = settlement;
+  const { beginSettlement, completeSettlement, failSettlement, getSettlement, settlementKey, reconcileAction, _resetSettlements } = settlement;
   const { payoutSeller, refundBuyer } = await import("./index");
   const ledger = await import("@/lib/ledger/store");
 
@@ -52,6 +52,19 @@ async function main() {
   const c3 = await beginSettlement(k, { dealId: "s1", kind: "payout" });
   assert("retry after failure proceeds", c3.proceed === true);
   assert("attempts increments on reclaim", ((await getSettlement(k))?.attempts ?? 0) > attemptsBefore);
+  // A reclaim flags what it took over, so the money path knows to reconcile
+  // with the provider before re-sending.
+  assert("reclaim of a failed op reports reclaimedFrom=failed", c3.proceed === true && c3.reclaimedFrom === "failed");
+
+  // --- a FRESH first claim carries no reclaimedFrom (nothing to reconcile) ---
+  const fresh = await beginSettlement(settlementKey("payout", "s1-fresh"), { dealId: "s1-fresh", kind: "payout" });
+  assert("fresh claim has no reclaimedFrom", fresh.proceed === true && fresh.reclaimedFrom === undefined);
+
+  // --- reconcile action mapping: never re-transfer on an ambiguous status ---
+  assert("provider succeeded → settled (do not re-send)", reconcileAction("succeeded") === "settled");
+  assert("provider failed → retry (safe to send)", reconcileAction("failed") === "retry");
+  assert("provider pending → hold", reconcileAction("pending") === "hold");
+  assert("provider unknown → hold (never re-send on ambiguity)", reconcileAction("unknown") === "hold");
 
   // --- a succeeded attempt short-circuits with its ref, never re-transfers ---
   await completeSettlement(k, "ref-123");

@@ -39,6 +39,13 @@ export interface TransferResult {
   error?: string;
 }
 
+/** The reconciled status of a prior transfer, looked up by its reference.
+    - succeeded: the money went out — do NOT send again.
+    - failed:    it definitively did not go out — safe to retry.
+    - pending:   still in flight at the provider — wait, do not retry.
+    - unknown:   couldn't determine — hold for manual reconciliation, never retry. */
+export type TransferStatus = "succeeded" | "pending" | "failed" | "unknown";
+
 /** The normalised meaning of a webhook, once its signature has been checked. */
 export interface WebhookEvent {
   authenticated: boolean; // false = signature/verification failed → caller must refuse to act
@@ -59,6 +66,14 @@ export interface PaymentProvider {
 
   /** Send money out (payout to seller, or refund to buyer). Idempotent on `reference`. */
   transfer(req: TransferRequest): Promise<TransferResult>;
+
+  /**
+   * The true status of a prior transfer, looked up by its deterministic
+   * `reference`. Called before retrying a stale/failed settlement so a transfer
+   * that already went through (but whose success we never recorded — e.g. a
+   * crash or timeout after the provider accepted it) is never sent twice.
+   */
+  getTransferStatus(reference: string): Promise<TransferStatus>;
 
   /**
    * Authenticate and parse a raw webhook body. Returns null when the body is
