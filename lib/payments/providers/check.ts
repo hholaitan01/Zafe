@@ -9,6 +9,13 @@ import { createHmac } from "node:crypto";
 // Set the secrets BEFORE importing modules that read them at load time.
 process.env.PAYSTACK_SECRET_KEY = "sk_test_zafe_check_secret";
 process.env.FLW_SECRET_HASH = "flw_test_zafe_verif_hash";
+// Prove ALAT stays disabled even when its keys are set AND it is explicitly
+// forced: activeProvider must still refuse to select it.
+process.env.PAYMENTS_PROVIDER = "alat";
+process.env.ALATPAY_API_KEY = "alat_test";
+process.env.ALATPAY_BUSINESS_ID = "alat_biz";
+process.env.ALAT_WALLET_API_KEY = "alat_wallet";
+process.env.ALAT_ESCROW_POOL_ACCOUNT = "0000000000";
 // Keep this check hermetic: with no Supabase configured, idempotency resolves to
 // the in-memory store, so the base claims below hit no network.
 delete process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -75,6 +82,12 @@ async function main() {
   assert("flw: non-success status does not fund", flwP?.funded === false);
 
   assert("flw: garbage body returns null", flutterwaveProvider.parseWebhook("{bad", new Headers()) === null);
+
+  // --- ALAT is disabled: never selected, even forced with keys set ---
+  const { activeProvider } = await import("../config");
+  assert("ALAT never selected for collection (even forced)", activeProvider("collection") !== "alat");
+  assert("ALAT never selected for payout (even forced)", activeProvider("payout") !== "alat");
+  assert("forced ALAT falls back to a real provider", activeProvider("payout") === "paystack");
 
   // --- idempotency (in-memory default) ---
   assert("claimOnce: first claim succeeds", (await claimOnce("evt-A")) === true);
