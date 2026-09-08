@@ -16,6 +16,7 @@ import { fundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
 import { computeFee, disputeSellerFee } from "@/lib/payments/fee";
 import { getSeller } from "@/lib/sellers/store";
+import { callerRoleOnDeal } from "./access";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
 import { autoReleaseTime, newHandoverCode, normalizeContact, statusLabel } from "./helpers";
@@ -431,21 +432,31 @@ export async function openDispute(id: string, input: DisputeInput): Promise<Disp
     return { ok: false, error: "Only a funded or delivered deal can be disputed." };
   }
 
+  // Trust boundary enforced HERE, not just at the route (audit #11/#12): a caller
+  // may only supply their OWN side's claim. The other side's stays as already
+  // recorded on the deal, so no party can submit or overwrite the counterparty's
+  // statement. Demo mode (single local session) may set both.
+  const role = await callerRoleOnDeal(deal);
+  if (role === "other") return { ok: false, error: "You are not a party to this deal." };
+  const prior = deal.dispute;
+  const buyer = role === "buyer" || role === "demo" ? input.buyer : (prior?.buyer ?? { claim: "(the buyer has not added their side yet)" });
+  const seller = role === "seller" || role === "demo" ? input.seller : (prior?.seller ?? { claim: "(the seller has not added their side yet)" });
+
   const openedAt = new Date().toISOString();
   // Use the mediator's server-computed resolution when one was passed; otherwise
   // fall back to the one-shot judge (the original form-based flow).
   const resolution = input.resolution ?? await getDisputeDecision({
     item: deal.item,
     amount: deal.item.amount,
-    buyer: input.buyer,
-    seller: input.seller,
+    buyer,
+    seller,
     chat: deal.chat,
   });
   const dispute: DealDispute = {
     openedAt: deal.dispute?.openedAt ?? openedAt,
     reason: input.reason ?? deal.dispute?.reason,
-    buyer: input.buyer,
-    seller: input.seller,
+    buyer,
+    seller,
     resolution,
     buyerAccepted: false,
     sellerAccepted: false,
