@@ -17,6 +17,7 @@
     "check:admin": "tsx lib/auth/roles.check.ts",
     "check:config": "tsx lib/config/check.ts",
     "check:security": "tsx lib/deals/adversarial.check.ts",
+    "check:lifecycle": "tsx lib/deals/transitions.check.ts",
     "check:identity": "tsx lib/auth/identity.check.ts",
     "check:payout": "tsx lib/sellers/payout-guard.check.ts",
     "mobile:sync": "cap sync",

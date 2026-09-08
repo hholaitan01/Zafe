@@ -134,7 +134,7 @@ export const flutterwaveProvider: PaymentProvider = {
   },
 
   parseWebhook(rawBody: string, reqHeaders: Headers): WebhookEvent | null {
-    let evt: { event?: string; data?: { tx_ref?: string; id?: number | string; status?: string } };
+    let evt: { event?: string; data?: { tx_ref?: string; id?: number | string; status?: string; amount?: number | string; currency?: string } };
     try {
       evt = JSON.parse(rawBody);
     } catch {
@@ -144,12 +144,16 @@ export const flutterwaveProvider: PaymentProvider = {
 
     const authenticated = verifyHash(reqHeaders.get("verif-hash"));
     const reference = String(evt.data.tx_ref ?? "");
+    // Flutterwave NGN amounts are already whole Naira.
+    const amount = evt.data.amount != null ? Number(evt.data.amount) : NaN;
     return {
       authenticated,
       funded: evt.event === "charge.completed" && evt.data.status === "successful",
       reference,
       providerRef: reference,
       eventId: `flutterwave:${evt.data.id ?? reference}`,
+      amountNaira: Number.isFinite(amount) ? amount : undefined,
+      currency: evt.data.currency ? String(evt.data.currency) : undefined,
     };
   },
 };

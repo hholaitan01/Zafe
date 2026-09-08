@@ -18,6 +18,7 @@ import { computeFee, disputeSellerFee } from "@/lib/payments/fee";
 import { getSeller } from "@/lib/sellers/store";
 import type { UserIdentity } from "@/lib/auth/identity";
 import { callerRoleOnDeal } from "./access";
+import { canTransition } from "./transitions";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
 import { autoReleaseTime, newHandoverCode, normalizeContact, statusLabel } from "./helpers";
@@ -178,10 +179,18 @@ async function assessDeal(input: CreateDealInput): Promise<DealTrust | undefined
   return base;
 }
 
-/** Simple status move (e.g. fund, refund) with a timeline entry. */
+/** Simple status move (e.g. fund, refund) with a timeline entry. Enforces the
+    lifecycle matrix: an illegal move (backward, skipping, or re-funding a
+    settled deal) is a no-op that returns the deal unchanged, so a settled deal
+    can never be pushed back to funded. Same-state re-asserts are idempotent. */
 export async function setDealStatus(id: string, status: DealStatus, note?: string): Promise<Deal | null> {
   const deal = await backend().get(id);
   if (!deal) return null;
+  if (!canTransition(deal.status, status)) {
+    console.warn(`deal ${id}: rejected illegal transition ${deal.status} -> ${status}`);
+    return deal; // unchanged — the caller decides how to report it
+  }
+  if (deal.status === status) return deal; // idempotent no-op (e.g. a replayed funding webhook)
   const ev = event(status, note);
   const updated = await backend().patch(id, { status, timeline: [...deal.timeline, ev], updatedAt: ev.at });
   // Money landed in escrow: post it to the ledger (best-effort, idempotent by ref).

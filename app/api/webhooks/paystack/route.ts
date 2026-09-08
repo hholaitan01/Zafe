@@ -12,8 +12,10 @@
    ========================================================================== */
 
 import { getDealByReference, setDealStatus } from "@/lib/deals/store";
+import { canTransition } from "@/lib/deals/transitions";
 import { paystackProvider } from "@/lib/payments/providers";
 import { claimOnce } from "@/lib/payments/idempotency";
+import { verifyFunding } from "@/lib/payments/funding";
 import { rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 
 export async function POST(req: Request): Promise<Response> {
@@ -41,11 +43,24 @@ export async function POST(req: Request): Promise<Response> {
   const deal = await getDealByReference(event.reference);
   if (!deal) return Response.json({ error: "deal not found" }, { status: 404 });
 
+  // A settled deal is terminal for funding: never move completed/refunded/resolved
+  // back to funded. Acknowledge so the provider stops retrying.
+  if (!canTransition(deal.status, "funded")) {
+    return Response.json({ received: true, alreadySettled: true });
+  }
+
   // Defence in depth: confirm the transaction is really successful with Paystack
   // directly, rather than trusting the (already signature-checked) callback.
   const verified = await paystackProvider.verifyTransaction(event.providerRef ?? event.reference);
   if (!verified?.successful) {
     return Response.json({ error: "callback did not match verified status" }, { status: 409 });
+  }
+
+  // Confirm the buyer paid the right currency and at least the required amount
+  // before funding the escrow — a signature-checked "success" is not enough.
+  const funding = verifyFunding(deal, { amountNaira: event.amountNaira, currency: event.currency });
+  if (!funding.ok) {
+    return Response.json({ error: `funding rejected: ${funding.reason}` }, { status: 409 });
   }
 
   await setDealStatus(deal.id, "funded", "Payment confirmed by Paystack — money held in escrow.");
