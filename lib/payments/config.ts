@@ -1,16 +1,16 @@
 /* ==========================================================================
    Which payment backend are we using? (Same live/demo seam as AI, auth, deals.)
 
-   - LIVE  — the ALAT keys are set, so we call ALATPay (collection) and the
-             ALAT Wallet (payout/refund) for real.
+   - LIVE  — Paystack (one key covers collection, payout, and webhook signing),
+             or Flutterwave. `activeProvider` picks whichever is keyed.
    - MOCK  — no keys, so payments are simulated: a fake virtual account, an
              instant "paid", a fake payout reference. The whole escrow flow
              still works end to end on stage with no bank access.
 
-   ALATPay (collection) and the ALAT Wallet (payout) are two separate ALAT
-   products with separate keys, so each can go live independently — collection
-   can be real while payout is still mocked, which matches how ALAT grants
-   access (self-serve ALATPay first, bank-issued Wallet key later).
+   ALAT (ALATPay collection + ALAT Wallet payout) is present but DISABLED: its
+   payout path is incomplete (securityInfo pending the bank's encryption scheme),
+   so activeProvider never selects it. The config + modules stay so it can be
+   re-enabled quickly once that's confirmed.
    ========================================================================== */
 
 export const ALATPAY_API_KEY = process.env.ALATPAY_API_KEY ?? "";
@@ -66,19 +66,21 @@ const PAYMENTS_PROVIDER = (process.env.PAYMENTS_PROVIDER ?? "").toLowerCase();
 /**
  * The active provider for a money-move.
  * - explicit `PAYMENTS_PROVIDER` wins when that provider's keys are present;
- * - otherwise Paystack (if keyed), then Flutterwave (if keyed), then ALAT (if
- *   keyed), else mock.
- * `kind` lets collection and payout resolve independently, matching ALAT's
- * split (collection can be live while payout is still mocked).
+ * - otherwise Paystack (if keyed), then Flutterwave (if keyed), else mock.
+ *
+ * ALAT is intentionally NOT selectable right now: its payout path is incomplete
+ * (the ALAT Wallet `securityInfo` is pending the bank's encryption scheme), so
+ * it must never move real money. Even `PAYMENTS_PROVIDER=alat` or ALAT keys
+ * being set resolve to mock rather than the ALAT path. The ALAT modules stay in
+ * place, dormant — re-enable by restoring the two `alat` branches below once the
+ * scheme is confirmed. The `kind` arg is retained for that future split
+ * (collection could go live before payout).
  */
-export function activeProvider(kind: "collection" | "payout"): PaymentProviderId {
-  const alatLive = kind === "collection" ? collectionLive() : payoutLive();
+export function activeProvider(_kind: "collection" | "payout"): PaymentProviderId {
   if (PAYMENTS_PROVIDER === "paystack" && paystackLive()) return "paystack";
   if (PAYMENTS_PROVIDER === "flutterwave" && flutterwaveLive()) return "flutterwave";
-  if (PAYMENTS_PROVIDER === "alat" && alatLive) return "alat";
   if (PAYMENTS_PROVIDER === "mock") return "mock";
   if (paystackLive()) return "paystack";
   if (flutterwaveLive()) return "flutterwave";
-  if (alatLive) return "alat";
   return "mock";
 }
