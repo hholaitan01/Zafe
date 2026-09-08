@@ -16,6 +16,7 @@ import { fundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
 import { computeFee, disputeSellerFee } from "@/lib/payments/fee";
 import { getSeller } from "@/lib/sellers/store";
+import { callerRoleOnDeal } from "./access";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
 import { autoReleaseTime, newHandoverCode, normalizeContact, statusLabel } from "./helpers";
@@ -40,15 +41,14 @@ export async function getDealByReference(reference: string): Promise<Deal | null
   return all.find((d) => d.reference === reference) ?? null;
 }
 
-/** List deals — but first release any that quietly ran past their timer. */
+/** List deals. (Auto-release is a money-move; it runs only from the scheduled
+    job, never as a side effect of reading — see /api/deals/auto-release.) */
 export async function listDeals(): Promise<Deal[]> {
-  await runAutoReleases();
   return backend().list();
 }
 
 /** List one buyer's own deals (per-user scoping for the dashboard + reputation). */
 export async function listDealsForUser(email: string): Promise<Deal[]> {
-  await runAutoReleases();
   return backend().listByBuyer(email);
 }
 
@@ -79,7 +79,6 @@ export async function listDealsBySeller(contact: string): Promise<Deal[]> {
 export async function listDealsBySellerContacts(contacts: string[]): Promise<Deal[]> {
   const set = new Set(contacts.map(normalizeContact).filter(Boolean));
   if (!set.size) return [];
-  await runAutoReleases();
   const all = await backend().list();
   return all
     .filter((d) => d.seller?.contact && set.has(normalizeContact(d.seller.contact)))
@@ -397,21 +396,31 @@ export async function openDispute(id: string, input: DisputeInput): Promise<Disp
     return { ok: false, error: "Only a funded or delivered deal can be disputed." };
   }
 
+  // Trust boundary enforced HERE, not just at the route (audit #11/#12): a caller
+  // may only supply their OWN side's claim. The other side's stays as already
+  // recorded on the deal, so no party can submit or overwrite the counterparty's
+  // statement. Demo mode (single local session) may set both.
+  const role = await callerRoleOnDeal(deal);
+  if (role === "other") return { ok: false, error: "You are not a party to this deal." };
+  const prior = deal.dispute;
+  const buyer = role === "buyer" || role === "demo" ? input.buyer : (prior?.buyer ?? { claim: "(the buyer has not added their side yet)" });
+  const seller = role === "seller" || role === "demo" ? input.seller : (prior?.seller ?? { claim: "(the seller has not added their side yet)" });
+
   const openedAt = new Date().toISOString();
   // Use the mediator's server-computed resolution when one was passed; otherwise
   // fall back to the one-shot judge (the original form-based flow).
   const resolution = input.resolution ?? await getDisputeDecision({
     item: deal.item,
     amount: deal.item.amount,
-    buyer: input.buyer,
-    seller: input.seller,
+    buyer,
+    seller,
     chat: deal.chat,
   });
   const dispute: DealDispute = {
     openedAt: deal.dispute?.openedAt ?? openedAt,
     reason: input.reason ?? deal.dispute?.reason,
-    buyer: input.buyer,
-    seller: input.seller,
+    buyer,
+    seller,
     resolution,
     buyerAccepted: false,
     sellerAccepted: false,

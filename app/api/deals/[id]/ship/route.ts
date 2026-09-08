@@ -8,6 +8,7 @@ import { jsonError, readJson } from "@/lib/ai/http";
 import { authorizeDeal } from "@/lib/deals/access";
 import { shipDeal } from "@/lib/deals/store";
 import type { PayoutAccount } from "@/lib/deals/types";
+import { publicDeal, publicDeals } from "@/lib/deals/redact";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
@@ -19,5 +20,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const body = await readJson<{ sellerPayout?: PayoutAccount }>(req).catch(() => null);
   const deal = await shipDeal(id, body?.sellerPayout);
   if (!deal) return jsonError("Deal not found", 404);
-  return Response.json({ deal });
+  return Response.json({ deal: publicDeal(deal) });
 }

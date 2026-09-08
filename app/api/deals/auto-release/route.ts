@@ -1,13 +1,14 @@
 /* ==========================================================================
    /api/deals/auto-release
    Releases any shipped deals whose timer has run out (the buyer never confirmed
-   or disputed). This is a SCHEDULED/ops sweep, not a user action — no screen
-   calls it, and the same sweep already runs inside every deal-list call.
+   or disputed). This is the ONLY place auto-release runs — a SCHEDULED/ops sweep,
+   never a side effect of reading deals.
 
-   It moves money, so it's protected: when CRON_SECRET is set (production) the
-   caller must present it as a Bearer token, which is exactly what Vercel Cron
-   sends (see vercel.json). When it's unset (local/demo) it stays open, since it
-   can only release deals already past their timer. Also rate-limited.
+   It moves money, so it's protected and FAILS CLOSED: when CRON_SECRET is set the
+   caller must present it as a Bearer token (exactly what Vercel Cron sends, see
+   vercel.json). When it's unset the endpoint is open ONLY in non-production
+   (local/demo); in production a missing secret is treated as unauthorized rather
+   than left open. Also rate-limited.
 
    Vercel Cron invokes via GET; POST stays for the existing client helper.
    ========================================================================== */
@@ -24,9 +25,10 @@ function safeEqual(a: string, b: string): boolean {
   return ab.length === bb.length && timingSafeEqual(ab, bb);
 }
 
-/** Authorized when no secret is configured (local/demo), or the Bearer token matches. */
+/** Authorized by a matching Bearer token; with no secret set, open only outside
+    production (fail closed in prod so a config slip can't expose a money-move). */
 function authorized(req: Request): boolean {
-  if (!CRON_SECRET) return true;
+  if (!CRON_SECRET) return process.env.NODE_ENV !== "production";
   const auth = req.headers.get("authorization") ?? "";
   return safeEqual(auth, `Bearer ${CRON_SECRET}`);
 }

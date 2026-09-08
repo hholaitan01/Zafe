@@ -16,6 +16,7 @@ import { openDispute } from "@/lib/deals/store";
 import { runDisputeTurn, type DisputeContext } from "@/lib/ai/dispute-agent";
 import type { ChatMessage } from "@/lib/ai/client";
 import { rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
+import { publicDeal, publicDeals } from "@/lib/deals/redact";
 
 function cleanMessages(input: unknown): ChatMessage[] {
   if (!Array.isArray(input)) return [];
@@ -67,5 +68,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!outcome.ok) {
     return jsonError(outcome.error === "not_found" ? "Deal not found" : (outcome.error ?? "Couldn't file the dispute."), outcome.error === "not_found" ? 404 : 400);
   }
-  return Response.json({ deal: outcome.deal, resolution: outcome.resolution });
+  return Response.json({ deal: publicDeal(outcome.deal), resolution: outcome.resolution });
 }

@@ -9,6 +9,7 @@
 import { jsonError } from "@/lib/ai/http";
 import { authorizeDeal, callerRoleOnDeal } from "@/lib/deals/access";
 import { escalateDispute } from "@/lib/deals/store";
+import { publicDeal, publicDeals } from "@/lib/deals/redact";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
@@ -21,5 +22,5 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const out = await escalateDispute(id, party);
   if (!out.ok) return jsonError(out.error ?? "Couldn't escalate the dispute.", out.error === "not_found" ? 404 : 409);
-  return Response.json({ deal: out.deal });
+  return Response.json({ deal: publicDeal(out.deal) });
 }
