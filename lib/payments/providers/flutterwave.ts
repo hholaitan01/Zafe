@@ -21,6 +21,7 @@ import type {
   PaymentProvider,
   TransferRequest,
   TransferResult,
+  TransferStatus,
   WebhookEvent,
 } from "./types";
 
@@ -106,6 +107,29 @@ export const flutterwaveProvider: PaymentProvider = {
       return { ok: true, ref: String(out.data?.id ?? req.reference) };
     } catch (e) {
       return { ok: false, error: (e as Error).message };
+    }
+  },
+
+  async getTransferStatus(reference: string): Promise<TransferStatus> {
+    // Flutterwave transfers are listed and filtered by reference. We match the
+    // returned rows on our EXACT reference rather than trusting positional order,
+    // so an ignored filter can never make us read an unrelated transfer's status.
+    // No match with a definitively-scoped empty result = never sent (retry);
+    // anything ambiguous holds ("unknown") for manual reconciliation.
+    try {
+      const res = await fetch(`${BASE}/transfers?reference=${encodeURIComponent(reference)}`, { headers: headers() });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return "unknown";
+      const list = Array.isArray(body?.data) ? (body.data as Array<Record<string, unknown>>) : [];
+      const match = list.find((t) => String(t?.reference ?? "") === reference);
+      if (!match) return list.length === 0 ? "failed" : "unknown";
+      const status = String(match.status ?? "").toUpperCase();
+      if (status === "SUCCESSFUL") return "succeeded";
+      if (status === "FAILED") return "failed";
+      if (status === "NEW" || status === "PENDING" || status === "PROCESSING") return "pending";
+      return "unknown";
+    } catch {
+      return "unknown";
     }
   },
 

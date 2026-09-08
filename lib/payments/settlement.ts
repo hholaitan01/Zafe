@@ -25,8 +25,23 @@
    idempotency store. `setSettlementStore` injects a test double.
    ========================================================================== */
 
+import type { TransferStatus } from "./providers/types";
+
 export type SettlementState = "pending" | "succeeded" | "failed";
 export type SettlementKind = "payout" | "refund";
+
+/** What to do with a reclaimed settlement once the provider's true status is known. */
+export type ReconcileAction =
+  | "settled" // the transfer already went through — record success, do NOT re-send
+  | "retry" // it definitively did not go through — safe to transfer
+  | "hold"; // pending or unknown — do not transfer; leave for the next window / exception queue
+
+/** Map a provider transfer status to the safe reconciliation action. */
+export function reconcileAction(status: TransferStatus): ReconcileAction {
+  if (status === "succeeded") return "settled";
+  if (status === "failed") return "retry";
+  return "hold"; // "pending" or "unknown" — never re-transfer on an ambiguous status
+}
 
 export interface SettlementRecord {
   key: string;
@@ -39,9 +54,13 @@ export interface SettlementRecord {
   updatedAt: string; // ISO
 }
 
-/** The verdict `begin` returns to a caller about to move money. */
+/** The verdict `begin` returns to a caller about to move money. `reclaimedFrom`
+    is set when this proceed took over an earlier attempt (a failed one, or a
+    stale-pending one whose process died) — the caller must reconcile with the
+    provider before actually re-transferring, so a transfer that already went
+    through is never sent twice. Absent on a fresh first claim. */
 export type BeginResult =
-  | { proceed: true }
+  | { proceed: true; reclaimedFrom?: SettlementState }
   | { proceed: false; reason: "succeeded"; ref?: string }
   | { proceed: false; reason: "in_flight" };
 
@@ -93,11 +112,12 @@ class MemorySettlementStore implements SettlementStore {
       return { proceed: false, reason: "in_flight" };
     }
     // failed, or a stale pending: this caller takes over the attempt.
+    const reclaimedFrom = rec.state; // "failed" | "pending" — before we overwrite it
     rec.state = "pending";
     rec.attempts += 1;
     rec.updatedAt = new Date(now).toISOString();
     rec.error = undefined;
-    return { proceed: true };
+    return { proceed: true, reclaimedFrom };
   }
 
   async complete(key: string, ref: string): Promise<void> {

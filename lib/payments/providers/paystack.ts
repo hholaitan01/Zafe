@@ -19,6 +19,7 @@ import type {
   PaymentProvider,
   TransferRequest,
   TransferResult,
+  TransferStatus,
   WebhookEvent,
 } from "./types";
 
@@ -104,6 +105,24 @@ export const paystackProvider: PaymentProvider = {
       return { ok: true, ref: String(out.data?.transfer_code ?? req.reference) };
     } catch (e) {
       return { ok: false, error: (e as Error).message };
+    }
+  },
+
+  async getTransferStatus(reference: string): Promise<TransferStatus> {
+    // Query by our deterministic reference. A 404 means Paystack has no transfer
+    // with this reference — it never went out, so it is safe to retry.
+    try {
+      const res = await fetch(`${BASE}/transfer/verify/${encodeURIComponent(reference)}`, { headers: headers() });
+      if (res.status === 404) return "failed";
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return "unknown";
+      const status = String(body?.data?.status ?? "").toLowerCase();
+      if (status === "success") return "succeeded";
+      if (status === "failed" || status === "abandoned" || status === "reversed") return "failed";
+      if (status === "pending" || status === "processing" || status === "otp" || status === "received" || status === "queued") return "pending";
+      return "unknown";
+    } catch {
+      return "unknown";
     }
   },
 
