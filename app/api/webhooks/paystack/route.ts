@@ -36,10 +36,6 @@ export async function POST(req: Request): Promise<Response> {
   // stops retrying.
   if (!event.funded) return Response.json({ received: true });
 
-  // Process each event exactly once. A re-delivery is a successful no-op.
-  const first = await claimOnce(event.eventId);
-  if (!first) return Response.json({ received: true, duplicate: true });
-
   const deal = await getDealByReference(event.reference);
   if (!deal) return Response.json({ error: "deal not found" }, { status: 404 });
 
@@ -49,19 +45,24 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ received: true, alreadySettled: true });
   }
 
-  // Defence in depth: confirm the transaction is really successful with Paystack
-  // directly, rather than trusting the (already signature-checked) callback.
+  // VERIFY BEFORE CLAIMING (audit #8). Confirm the transaction is really
+  // successful with Paystack, then that the buyer paid the right currency and
+  // amount — BEFORE consuming the event id. A transient verify failure returns
+  // 409 without burning the event, so Paystack's retry can still fund the deal;
+  // claiming first would strand a real payment as a "duplicate" forever.
   const verified = await paystackProvider.verifyTransaction(event.providerRef ?? event.reference);
   if (!verified?.successful) {
     return Response.json({ error: "callback did not match verified status" }, { status: 409 });
   }
-
-  // Confirm the buyer paid the right currency and at least the required amount
-  // before funding the escrow — a signature-checked "success" is not enough.
   const funding = verifyFunding(deal, { amountNaira: event.amountNaira, currency: event.currency });
   if (!funding.ok) {
     return Response.json({ error: `funding rejected: ${funding.reason}` }, { status: 409 });
   }
+
+  // Now claim, so funding happens exactly once. A re-delivery is a no-op; and
+  // setDealStatus("funded") is itself idempotent (funded → funded).
+  const first = await claimOnce(event.eventId);
+  if (!first) return Response.json({ received: true, duplicate: true });
 
   await setDealStatus(deal.id, "funded", "Payment confirmed by Paystack — money held in escrow.");
   return Response.json({ received: true });
