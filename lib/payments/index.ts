@@ -11,7 +11,7 @@
 import type { Deal } from "@/lib/deals/types";
 import { generateVirtualAccount, isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus } from "./alatpay";
 import { accountNameEnquiry, debitWalletTransfer } from "./wallet";
-import { ALAT_ESCROW_POOL_ACCOUNT, activeProvider } from "./config";
+import { ALAT_ESCROW_POOL_ACCOUNT, activeProvider, productionMoneyGuard } from "./config";
 import { getProvider } from "./providers";
 import { payoutEntry, refundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
@@ -49,6 +49,9 @@ function ref(prefix: string, dealId: string): string {
 
 /** A one-time account for the buyer to pay the escrow into (funds the deal). */
 export async function createCollectionAccount(deal: Deal): Promise<CollectionAccount> {
+  // Fail closed: never hand out a mock collection account in production.
+  const block = productionMoneyGuard();
+  if (block) throw new Error(block);
   const expiresAt = new Date(Date.now() + TEN_MIN_MS).toISOString();
   const provider = activeProvider("collection");
   // The buyer pays the deal amount plus their half of the fee.
@@ -134,6 +137,10 @@ export async function payoutSeller(
   const provider = activeProvider("payout");
   const mode: PaymentMode = provider === "mock" ? "mock" : "live";
   const key = settlementKey("payout", deal.id);
+
+  // Fail closed: never pay out through the mock provider (or a demo store) in production.
+  const block = productionMoneyGuard();
+  if (block) return { ok: false, error: block, mode };
 
   // Cooldown: a payout account changed within the window is held before it can
   // receive money (a fraud window after a possible account takeover). Checked
@@ -237,6 +244,10 @@ export async function refundBuyer(
   const provider = activeProvider("payout");
   const mode: PaymentMode = provider === "mock" ? "mock" : "live";
   const key = settlementKey("refund", deal.id);
+
+  // Fail closed: never refund through the mock provider (or a demo store) in production.
+  const block = productionMoneyGuard();
+  if (block) return { ok: false, error: block, mode };
 
   // Same claim as a payout: a retried or concurrent refund never pays twice.
   const claim = await beginSettlement(key, { dealId: deal.id, kind: "refund" });
