@@ -25,6 +25,10 @@ export interface SellerRecord {
   phone?: string;
   idVerified: boolean;
   payout?: SellerPayout;
+  /** When the payout ACCOUNT last changed (not just any profile edit). Drives the
+      post-change payout cooldown — a freshly changed account is held before it
+      can receive money. */
+  payoutUpdatedAt?: string;
   updatedAt: string;
 }
 
@@ -52,6 +56,7 @@ function fromRow(row: Record<string, unknown>): SellerRecord {
     phone: (row.phone as string) ?? undefined,
     idVerified: Boolean(row.id_verified),
     payout: (row.payout as SellerPayout) ?? undefined,
+    payoutUpdatedAt: (row.payout_updated_at as string) ?? undefined,
     updatedAt: String(row.updated_at),
   };
 }
@@ -75,7 +80,7 @@ export async function upsertSeller(rec: SellerRecord): Promise<SellerRecord> {
   const { data, error } = await db()
     .from("sellers")
     .upsert(
-      { email: record.email, full_name: record.fullName ?? null, phone: record.phone ?? null, id_verified: record.idVerified, payout: record.payout ?? null, updated_at: record.updatedAt },
+      { email: record.email, full_name: record.fullName ?? null, phone: record.phone ?? null, id_verified: record.idVerified, payout: record.payout ?? null, payout_updated_at: record.payoutUpdatedAt ?? null, updated_at: record.updatedAt },
       { onConflict: "email" },
     )
     .select("*")
