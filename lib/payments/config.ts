@@ -13,6 +13,8 @@
    re-enabled quickly once that's confirmed.
    ========================================================================== */
 
+import { dealBackend } from "@/lib/deals/config";
+
 export const ALATPAY_API_KEY = process.env.ALATPAY_API_KEY ?? "";
 export const ALATPAY_BUSINESS_ID = process.env.ALATPAY_BUSINESS_ID ?? "";
 export const ALAT_WALLET_API_KEY = process.env.ALAT_WALLET_API_KEY ?? "";
@@ -83,4 +85,21 @@ export function activeProvider(_kind: "collection" | "payout"): PaymentProviderI
   if (paystackLive()) return "paystack";
   if (flutterwaveLive()) return "flutterwave";
   return "mock";
+}
+
+/**
+ * Fail-closed check for a REAL-MONEY move (audit P0 #1). In production the app
+ * must never move money through the mock provider or persist deals in the
+ * in-memory demo store — a config slip that left either unset would otherwise
+ * silently "succeed" with no real money and no durable record. Returns a reason
+ * string when a money-move must be refused, or null when it is safe to proceed.
+ * Outside production (dev/preview) the demo seams are expected, so it returns null.
+ */
+export function productionMoneyGuard(): string | null {
+  if (process.env.NODE_ENV !== "production") return null;
+  const reasons: string[] = [];
+  if (activeProvider("payout") === "mock") reasons.push("no live payment provider is configured");
+  if (dealBackend() !== "supabase") reasons.push("the deal store would fall back to the in-memory demo store");
+  if (!reasons.length) return null;
+  return `Refusing to move money in production: ${reasons.join(" and ")}. Configure a live payment provider (Paystack/Flutterwave) and Supabase.`;
 }
