@@ -16,6 +16,7 @@ import { fundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
 import { computeFee, disputeSellerFee } from "@/lib/payments/fee";
 import { getSeller } from "@/lib/sellers/store";
+import type { UserIdentity } from "@/lib/auth/identity";
 import { callerRoleOnDeal } from "./access";
 import { dealBackend } from "./config";
 import { demoStore } from "./demo-store";
@@ -50,6 +51,25 @@ export async function listDeals(): Promise<Deal[]> {
 /** List one buyer's own deals (per-user scoping for the dashboard + reputation). */
 export async function listDealsForUser(email: string): Promise<Deal[]> {
   return backend().listByBuyer(email);
+}
+
+/**
+ * List a buyer's deals by their canonical identity — matched by stable id OR
+ * email (the dual-key read, audit #17). Lazily backfills `buyerId` on the
+ * caller's own email-only deals, so the data migrates onto the stable key as
+ * traders return, with no separate migration job.
+ */
+export async function listDealsForIdentity(who: UserIdentity): Promise<Deal[]> {
+  const deals = await backend().listByBuyerIdentity(who);
+  if (who.id) {
+    for (const d of deals) {
+      if (!d.buyerId && d.buyerEmail && d.buyerEmail.trim().toLowerCase() === who.email.trim().toLowerCase()) {
+        await backend().patch(d.id, { buyerId: who.id, updatedAt: d.updatedAt }).catch(() => {});
+        d.buyerId = who.id;
+      }
+    }
+  }
+  return deals;
 }
 
 /** Store the buyer's ALATPay collection account on the deal (funding, live mode). */

@@ -25,6 +25,7 @@ function fromRow(row: Record<string, unknown>): Deal {
     item: row.item as Deal["item"],
     seller: row.seller as Deal["seller"],
     buyerEmail: (row.buyer_email as string) ?? undefined,
+    buyerId: (row.buyer_id as string) ?? undefined,
     chat: (row.chat as string) ?? undefined,
     status: row.status as DealStatus,
     trust: (row.trust as DealTrust) ?? undefined,
@@ -47,6 +48,7 @@ function fromRow(row: Record<string, unknown>): Deal {
 /** Map our camelCase Deal fields to the table's snake_case columns for a patch. */
 function toRow(fields: Partial<Deal>): Record<string, unknown> {
   const row: Record<string, unknown> = {};
+  if (fields.buyerId !== undefined) row.buyer_id = fields.buyerId;
   if (fields.status !== undefined) row.status = fields.status;
   if (fields.trust !== undefined) row.trust = fields.trust;
   if (fields.handoverCode !== undefined) row.handover_code = fields.handoverCode;
@@ -81,6 +83,21 @@ export const supabaseStore = {
     return (data ?? []).map(fromRow);
   },
 
+  /** A buyer's deals matched by stable id OR email (the dual-key read). */
+  async listByBuyerIdentity(who: { id?: string; email: string }): Promise<Deal[]> {
+    const clauses: string[] = [];
+    if (who.email) clauses.push(`buyer_email.eq.${who.email}`);
+    if (who.id) clauses.push(`buyer_id.eq.${who.id}`);
+    if (!clauses.length) return [];
+    const { data, error } = await db()
+      .from("deals")
+      .select("*")
+      .or(clauses.join(","))
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(fromRow);
+  },
+
   async get(id: string): Promise<Deal | null> {
     const { data, error } = await db().from("deals").select("*").eq("id", id).maybeSingle();
     if (error) throw new Error(error.message);
@@ -97,6 +114,7 @@ export const supabaseStore = {
         item: { title: input.item.title, amount: input.item.amount, currency: input.item.currency ?? "NGN" },
         seller: input.seller,
         buyer_email: input.buyerEmail ?? null,
+        buyer_id: input.buyerId ?? null,
         chat: input.chat ?? null,
         status: "created",
         trust: trust ?? null,
