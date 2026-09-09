@@ -62,20 +62,35 @@ alter table public.settlement_operations enable row level security;
 -- ============================================================================
 -- Zafe — `settlement_approvals` table (dual control for large settlements).
 --
--- One row per settlement scope ("dispute:<dealId>"). Above a configurable
+-- ONE ROW PER APPROVAL: (key, fingerprint, approver). Above a configurable
 -- threshold, a discretionary money-move (an escalated dispute ruling) needs two
 -- distinct admins to approve the SAME ruling before it executes (audit #17).
--- `fingerprint` pins the exact decision approved, so a changed ruling resets the
--- approver set; `approvers` holds the distinct approver emails. The row is
--- cleared once the settlement executes. Below the threshold this table is unused.
+-- `key` is the settlement scope ("dispute:<dealId>"), `fingerprint` pins the
+-- exact decision (decision + split), `approver` is one admin's email. Quorum is
+-- a distinct-approver count for the current fingerprint.
+--
+-- The composite PRIMARY KEY makes each approval a single idempotent insert (a
+-- repeat by the same admin is a no-op), so two admins approving at the same
+-- instant insert two separate rows and NEITHER can overwrite the other — closing
+-- the lost-update race the v3 recheck flagged in the earlier array-column form.
+-- Rows for a scope are deleted once the settlement executes.
+--
+-- NOTE for existing deployments: an earlier version of this table had columns
+-- (key primary key, fingerprint, approvers text[]). Its shape is incompatible,
+-- so drop it before creating the new one. Approval rows are transient (created
+-- just before a settlement and cleared on execution), so nothing durable is lost.
+drop table if exists public.settlement_approvals;
 -- ============================================================================
 
 create table if not exists public.settlement_approvals (
-  key         text        primary key,        -- "dispute:<dealId>"; the approval scope
+  key         text        not null,            -- "dispute:<dealId>"; the approval scope
   fingerprint text        not null,            -- the exact ruling approved (decision + split)
-  approvers   text[]      not null default '{}', -- distinct approver emails
-  updated_at  timestamptz not null default now()
+  approver    text        not null,            -- one admin's email (lowercased)
+  created_at  timestamptz not null default now(),
+  primary key (key, fingerprint, approver)
 );
+
+create index if not exists settlement_approvals_key_fp_idx on public.settlement_approvals (key, fingerprint);
 
 -- Same posture as the rest: server writes with the service-role key; the anon
 -- key gets no access. No browser reads this table, so no read policy.
