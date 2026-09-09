@@ -13,6 +13,7 @@
     "check:ledger": "tsx lib/ledger/check.ts",
     "check:fees": "tsx lib/payments/fee.check.ts",
     "check:settlement": "tsx lib/payments/settlement.check.ts",
+    "check:approvals": "tsx lib/payments/approvals.check.ts",
     "check:reconcile": "tsx lib/ledger/reconcile.check.ts",
     "check:admin": "tsx lib/auth/roles.check.ts",
     "check:config": "tsx lib/config/check.ts",
