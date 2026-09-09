@@ -105,8 +105,9 @@ export default function Landing() {
       <section className="lp-hero" id="top">
         <div className="lp-wrap lp-herocenter">
           <div className="lp-herocopy lp-reveal">
+            <span className="lp-eyebrow" style={{ marginBottom: 16 }}>AI-powered escrow · Nigeria</span>
             <h1>Buy from strangers.<br />Keep your money safe.</h1>
-            <p className="lp-herosub">Pay into escrow, not the seller. An AI checks the deal for scams and your money is released only when you confirm the item arrived.</p>
+            <p className="lp-herosub">Zafe is escrow for buying from strangers online in Nigeria. Pay into escrow, not the seller. An AI checks the deal for scams, and your money is released only when you confirm the item arrived.</p>
             <div className="lp-herobtns">
               <Link href="/waitlist" className="lp-btn lp-btn-primary lp-btn-lg">Join the waitlist</Link>
               <a href="#how" className="lp-btn lp-btn-ghost lp-btn-lg">See how it works</a>
@@ -282,7 +283,13 @@ export default function Landing() {
       <footer className="lp-footer">
         <div className="lp-wrap lp-footrow">
           <a className="lp-brand" href="#top" aria-label="Zafe home"><Mark size={24} /><span>Zafe</span></a>
-          <nav className="lp-footlinks" aria-label="Legal">
+          <nav className="lp-footlinks" aria-label="Learn about Zafe" style={{ flexWrap: "wrap" }}>
+            <Link href="/escrow-nigeria">Escrow in Nigeria</Link>
+            <Link href="/how-it-works">How it works</Link>
+            <Link href="/buyer-protection">Buyer protection</Link>
+            <Link href="/seller-protection">Seller protection</Link>
+          </nav>
+          <nav className="lp-footlinks" aria-label="More" style={{ flexWrap: "wrap" }}>
             <Link href="/guides">Guides</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/privacy">Privacy</Link>
