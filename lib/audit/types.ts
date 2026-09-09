@@ -10,6 +10,7 @@
 /** The privileged actions worth recording. Extend as new admin powers are added. */
 export type AuditAction =
   | "dispute.resolve" // a reviewer settled an escalated dispute (moved money)
+  | "settlement.approval" // an admin approved a large settlement (dual control; may not yet have executed)
   | "settlement.retry" // a stuck payout/refund was re-driven from reconciliation
   | "account.deactivate"; // an account was deactivated
 

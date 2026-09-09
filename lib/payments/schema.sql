@@ -58,3 +58,25 @@ create index if not exists settlement_operations_state_idx on public.settlement_
 -- Same posture as the rest: server writes with the service-role key; the anon
 -- key gets no access. No browser reads this table, so no read policy.
 alter table public.settlement_operations enable row level security;
+
+-- ============================================================================
+-- Zafe — `settlement_approvals` table (dual control for large settlements).
+--
+-- One row per settlement scope ("dispute:<dealId>"). Above a configurable
+-- threshold, a discretionary money-move (an escalated dispute ruling) needs two
+-- distinct admins to approve the SAME ruling before it executes (audit #17).
+-- `fingerprint` pins the exact decision approved, so a changed ruling resets the
+-- approver set; `approvers` holds the distinct approver emails. The row is
+-- cleared once the settlement executes. Below the threshold this table is unused.
+-- ============================================================================
+
+create table if not exists public.settlement_approvals (
+  key         text        primary key,        -- "dispute:<dealId>"; the approval scope
+  fingerprint text        not null,            -- the exact ruling approved (decision + split)
+  approvers   text[]      not null default '{}', -- distinct approver emails
+  updated_at  timestamptz not null default now()
+);
+
+-- Same posture as the rest: server writes with the service-role key; the anon
+-- key gets no access. No browser reads this table, so no read policy.
+alter table public.settlement_approvals enable row level security;
