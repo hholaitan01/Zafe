@@ -316,6 +316,45 @@ export async function refundDeal(id: string, amount?: number): Promise<ReleaseRe
   return { ok: true, deal: updated ?? undefined };
 }
 
+/**
+ * Recover the seller's remainder on a resolved SPLIT (audit #9).
+ *
+ * A split settles two legs: the buyer's share is refunded first (protective), then
+ * the seller's remainder is paid out. If the buyer refund succeeds but the seller
+ * payout fails, the deal is still marked "resolved" (the buyer is protected) with
+ * the failure recorded durably in `settlement_operations` (payoutSeller's
+ * failSettlement) and surfaced in the exception queue. But the deal is terminal,
+ * so neither the dispute review path nor the normal payout retry (which refuses
+ * disputed deals) can re-drive that stranded leg. This does, safely.
+ *
+ * It recomputes the exact remainder from the recorded split (`partialRefundAmount`)
+ * and the same dispute fee, then re-drives ONLY the seller payout. The settlement
+ * claim keyed `payout:<dealId>` makes it idempotent: a leg that already went
+ * through short-circuits, so calling this twice never pays the seller twice.
+ */
+export async function recoverSplitRemainder(id: string): Promise<ReleaseResult> {
+  const deal = await backend().get(id);
+  if (!deal) return { ok: false, error: "not_found" };
+  if (deal.status !== "resolved") {
+    return { ok: false, error: "Only a resolved split has a seller remainder to recover." };
+  }
+  const buyerShare = deal.partialRefundAmount ?? 0;
+  const remainder = deal.item.amount - buyerShare;
+  if (remainder <= 0) return { ok: false, error: "This settlement left no seller remainder." };
+
+  const fee = disputeSellerFee(remainder, deal.item.amount);
+  const payout = await payoutSeller(deal, remainder, { feeOverride: fee });
+  if (!payout.ok) return { ok: false, error: payout.error ?? "The seller remainder payout did not go through." };
+
+  const ev = event("resolved", `Seller's remainder payout recovered${payout.mode === "mock" ? " (demo)" : ""}.`);
+  const updated = await backend().patch(id, {
+    payoutRef: payout.ref ?? deal.payoutRef,
+    timeline: [...deal.timeline, ev],
+    updatedAt: ev.at,
+  });
+  return { ok: true, deal: updated ?? undefined };
+}
+
 export interface AutoReleaseResult {
   released: number; // deals paid out and completed this sweep
   eligible: number; // deals whose timer had run out

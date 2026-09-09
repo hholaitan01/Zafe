@@ -19,6 +19,7 @@ import type {
   PaymentProvider,
   TransferRequest,
   TransferResult,
+  TransferSnapshot,
   TransferStatus,
   WebhookEvent,
 } from "./types";
@@ -108,21 +109,32 @@ export const paystackProvider: PaymentProvider = {
     }
   },
 
-  async getTransferStatus(reference: string): Promise<TransferStatus> {
+  async getTransferStatus(reference: string): Promise<TransferSnapshot> {
     // Query by our deterministic reference. A 404 means Paystack has no transfer
     // with this reference — it never went out, so it is safe to retry.
     try {
       const res = await fetch(`${BASE}/transfer/verify/${encodeURIComponent(reference)}`, { headers: headers() });
-      if (res.status === 404) return "failed";
+      if (res.status === 404) return { status: "failed" };
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) return "unknown";
-      const status = String(body?.data?.status ?? "").toLowerCase();
-      if (status === "success") return "succeeded";
-      if (status === "failed" || status === "abandoned" || status === "reversed") return "failed";
-      if (status === "pending" || status === "processing" || status === "otp" || status === "received" || status === "queued") return "pending";
-      return "unknown";
+      if (!res.ok) return { status: "unknown" };
+      const d = (body?.data ?? {}) as Record<string, unknown>;
+      const raw = String(d.status ?? "").toLowerCase();
+      let status: TransferStatus = "unknown";
+      if (raw === "success") status = "succeeded";
+      else if (raw === "failed" || raw === "abandoned" || raw === "reversed") status = "failed";
+      else if (raw === "pending" || raw === "processing" || raw === "otp" || raw === "received" || raw === "queued") status = "pending";
+      // Amount is in kobo; the destination lives under recipient.details.
+      const kobo = d.amount != null ? Number(d.amount) : NaN;
+      const details = ((d.recipient as { details?: Record<string, unknown> } | undefined)?.details ?? {}) as Record<string, unknown>;
+      return {
+        status,
+        amountNaira: Number.isFinite(kobo) ? kobo / 100 : undefined,
+        currency: d.currency ? String(d.currency) : undefined,
+        accountNumber: details.account_number ? String(details.account_number) : undefined,
+        bankCode: details.bank_code ? String(details.bank_code) : undefined,
+      };
     } catch {
-      return "unknown";
+      return { status: "unknown" };
     }
   },
 

@@ -69,12 +69,12 @@ async function main() {
   // --- settlement exception queue: failed shows, succeeded and fresh-pending don't ---
   settlement._resetSettlements();
   const kFail = settlement.settlementKey("payout", "x-fail");
-  await settlement.beginSettlement(kFail, { dealId: "x-fail", kind: "payout" });
-  await settlement.failSettlement(kFail, "provider down");
+  const cFail = await settlement.beginSettlement(kFail, { dealId: "x-fail", kind: "payout" });
+  await settlement.failSettlement(kFail, "provider down", cFail.proceed ? cFail.token : "");
 
   const kDone = settlement.settlementKey("payout", "x-done");
-  await settlement.beginSettlement(kDone, { dealId: "x-done", kind: "payout" });
-  await settlement.completeSettlement(kDone, "ref-ok");
+  const cDone = await settlement.beginSettlement(kDone, { dealId: "x-done", kind: "payout" });
+  await settlement.completeSettlement(kDone, "ref-ok", cDone.proceed ? cDone.token : "");
 
   const kFresh = settlement.settlementKey("refund", "x-fresh");
   await settlement.beginSettlement(kFresh, { dealId: "x-fresh", kind: "refund" }); // pending, not stale

@@ -16,7 +16,7 @@ import { getProvider } from "./providers";
 import { payoutEntry, refundEntry } from "@/lib/ledger/entries";
 import { recordSafe } from "@/lib/ledger/store";
 import { collectionAmount, computeFee } from "./fee";
-import { beginSettlement, completeSettlement, failSettlement, reconcileAction, settlementKey, type BeginResult } from "./settlement";
+import { beginSettlement, completeSettlement, failSettlement, reconcileAction, settlementKey, transferMismatch, type BeginResult, type IntendedTransfer } from "./settlement";
 import { getSeller } from "@/lib/sellers/store";
 import { cooldownUntil } from "@/lib/sellers/payout-guard";
 
@@ -105,13 +105,21 @@ async function reconcileReclaim(
   reference: string,
   key: string,
   mode: PaymentMode,
+  intended: IntendedTransfer,
 ): Promise<TransferResult | null> {
   if (!claim.proceed || !claim.reclaimedFrom) return null; // fresh first claim → nothing to reconcile
   if (provider !== "paystack" && provider !== "flutterwave") return null; // no status lookup for mock/ALAT
-  const action = reconcileAction(await getProvider(provider).getTransferStatus(reference));
+  const snapshot = await getProvider(provider).getTransferStatus(reference);
+  const action = reconcileAction(snapshot.status);
   if (action === "settled") {
-    // The money already went out. Record success; do NOT re-transfer.
-    await completeSettlement(key, reference);
+    // The money already went out — but only record it done if it moved what we
+    // intended. A transfer that succeeded for the wrong amount or destination is
+    // held for a human, never silently closed (audit #13).
+    const mismatch = transferMismatch(snapshot, intended);
+    if (mismatch) {
+      return { ok: false, error: `A prior transfer for this deal succeeded but does not match the intended move (${mismatch}); held for reconciliation.`, mode };
+    }
+    await completeSettlement(key, reference, claim.token);
     return { ok: true, ref: reference, mode };
   }
   if (action === "hold") {
@@ -151,6 +159,9 @@ export async function payoutSeller(
     return { ok: false, error: `The seller's payout account changed recently. Payout is on hold until ${new Date(until).toLocaleString("en-NG")}.`, mode };
   }
 
+  const sellerFee = opts?.feeOverride ?? (opts?.chargeFee === false ? 0 : computeFee(amount).sellerShare);
+  const net = amount - sellerFee; // what the seller actually receives
+
   // Claim the operation before moving a naira. A second concurrent release, or a
   // retry of one that already succeeded, never fires a second transfer.
   const claim = await beginSettlement(key, { dealId: deal.id, kind: "payout" });
@@ -159,16 +170,19 @@ export async function payoutSeller(
     return { ok: false, error: "A payout for this deal is already in progress.", mode };
   }
   // If this claim took over an earlier attempt, reconcile with the provider
-  // before re-sending, so a payout that already went through isn't sent twice.
-  const reconciled = await reconcileReclaim(claim, provider, `zf_payout_${deal.id}`, key, mode);
+  // before re-sending, so a payout that already went through isn't sent twice —
+  // and one that went through for the wrong amount/destination is held, not closed.
+  const reconciled = await reconcileReclaim(claim, provider, `zf_payout_${deal.id}`, key, mode, {
+    amountNaira: net,
+    currency: "NGN",
+    accountNumber: deal.sellerPayout?.accountNumber,
+    bankCode: deal.sellerPayout?.bankCode,
+  });
   if (reconciled) return reconciled;
 
-  const sellerFee = opts?.feeOverride ?? (opts?.chargeFee === false ? 0 : computeFee(amount).sellerShare);
-  const net = amount - sellerFee; // what the seller actually receives
-
   const result = await doPayout(deal, amount, net, sellerFee, provider);
-  if (result.ok) await completeSettlement(key, result.ref ?? key);
-  else await failSettlement(key, result.error ?? "payout failed");
+  if (result.ok) await completeSettlement(key, result.ref ?? key, claim.token);
+  else await failSettlement(key, result.error ?? "payout failed", claim.token);
   return result;
 }
 
@@ -249,22 +263,28 @@ export async function refundBuyer(
   const block = productionMoneyGuard();
   if (block) return { ok: false, error: block, mode };
 
+  const buyerFeeReversed = opts?.buyerFeeReversed ?? computeFee(deal.item.amount).buyerShare;
+  const cashOut = amount + buyerFeeReversed; // principal back plus the buyer's fee back
+
   // Same claim as a payout: a retried or concurrent refund never pays twice.
   const claim = await beginSettlement(key, { dealId: deal.id, kind: "refund" });
   if (!claim.proceed) {
     if (claim.reason === "succeeded") return { ok: true, ref: claim.ref, mode };
     return { ok: false, error: "A refund for this deal is already in progress.", mode };
   }
-  // Reconcile a reclaimed refund with the provider before re-sending.
-  const reconciled = await reconcileReclaim(claim, provider, `zf_refund_${deal.id}`, key, mode);
+  // Reconcile a reclaimed refund with the provider before re-sending — including
+  // that the prior transfer moved the right amount to the right account.
+  const reconciled = await reconcileReclaim(claim, provider, `zf_refund_${deal.id}`, key, mode, {
+    amountNaira: cashOut,
+    currency: "NGN",
+    accountNumber: deal.buyerPayout?.accountNumber,
+    bankCode: deal.buyerPayout?.bankCode,
+  });
   if (reconciled) return reconciled;
 
-  const buyerFeeReversed = opts?.buyerFeeReversed ?? computeFee(deal.item.amount).buyerShare;
-  const cashOut = amount + buyerFeeReversed; // principal back plus the buyer's fee back
-
   const result = await doRefund(deal, amount, cashOut, buyerFeeReversed, provider);
-  if (result.ok) await completeSettlement(key, result.ref ?? key);
-  else await failSettlement(key, result.error ?? "refund failed");
+  if (result.ok) await completeSettlement(key, result.ref ?? key, claim.token);
+  else await failSettlement(key, result.error ?? "refund failed", claim.token);
   return result;
 }
 

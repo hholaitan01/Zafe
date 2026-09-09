@@ -32,7 +32,9 @@ function deal(id: string, amount = 100000): Deal {
 
 async function main() {
   const settlement = await import("./settlement");
-  const { beginSettlement, completeSettlement, failSettlement, getSettlement, settlementKey, reconcileAction, _resetSettlements } = settlement;
+  const { beginSettlement, completeSettlement, failSettlement, getSettlement, settlementKey, reconcileAction, transferMismatch, _resetSettlements } = settlement;
+  /** Narrow a BeginResult to its ownership token (empty string if it did not proceed). */
+  const tokenOf = (r: Awaited<ReturnType<typeof beginSettlement>>) => (r.proceed ? r.token : "");
   const { payoutSeller, refundBuyer } = await import("./index");
   const ledger = await import("@/lib/ledger/store");
 
@@ -41,11 +43,12 @@ async function main() {
   const k = settlementKey("payout", "s1");
   const c1 = await beginSettlement(k, { dealId: "s1", kind: "payout" });
   assert("first claim proceeds", c1.proceed === true);
+  assert("first claim carries an ownership token", c1.proceed === true && typeof c1.token === "string" && c1.token.length > 0);
   const c2 = await beginSettlement(k, { dealId: "s1", kind: "payout" });
   assert("second concurrent claim is in-flight", c2.proceed === false && c2.reason === "in_flight");
 
   // --- a failed attempt is retryable ---
-  await failSettlement(k, "provider timeout");
+  await failSettlement(k, "provider timeout", tokenOf(c1));
   const failedRec = await getSettlement(k);
   assert("failed attempt is recorded as failed", failedRec?.state === "failed");
   const attemptsBefore = failedRec?.attempts ?? 0; // capture the number, not the live ref
@@ -67,10 +70,36 @@ async function main() {
   assert("provider unknown → hold (never re-send on ambiguity)", reconcileAction("unknown") === "hold");
 
   // --- a succeeded attempt short-circuits with its ref, never re-transfers ---
-  await completeSettlement(k, "ref-123");
+  // c3 is the current owner (it reclaimed the failed attempt), so its token closes it.
+  await completeSettlement(k, "ref-123", tokenOf(c3));
   const c4 = await beginSettlement(k, { dealId: "s1", kind: "payout" });
   assert("claim after success short-circuits", c4.proceed === false && c4.reason === "succeeded");
   assert("short-circuit carries the recorded ref", c4.proceed === false && c4.reason === "succeeded" && c4.ref === "ref-123");
+
+  // --- ownership token (audit #10): a superseded owner's complete/fail no-ops ---
+  _resetSettlements();
+  const ok1 = settlementKey("payout", "own-1");
+  const owner1 = await beginSettlement(ok1, { dealId: "own-1", kind: "payout" });
+  await failSettlement(ok1, "first attempt died", tokenOf(owner1)); // -> failed, retryable
+  const owner2 = await beginSettlement(ok1, { dealId: "own-1", kind: "payout" });
+  assert("reclaim proceeds with a new token", owner2.proceed === true && tokenOf(owner2) !== tokenOf(owner1));
+  // The ORIGINAL owner wakes up late and tries to close the claim it no longer owns.
+  await completeSettlement(ok1, "late-ref-from-owner1", tokenOf(owner1));
+  const afterStale = await getSettlement(ok1);
+  assert("stale owner's complete does not settle the claim", afterStale?.state === "pending");
+  assert("stale owner's complete does not record its ref", afterStale?.ref !== "late-ref-from-owner1");
+  // The current owner closes it normally.
+  await completeSettlement(ok1, "ref-from-owner2", tokenOf(owner2));
+  const afterOwner = await getSettlement(ok1);
+  assert("current owner's complete settles the claim", afterOwner?.state === "succeeded" && afterOwner?.ref === "ref-from-owner2");
+
+  // --- full-field reconciliation (audit #13): succeeded is not enough ---
+  assert("matching transfer → no mismatch", transferMismatch({ status: "succeeded", amountNaira: 5000, currency: "NGN", accountNumber: "0123456789", bankCode: "058" }, { amountNaira: 5000, currency: "NGN", accountNumber: "0123456789", bankCode: "058" }) === null);
+  assert("wrong amount → mismatch", transferMismatch({ status: "succeeded", amountNaira: 9000 }, { amountNaira: 5000 }) !== null);
+  assert("wrong currency → mismatch", transferMismatch({ status: "succeeded", currency: "USD" }, { amountNaira: 5000, currency: "NGN" }) !== null);
+  assert("wrong destination account → mismatch", transferMismatch({ status: "succeeded", accountNumber: "9999999999" }, { amountNaira: 5000, accountNumber: "0123456789" }) !== null);
+  assert("currency defaults to NGN when unspecified", transferMismatch({ status: "succeeded", currency: "ngn" }, { amountNaira: 5000 }) === null);
+  assert("a field the provider did not report is not a mismatch", transferMismatch({ status: "succeeded" }, { amountNaira: 5000, accountNumber: "0123456789", bankCode: "058" }) === null);
 
   // --- payout and refund on one deal are separately keyed ---
   _resetSettlements();
