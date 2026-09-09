@@ -4,6 +4,7 @@ import { LegalDoc, type LegalSection } from "@/app/_lib/LegalDoc";
 export const metadata: Metadata = {
   title: "Privacy Policy · Zafe",
   description: "How Zafe collects, uses, and protects your data, and your rights under the Nigeria Data Protection Act 2023.",
+  alternates: { canonical: "/privacy" },
 };
 
 const sections: LegalSection[] = [

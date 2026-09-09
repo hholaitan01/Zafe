@@ -39,6 +39,9 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Never ship client source maps to production: they expose readable source and
+  // bloat the deploy. (This is Next's default; pinned here so it stays off.)
+  productionBrowserSourceMaps: false,
   // Pin the workspace root to THIS folder so Next ignores stray lockfiles elsewhere.
   turbopack: {
     root: path.resolve(),
