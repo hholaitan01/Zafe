@@ -35,6 +35,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   // what's at stake, so the threshold is checked against it.
   const deal = await getDeal(id);
   if (!deal) return jsonError("Deal not found", 404);
+  // Bind approvals to a live settlement: only a deal actually awaiting a ruling
+  // may accrue approvals, so nothing accumulates against an already-settled deal
+  // (recheck v3). Execution re-checks this state inside adminResolveDispute too.
+  if (deal.status !== "under_review" && deal.status !== "disputed") {
+    return jsonError("This deal isn't awaiting a settlement decision.", 409);
+  }
   if (requiresDualApproval(deal.item.amount)) {
     const key = approvalKey(id);
     const fingerprint = approvalFingerprint(body.decision, split);

@@ -77,14 +77,32 @@ async function main() {
   const otherFp = approvalFingerprint("refund_buyer", undefined);
   assert("accrued approvals do not authorise a different ruling", hasDualApproval(s2, otherFp) === false);
 
-  // Recording against a changed fingerprint resets the approver set.
-  const reset = await recordApproval(key, otherFp, "alice@zafe.ng");
-  assert("a changed ruling resets the approvers", reset.approvers.length === 1 && reset.fingerprint === otherFp);
-  assert("reset ruling is not dual-approved", hasDualApproval(reset, otherFp) === false);
+  // Per-fingerprint isolation: approving a DIFFERENT ruling starts that ruling at
+  // one approver and does not inherit the other ruling's quorum.
+  const other1 = await recordApproval(key, otherFp, "alice@zafe.ng");
+  assert("a different ruling starts fresh at one approver", other1.approvers.length === 1 && other1.fingerprint === otherFp);
+  assert("the different ruling is not dual-approved off one approval", hasDualApproval(other1, otherFp) === false);
+  // The original ruling still stands with its own two approvers, untouched.
+  assert("the original ruling keeps its quorum", hasDualApproval(await approvalState(key, fp), fp) === true);
+
+  // --- concurrency (recheck v3): two distinct admins approving at the same
+  //     instant must BOTH survive — no lost update — and reach quorum exactly once ---
+  _resetApprovals();
+  const ckey = approvalKey("deal-concurrent");
+  const cfp = approvalFingerprint("split", 40);
+  const [ra, rb] = await Promise.all([
+    recordApproval(ckey, cfp, "carol@zafe.ng"),
+    recordApproval(ckey, cfp, "dave@zafe.ng"),
+  ]);
+  const finalState = await approvalState(ckey, cfp);
+  assert("concurrent approvals: both approvers survive", finalState?.approvers.length === APPROVERS_REQUIRED);
+  assert("concurrent approvals: both distinct emails are present", !!finalState && finalState.approvers.includes("carol@zafe.ng") && finalState.approvers.includes("dave@zafe.ng"));
+  assert("concurrent approvals: quorum is reached", hasDualApproval(finalState, cfp) === true);
+  assert("concurrent approvals: neither call lost the other", ra.approvers.length >= 1 && rb.approvers.length >= 1);
 
   // --- clear ---
   await clearApproval(key);
-  assert("clearing removes the approval scope", (await approvalState(key)) === null);
+  assert("clearing removes the approval scope", (await approvalState(key, fp)) === null);
 
   console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
   process.exit(failures === 0 ? 0 : 1);

@@ -1,26 +1,29 @@
 /* ==========================================================================
-   Dual control for large settlements (audit #17).
+   Dual control for large settlements (audit #17), concurrency-safe (recheck v3).
 
    A single admin should not be able to move a large sum on their own say-so.
    Above a configurable threshold, a discretionary money-move — an escalated
    dispute ruling — needs TWO distinct admins to approve the exact same decision
-   before it executes. Below the threshold, one approval is enough and this
-   module is a no-op.
+   before it executes. Below the threshold this module is a no-op.
 
-   The approval is scoped to a settlement key ("dispute:<dealId>") AND a
-   fingerprint of the exact action (the decision and its split). Approving one
-   ruling never approves a different one on the same deal: a changed fingerprint
-   resets the approver set, so A approving "split 50/50" and B approving "refund
-   the buyer" never combine into two approvals for either.
+   Each approval is ONE durable row keyed by (settlement key, decision
+   fingerprint, approver). Recording an approval is a single idempotent insert,
+   never a read-modify-write of a shared array, so two admins approving at the
+   same instant can never lose each other's approval (the v3 recheck flagged the
+   old array-upsert as a lost-update race). Quorum is a distinct-approver count
+   for the CURRENT fingerprint, so a stale or changed ruling can never carry its
+   approvals onto a different decision.
 
-   Same live/demo seam as the audit log: a Supabase table (`settlement_approvals`,
-   schema.sql) when configured, an in-memory map otherwise.
+   Same live/demo seam as the audit log: a Supabase table
+   (`settlement_approvals`, schema.sql) when configured, an in-memory map
+   otherwise.
    ========================================================================== */
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+const UNIQUE_VIOLATION = "23505";
 
 /** How many distinct admins must approve a large settlement before it executes. */
 export const APPROVERS_REQUIRED = 2;
@@ -54,7 +57,7 @@ export function approvalFingerprint(decision: string, splitBuyerPercent?: number
 export interface ApprovalState {
   key: string;
   fingerprint: string;
-  approvers: string[]; // distinct approver emails, lowercased
+  approvers: string[]; // distinct approver emails for this fingerprint, lowercased
   updatedAt: string;
 }
 
@@ -74,58 +77,63 @@ function db(): SupabaseClient {
   return client;
 }
 
-// Demo backend: approvals by key.
-const memory = new Map<string, ApprovalState>();
+// Demo backend: key -> fingerprint -> set of approver emails. A Set add is a
+// single synchronous op, so concurrent approvals never lose each other here
+// either (JS is single-threaded within an instance).
+const memory = new Map<string, Map<string, Set<string>>>();
 
-/** Merge an approver into the state for (key, fingerprint), returning the result.
-    A changed fingerprint resets the approver set; a repeat approver is a no-op
-    (an admin can never count as two approvals). */
-function mergeApprover(prev: ApprovalState | null, key: string, fingerprint: string, approver: string): ApprovalState {
-  const email = approver.trim().toLowerCase();
-  if (!prev || prev.fingerprint !== fingerprint) {
-    return { key, fingerprint, approvers: [email], updatedAt: new Date().toISOString() };
-  }
-  const approvers = prev.approvers.includes(email) ? prev.approvers : [...prev.approvers, email];
+function state(key: string, fingerprint: string, approvers: string[]): ApprovalState {
   return { key, fingerprint, approvers, updatedAt: new Date().toISOString() };
 }
 
-function fromRow(row: Record<string, unknown>): ApprovalState {
-  return {
-    key: String(row.key),
-    fingerprint: String(row.fingerprint),
-    approvers: Array.isArray(row.approvers) ? (row.approvers as unknown[]).map((a) => String(a)) : [],
-    updatedAt: String(row.updated_at),
-  };
-}
-
-/** Read the current approval state for a settlement scope, or null. */
-export async function approvalState(key: string): Promise<ApprovalState | null> {
-  if (!approvalsLive()) return memory.get(key) ?? null;
-  const { data, error } = await db().from("settlement_approvals").select("*").eq("key", key).maybeSingle();
-  if (error) throw new Error(`approval read failed: ${error.message}`);
-  return data ? fromRow(data) : null;
-}
-
-/** Record `approver`'s approval of `fingerprint` for `key`; returns the new state. */
+/**
+ * Record `approver`'s approval of `fingerprint` for `key`, and return the
+ * distinct approvers now standing for that fingerprint. Idempotent: the same
+ * admin approving twice still counts once.
+ */
 export async function recordApproval(key: string, fingerprint: string, approver: string): Promise<ApprovalState> {
-  const prev = await approvalState(key);
-  const next = mergeApprover(prev, key, fingerprint, approver);
+  const email = approver.trim().toLowerCase();
   if (!approvalsLive()) {
-    memory.set(key, next);
-    return next;
+    let byFp = memory.get(key);
+    if (!byFp) memory.set(key, (byFp = new Map()));
+    let set = byFp.get(fingerprint);
+    if (!set) byFp.set(fingerprint, (set = new Set()));
+    set.add(email);
+    return state(key, fingerprint, [...set]);
   }
-  const { error } = await db().from("settlement_approvals").upsert({
-    key: next.key,
-    fingerprint: next.fingerprint,
-    approvers: next.approvers,
-    updated_at: next.updatedAt,
-  });
-  if (error) throw new Error(`approval write failed: ${error.message}`);
-  return next;
+  // One row per (key, fingerprint, approver): a single insert, so two admins
+  // racing insert two different rows and neither can clobber the other. A repeat
+  // by the same admin hits the primary key and is ignored.
+  const { error } = await db()
+    .from("settlement_approvals")
+    .insert({ key, fingerprint, approver: email });
+  if (error && error.code !== UNIQUE_VIOLATION) throw new Error(`approval write failed: ${error.message}`);
+  return readState(key, fingerprint);
+}
+
+async function readState(key: string, fingerprint: string): Promise<ApprovalState> {
+  const { data, error } = await db()
+    .from("settlement_approvals")
+    .select("approver")
+    .eq("key", key)
+    .eq("fingerprint", fingerprint);
+  if (error) throw new Error(`approval read failed: ${error.message}`);
+  const approvers = [...new Set((data ?? []).map((r) => String((r as { approver: unknown }).approver)))];
+  return state(key, fingerprint, approvers);
+}
+
+/** Read the current approval state for a (key, fingerprint), or null if none. */
+export async function approvalState(key: string, fingerprint: string): Promise<ApprovalState | null> {
+  if (!approvalsLive()) {
+    const set = memory.get(key)?.get(fingerprint);
+    return set && set.size ? state(key, fingerprint, [...set]) : null;
+  }
+  const s = await readState(key, fingerprint);
+  return s.approvers.length ? s : null;
 }
 
 /** Clear a settlement scope's approvals once it has executed (or been abandoned),
-    so a later ruling on the same deal starts fresh. */
+    so a later ruling on the same deal starts fresh. Removes every fingerprint. */
 export async function clearApproval(key: string): Promise<void> {
   if (!approvalsLive()) {
     memory.delete(key);

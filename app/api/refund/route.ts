@@ -8,6 +8,7 @@
 import { jsonError, readJson } from "@/lib/ai/http";
 import { authorizeDeal, callerRoleOnDeal } from "@/lib/deals/access";
 import { refundDeal } from "@/lib/deals/store";
+import { publicDeal } from "@/lib/deals/redact";
 
 export async function POST(req: Request): Promise<Response> {
   const body = await readJson<{ dealId?: string; amount?: number }>(req);
@@ -30,5 +31,6 @@ export async function POST(req: Request): Promise<Response> {
   const result = await refundDeal(body.dealId, body.amount);
   if (!result.ok) return jsonError(result.error ?? "Refund failed.", result.error === "not_found" ? 404 : 400);
 
-  return Response.json({ ok: true, deal: result.deal });
+  // Return a redacted projection: never leak the handover code or bank details.
+  return Response.json({ ok: true, deal: publicDeal(result.deal) });
 }
