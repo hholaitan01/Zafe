@@ -21,6 +21,7 @@ import type {
   PaymentProvider,
   TransferRequest,
   TransferResult,
+  TransferSnapshot,
   TransferStatus,
   WebhookEvent,
 } from "./types";
@@ -110,7 +111,7 @@ export const flutterwaveProvider: PaymentProvider = {
     }
   },
 
-  async getTransferStatus(reference: string): Promise<TransferStatus> {
+  async getTransferStatus(reference: string): Promise<TransferSnapshot> {
     // Flutterwave transfers are listed and filtered by reference. We match the
     // returned rows on our EXACT reference rather than trusting positional order,
     // so an ignored filter can never make us read an unrelated transfer's status.
@@ -119,17 +120,26 @@ export const flutterwaveProvider: PaymentProvider = {
     try {
       const res = await fetch(`${BASE}/transfers?reference=${encodeURIComponent(reference)}`, { headers: headers() });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) return "unknown";
+      if (!res.ok) return { status: "unknown" };
       const list = Array.isArray(body?.data) ? (body.data as Array<Record<string, unknown>>) : [];
       const match = list.find((t) => String(t?.reference ?? "") === reference);
-      if (!match) return list.length === 0 ? "failed" : "unknown";
-      const status = String(match.status ?? "").toUpperCase();
-      if (status === "SUCCESSFUL") return "succeeded";
-      if (status === "FAILED") return "failed";
-      if (status === "NEW" || status === "PENDING" || status === "PROCESSING") return "pending";
-      return "unknown";
+      if (!match) return { status: list.length === 0 ? "failed" : "unknown" };
+      const raw = String(match.status ?? "").toUpperCase();
+      let status: TransferStatus = "unknown";
+      if (raw === "SUCCESSFUL") status = "succeeded";
+      else if (raw === "FAILED") status = "failed";
+      else if (raw === "NEW" || raw === "PENDING" || raw === "PROCESSING") status = "pending";
+      // Flutterwave NGN amounts are already whole Naira; destination fields sit on the row.
+      const amount = match.amount != null ? Number(match.amount) : NaN;
+      return {
+        status,
+        amountNaira: Number.isFinite(amount) ? amount : undefined,
+        currency: match.currency ? String(match.currency) : undefined,
+        accountNumber: match.account_number ? String(match.account_number) : undefined,
+        bankCode: match.bank_code ? String(match.bank_code) : undefined,
+      };
     } catch {
-      return "unknown";
+      return { status: "unknown" };
     }
   },
 

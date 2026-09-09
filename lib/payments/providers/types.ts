@@ -46,6 +46,21 @@ export interface TransferResult {
     - unknown:   couldn't determine — hold for manual reconciliation, never retry. */
 export type TransferStatus = "succeeded" | "pending" | "failed" | "unknown";
 
+/** A prior transfer's true status PLUS the fields needed to confirm it moved the
+    money we intended (audit #13). A `succeeded` status alone is not enough to
+    record a settlement done: the amount, currency, and destination the provider
+    actually sent to must also match the intended transfer, or a wrong-amount /
+    wrong-destination transfer would be silently accepted. Fields are whatever the
+    provider reports for that reference; a field left undefined is one it did not
+    return (so it cannot be compared, not that it matched). */
+export interface TransferSnapshot {
+  status: TransferStatus;
+  amountNaira?: number;   // amount the provider actually sent, whole Naira
+  currency?: string;      // currency it sent in
+  accountNumber?: string; // destination account it sent to
+  bankCode?: string;      // destination bank it sent to
+}
+
 /** The normalised meaning of a webhook, once its signature has been checked. */
 export interface WebhookEvent {
   authenticated: boolean; // false = signature/verification failed → caller must refuse to act
@@ -71,11 +86,14 @@ export interface PaymentProvider {
 
   /**
    * The true status of a prior transfer, looked up by its deterministic
-   * `reference`. Called before retrying a stale/failed settlement so a transfer
-   * that already went through (but whose success we never recorded — e.g. a
-   * crash or timeout after the provider accepted it) is never sent twice.
+   * `reference`, plus the amount/currency/destination it actually moved. Called
+   * before retrying a stale/failed settlement so a transfer that already went
+   * through (but whose success we never recorded — e.g. a crash or timeout after
+   * the provider accepted it) is never sent twice, and so a transfer that went
+   * through for the WRONG amount or destination is held for a human rather than
+   * silently recorded as done (audit #13).
    */
-  getTransferStatus(reference: string): Promise<TransferStatus>;
+  getTransferStatus(reference: string): Promise<TransferSnapshot>;
 
   /**
    * Authenticate and parse a raw webhook body. Returns null when the body is

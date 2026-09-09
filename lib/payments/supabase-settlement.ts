@@ -19,7 +19,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { BeginResult, SettlementFilter, SettlementMeta, SettlementRecord, SettlementStore, SettlementState } from "./settlement";
-import { STALE_PENDING_MS } from "./settlement";
+import { STALE_PENDING_MS, newSettlementToken } from "./settlement";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -44,6 +44,7 @@ function fromRow(row: Record<string, unknown>): SettlementRecord {
     ref: (row.ref as string) ?? undefined,
     error: (row.error as string) ?? undefined,
     attempts: Number(row.attempts ?? 0),
+    token: (row.owner_token as string) ?? undefined,
     updatedAt: String(row.updated_at),
   };
 }
@@ -57,6 +58,7 @@ async function read(key: string): Promise<SettlementRecord | null> {
 export const supabaseSettlementStore: SettlementStore = {
   async begin(key: string, meta: SettlementMeta): Promise<BeginResult> {
     const nowIso = new Date().toISOString();
+    const token = newSettlementToken();
     // First attempt: a plain insert. The PK makes concurrent firsts race here.
     const { error } = await db().from("settlement_operations").insert({
       key,
@@ -64,10 +66,11 @@ export const supabaseSettlementStore: SettlementStore = {
       kind: meta.kind,
       state: "pending",
       attempts: 1,
+      owner_token: token,
       created_at: nowIso,
       updated_at: nowIso,
     });
-    if (!error) return { proceed: true };
+    if (!error) return { proceed: true, token };
     if (error.code !== UNIQUE_VIOLATION) throw new Error(`settlement claim failed: ${error.message}`);
 
     // Row exists. Decide against its current state, retrying the compare-and-swap
@@ -80,34 +83,41 @@ export const supabaseSettlementStore: SettlementStore = {
       if (rec.state === "pending" && !stale) return { proceed: false, reason: "in_flight" };
 
       // failed, or a stale pending → try to claim it via compare-and-swap on
-      // (state, updated_at). Only one concurrent reclaimer can win.
+      // (state, updated_at). Only one concurrent reclaimer can win. A fresh
+      // owner_token is stamped so the prior owner's late complete/fail no-ops.
       const { data, error: upErr } = await db()
         .from("settlement_operations")
-        .update({ state: "pending", attempts: rec.attempts + 1, error: null, updated_at: new Date().toISOString() })
+        .update({ state: "pending", attempts: rec.attempts + 1, owner_token: token, error: null, updated_at: new Date().toISOString() })
         .eq("key", key)
         .eq("state", rec.state)
         .eq("updated_at", rec.updatedAt)
         .select();
       if (upErr) throw new Error(`settlement reclaim failed: ${upErr.message}`);
-      if (data && data.length === 1) return { proceed: true, reclaimedFrom: rec.state };
+      if (data && data.length === 1) return { proceed: true, token, reclaimedFrom: rec.state };
       // Lost the race; the row moved. Loop re-reads and re-decides.
     }
     return { proceed: false, reason: "in_flight" };
   },
 
-  async complete(key: string, ref: string): Promise<void> {
+  async complete(key: string, ref: string, token: string): Promise<void> {
+    // Gate on (owner_token, state=pending): only the current owner closes the
+    // attempt, so a superseded caller matches zero rows and quietly no-ops.
     const { error } = await db()
       .from("settlement_operations")
       .update({ state: "succeeded", ref, error: null, updated_at: new Date().toISOString() })
-      .eq("key", key);
+      .eq("key", key)
+      .eq("owner_token", token)
+      .eq("state", "pending");
     if (error) throw new Error(`settlement complete failed: ${error.message}`);
   },
 
-  async fail(key: string, err: string): Promise<void> {
+  async fail(key: string, err: string, token: string): Promise<void> {
     const { error } = await db()
       .from("settlement_operations")
       .update({ state: "failed", error: err.slice(0, 500), updated_at: new Date().toISOString() })
-      .eq("key", key);
+      .eq("key", key)
+      .eq("owner_token", token)
+      .eq("state", "pending");
     if (error) throw new Error(`settlement fail failed: ${error.message}`);
   },
 

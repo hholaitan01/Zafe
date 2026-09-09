@@ -25,7 +25,7 @@
    idempotency store. `setSettlementStore` injects a test double.
    ========================================================================== */
 
-import type { TransferStatus } from "./providers/types";
+import type { TransferSnapshot, TransferStatus } from "./providers/types";
 
 export type SettlementState = "pending" | "succeeded" | "failed";
 export type SettlementKind = "payout" | "refund";
@@ -43,6 +43,42 @@ export function reconcileAction(status: TransferStatus): ReconcileAction {
   return "hold"; // "pending" or "unknown" — never re-transfer on an ambiguous status
 }
 
+/** The money-move a reclaim is about to (re-)send, for full-field reconciliation. */
+export interface IntendedTransfer {
+  amountNaira: number;
+  currency?: string;      // defaults to NGN when unset
+  accountNumber?: string; // destination account, when known
+  bankCode?: string;      // destination bank, when known
+}
+
+/**
+ * When a reclaimed transfer reads "succeeded" at the provider, confirm it moved
+ * what we intended BEFORE recording it done (audit #13). A `succeeded` status is
+ * not enough on its own: a transfer that went out for the wrong amount, currency,
+ * or to the wrong account must be held for a human, never silently accepted.
+ *
+ * Returns a human-readable mismatch reason, or null when every field the provider
+ * reported matches. A field the provider did not report cannot be compared, so it
+ * does not block (we never invent a mismatch from missing data). Currency compares
+ * case-insensitively and defaults to NGN.
+ */
+export function transferMismatch(snap: TransferSnapshot, intended: IntendedTransfer): string | null {
+  if (snap.amountNaira !== undefined && Math.round(snap.amountNaira) !== Math.round(intended.amountNaira)) {
+    return `amount ₦${snap.amountNaira} sent vs ₦${intended.amountNaira} intended`;
+  }
+  const wantCurrency = (intended.currency ?? "NGN").toUpperCase();
+  if (snap.currency !== undefined && snap.currency.toUpperCase() !== wantCurrency) {
+    return `currency ${snap.currency} sent vs ${wantCurrency} intended`;
+  }
+  if (intended.accountNumber && snap.accountNumber !== undefined && snap.accountNumber !== intended.accountNumber) {
+    return `destination account ${snap.accountNumber} sent vs ${intended.accountNumber} intended`;
+  }
+  if (intended.bankCode && snap.bankCode !== undefined && snap.bankCode !== intended.bankCode) {
+    return `destination bank ${snap.bankCode} sent vs ${intended.bankCode} intended`;
+  }
+  return null;
+}
+
 export interface SettlementRecord {
   key: string;
   dealId: string;
@@ -51,18 +87,33 @@ export interface SettlementRecord {
   ref?: string;
   error?: string;
   attempts: number;
+  /** The token of the attempt that currently owns the claim. `complete`/`fail`
+      only apply when they carry this token, so a superseded (reclaimed-over)
+      attempt can never overwrite the new owner's outcome. */
+  token?: string;
   updatedAt: string; // ISO
 }
 
-/** The verdict `begin` returns to a caller about to move money. `reclaimedFrom`
-    is set when this proceed took over an earlier attempt (a failed one, or a
-    stale-pending one whose process died) — the caller must reconcile with the
-    provider before actually re-transferring, so a transfer that already went
-    through is never sent twice. Absent on a fresh first claim. */
+/** The verdict `begin` returns to a caller about to move money. On `proceed`,
+    `token` proves this caller owns the current attempt — it must be handed back
+    to `complete`/`fail`, which no-op if a later reclaim replaced it (audit #10).
+    `reclaimedFrom` is set when this proceed took over an earlier attempt (a
+    failed one, or a stale-pending one whose process died) — the caller must
+    reconcile with the provider before actually re-transferring, so a transfer
+    that already went through is never sent twice. Absent on a fresh first claim. */
 export type BeginResult =
-  | { proceed: true; reclaimedFrom?: SettlementState }
+  | { proceed: true; token: string; reclaimedFrom?: SettlementState }
   | { proceed: false; reason: "succeeded"; ref?: string }
   | { proceed: false; reason: "in_flight" };
+
+/** A fresh, unguessable ownership token for one settlement attempt. CSPRNG via
+    Web Crypto so it works server-side without pulling `node:crypto` into any
+    client bundle. */
+export function newSettlementToken(): string {
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 export interface SettlementMeta {
   dealId: string;
@@ -76,8 +127,10 @@ export interface SettlementFilter {
 
 export interface SettlementStore {
   begin(key: string, meta: SettlementMeta): Promise<BeginResult>;
-  complete(key: string, ref: string): Promise<void>;
-  fail(key: string, error: string): Promise<void>;
+  /** Record success. `token` must be the current owner's; a superseded token no-ops. */
+  complete(key: string, ref: string, token: string): Promise<void>;
+  /** Record failure. `token` must be the current owner's; a superseded token no-ops. */
+  fail(key: string, error: string, token: string): Promise<void>;
   get(key: string): Promise<SettlementRecord | null>;
   list(filter?: SettlementFilter): Promise<SettlementRecord[]>;
 }
@@ -103,26 +156,31 @@ class MemorySettlementStore implements SettlementStore {
   async begin(key: string, meta: SettlementMeta): Promise<BeginResult> {
     const now = Date.now();
     const rec = this.ops.get(key);
+    const token = newSettlementToken();
     if (!rec) {
-      this.ops.set(key, { key, dealId: meta.dealId, kind: meta.kind, state: "pending", attempts: 1, updatedAt: new Date(now).toISOString() });
-      return { proceed: true };
+      this.ops.set(key, { key, dealId: meta.dealId, kind: meta.kind, state: "pending", attempts: 1, token, updatedAt: new Date(now).toISOString() });
+      return { proceed: true, token };
     }
     if (rec.state === "succeeded") return { proceed: false, reason: "succeeded", ref: rec.ref };
     if (rec.state === "pending" && now - Date.parse(rec.updatedAt) < STALE_PENDING_MS) {
       return { proceed: false, reason: "in_flight" };
     }
-    // failed, or a stale pending: this caller takes over the attempt.
+    // failed, or a stale pending: this caller takes over the attempt with a fresh
+    // token, so the prior owner's late complete/fail no longer matches and no-ops.
     const reclaimedFrom = rec.state; // "failed" | "pending" — before we overwrite it
     rec.state = "pending";
     rec.attempts += 1;
+    rec.token = token;
     rec.updatedAt = new Date(now).toISOString();
     rec.error = undefined;
-    return { proceed: true, reclaimedFrom };
+    return { proceed: true, token, reclaimedFrom };
   }
 
-  async complete(key: string, ref: string): Promise<void> {
+  async complete(key: string, ref: string, token: string): Promise<void> {
     const rec = this.ops.get(key);
-    if (rec) {
+    // Only the current owner closes the attempt. A superseded token means a later
+    // reclaim took over, so this stale caller must not overwrite the new outcome.
+    if (rec && rec.state === "pending" && rec.token === token) {
       rec.state = "succeeded";
       rec.ref = ref;
       rec.error = undefined;
@@ -130,9 +188,9 @@ class MemorySettlementStore implements SettlementStore {
     }
   }
 
-  async fail(key: string, error: string): Promise<void> {
+  async fail(key: string, error: string, token: string): Promise<void> {
     const rec = this.ops.get(key);
-    if (rec) {
+    if (rec && rec.state === "pending" && rec.token === token) {
       rec.state = "failed";
       rec.error = error;
       rec.updatedAt = new Date().toISOString();
@@ -190,14 +248,16 @@ export async function beginSettlement(key: string, meta: SettlementMeta): Promis
   return (await resolveStore()).begin(key, meta);
 }
 
-/** Record that the money-move succeeded, with the provider/ledger ref. */
-export async function completeSettlement(key: string, ref: string): Promise<void> {
-  return (await resolveStore()).complete(key, ref);
+/** Record that the money-move succeeded, with the provider/ledger ref. `token`
+    must be the one `beginSettlement` returned; a superseded token no-ops. */
+export async function completeSettlement(key: string, ref: string, token: string): Promise<void> {
+  return (await resolveStore()).complete(key, ref, token);
 }
 
-/** Record that the money-move failed, leaving the claim retryable. */
-export async function failSettlement(key: string, error: string): Promise<void> {
-  return (await resolveStore()).fail(key, error);
+/** Record that the money-move failed, leaving the claim retryable. `token` must
+    be the one `beginSettlement` returned; a superseded token no-ops. */
+export async function failSettlement(key: string, error: string, token: string): Promise<void> {
+  return (await resolveStore()).fail(key, error, token);
 }
 
 /** Read the current state of a settlement operation (admin/verification). */

@@ -35,16 +35,22 @@ alter table public.processed_events enable row level security;
 -- ============================================================================
 
 create table if not exists public.settlement_operations (
-  key        text        primary key,        -- "payout:<dealId>" / "refund:<dealId>"; the claim lock
-  deal_id    text        not null,
-  kind       text        not null,            -- 'payout' | 'refund'
-  state      text        not null,            -- 'pending' | 'succeeded' | 'failed'
-  ref        text,                            -- provider/ledger ref once it succeeds
-  error      text,                            -- last failure reason, for the exception queue
-  attempts   int         not null default 0,  -- how many times the move has been attempted
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  key         text        primary key,        -- "payout:<dealId>" / "refund:<dealId>"; the claim lock
+  deal_id     text        not null,
+  kind        text        not null,            -- 'payout' | 'refund'
+  state       text        not null,            -- 'pending' | 'succeeded' | 'failed'
+  ref         text,                            -- provider/ledger ref once it succeeds
+  error       text,                            -- last failure reason, for the exception queue
+  attempts    int         not null default 0,  -- how many times the move has been attempted
+  owner_token text,                            -- the current attempt's token; complete/fail must match it (audit #10)
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
 );
+
+-- Existing deployments: add the ownership token column if the table predates it.
+-- complete/fail gate on (owner_token, state='pending') so a reclaimed-over attempt
+-- can never overwrite the new owner's outcome (audit #10).
+alter table public.settlement_operations add column if not exists owner_token text;
 
 create index if not exists settlement_operations_deal_id_idx on public.settlement_operations (deal_id);
 create index if not exists settlement_operations_state_idx on public.settlement_operations (state);

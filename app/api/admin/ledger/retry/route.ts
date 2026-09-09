@@ -12,7 +12,7 @@
 
 import { isNonEmptyString, jsonError, readJson } from "@/lib/ai/http";
 import { requireCapability } from "@/lib/auth/server";
-import { getDeal, refundDeal, releaseToSeller } from "@/lib/deals/store";
+import { getDeal, recoverSplitRemainder, refundDeal, releaseToSeller } from "@/lib/deals/store";
 import { publicDeal } from "@/lib/deals/redact";
 import { recordAudit } from "@/lib/audit/log";
 
@@ -32,6 +32,22 @@ export async function POST(req: Request): Promise<Response> {
   const deal = await getDeal(dealId);
   if (!deal) return jsonError("Deal not found", 404);
   if (deal.dispute) {
+    // A resolved split's stranded seller-remainder leg re-drives here — safely,
+    // via the settlement claim — since the deal is terminal and the review path
+    // can no longer move it (audit #9). Every other disputed deal still routes
+    // to the review queue so this endpoint never guesses a settlement amount.
+    if (kind === "payout" && deal.status === "resolved") {
+      const recovered = await recoverSplitRemainder(dealId);
+      if (!recovered.ok) return jsonError(recovered.error ?? "The retry did not go through.", 422);
+      await recordAudit({
+        actorEmail: caller.email,
+        actorRole: caller.role,
+        action: "settlement.retry",
+        target: body.key,
+        meta: { kind, dealId, newStatus: recovered.deal?.status, recovery: "split-remainder" },
+      });
+      return Response.json({ ok: true, deal: publicDeal(recovered.deal) });
+    }
     return jsonError("This deal is in a dispute. Re-drive it from the dispute review queue, not here.", 409);
   }
 
