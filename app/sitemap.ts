@@ -9,12 +9,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "avoid-whatsapp-instagram-scams-nigeria",
     "buy-from-strangers-online-safely",
   ];
+  // Commercial pillar pages — the primary search entry points.
+  const pillars = ["escrow-nigeria", "how-it-works", "buyer-protection", "seller-protection"];
   return [
     { url: `${SITE_URL}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
+    ...pillars.map((s) => ({ url: `${SITE_URL}/${s}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.9 })),
     { url: `${SITE_URL}/waitlist`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${SITE_URL}/guides`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
     ...guides.map((s) => ({ url: `${SITE_URL}/guides/${s}`, lastModified: now, changeFrequency: "monthly" as const, priority: 0.7 })),
-    { url: `${SITE_URL}/login`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    // /login is intentionally omitted: it has no standalone search value and is noindex.
     { url: `${SITE_URL}/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE_URL}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
   ];
