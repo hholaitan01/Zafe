@@ -4,6 +4,7 @@ import { LegalDoc, type LegalSection } from "@/app/_lib/LegalDoc";
 export const metadata: Metadata = {
   title: "Terms of Service · Zafe",
   description: "The terms that govern your use of Zafe's AI-powered escrow for peer-to-peer trades.",
+  alternates: { canonical: "/terms" },
 };
 
 const sections: LegalSection[] = [
