@@ -31,6 +31,31 @@ const GUIDES = [
     title: "How to buy from a stranger online safely",
     dek: "A short checklist for buying from social-media vendors without losing your money.",
   },
+  {
+    slug: "how-to-verify-an-online-seller-nigeria",
+    title: "How to verify an online seller in Nigeria",
+    dek: "The checks that separate a real vendor from a scammer, before you pay a naira.",
+  },
+  {
+    slug: "buy-a-phone-safely-online-nigeria",
+    title: "How to buy a phone safely from a WhatsApp or Instagram seller",
+    dek: "Phones are the most-scammed item online. Inspect the device, verify the seller, and pay safely.",
+  },
+  {
+    slug: "escrow-vs-bank-transfer",
+    title: "Escrow vs paying by bank transfer: which is safer?",
+    dek: "Why a direct transfer leaves you unprotected the moment it lands, and how escrow compares.",
+  },
+  {
+    slug: "escrow-vs-cash-on-delivery-nigeria",
+    title: "Escrow vs cash on delivery in Nigeria",
+    dek: "Where pay-on-delivery protects you, where it fails, and how escrow covers the gaps.",
+  },
+  {
+    slug: "fake-payment-alerts-nigeria",
+    title: "Fake payment alerts: how sellers can protect themselves",
+    dek: "The scam run on sellers, the red flags, and the one rule that defeats it.",
+  },
 ];
 
 export default function GuidesIndex() {

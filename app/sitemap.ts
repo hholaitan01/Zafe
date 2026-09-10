@@ -8,6 +8,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "what-is-escrow",
     "avoid-whatsapp-instagram-scams-nigeria",
     "buy-from-strangers-online-safely",
+    "escrow-vs-bank-transfer",
+    "escrow-vs-cash-on-delivery-nigeria",
+    "how-to-verify-an-online-seller-nigeria",
+    "buy-a-phone-safely-online-nigeria",
+    "fake-payment-alerts-nigeria",
   ];
   // Commercial pillar pages — the primary search entry points.
   const pillars = ["escrow-nigeria", "how-it-works", "buyer-protection", "seller-protection"];
