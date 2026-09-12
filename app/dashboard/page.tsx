@@ -1,9 +1,9 @@
 "use client";
 
-/* Dashboard — responsive. Desktop keeps the Claude Design structure (page head,
-   proactive AI banner, a 4-KPI row, an active-transactions list); it collapses
-   to a stacked mobile view inside AppShell. Built in our navy/emerald light
-   system. All figures come from real deals + reputation. */
+/* Home (dashboard) — the OBIEX-inspired trust-fintech layout: an emerald
+   "money held safe" hero, a row of round action buttons, the radial Trust Score
+   dial, and the active-deals list. Real figures from deals + reputation, wired
+   navigation, dark-mode aware (AppShell darkAware). */
 
 import { useEffect, useMemo, useState } from "react";
 import { Skeleton } from "@/app/_lib/States";
@@ -14,15 +14,15 @@ import { getCurrentUser } from "@/lib/auth";
 import { cacheDeals, getMyReputation, listMyDeals, loadUserProfile, naira, setCurrentDealId } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
-const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: string }> = {
-  created: { label: "Awaiting payment", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
-  funded: { label: "Funded", bg: "#ECFDF5", fg: "#047857", dot: "#059669" },
-  shipped: { label: "Delivered", bg: "#FEF3C7", fg: "#A16207", dot: "#E89914" },
-  completed: { label: "Released", bg: "#ECFDF5", fg: "#047857", dot: "#059669" },
-  disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C", dot: "#DC2626" },
-  under_review: { label: "Under review", bg: "#EDE9FE", fg: "#6D28D9", dot: "#7C3AED" },
-  refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
-  resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3", dot: "#6366F1" },
+const PILL: Record<DealStatus, { label: string; bg: string; fg: string }> = {
+  created: { label: "Awaiting payment", bg: "var(--line-2)", fg: "var(--muted)" },
+  funded: { label: "Funded", bg: "var(--safe-tint)", fg: "var(--safe-2)" },
+  shipped: { label: "Delivered", bg: "#FEF3C7", fg: "#A16207" },
+  completed: { label: "Released", bg: "var(--safe-tint)", fg: "var(--safe-2)" },
+  disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C" },
+  under_review: { label: "Under review", bg: "#EDE9FE", fg: "#6D28D9" },
+  refunded: { label: "Refunded", bg: "var(--line-2)", fg: "var(--muted)" },
+  resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3" },
 };
 
 function itemIcon(t: string, size = 20): React.ReactNode {
@@ -33,15 +33,7 @@ function itemIcon(t: string, size = 20): React.ReactNode {
   else if (/ps5|playstation|xbox|console|game|nintendo|switch/i.test(t)) d = "M2 8h20v8H2zM7 12h3M8.5 10.5v3";
   else if (/jordan|sneaker|shoe|kick|air ?force|nike|adidas/i.test(t)) d = "M2 16h13l5 2h2v2H2zM2 16v-4l4-2 2 3 4-1";
   else d = "m3 8 9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8";
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
-}
-
-function relTime(iso?: string): string {
-  if (!iso) return "";
-  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
 
 function TxRow({ tx, onOpen }: { tx: Deal; onOpen: (id: string) => void }) {
@@ -52,21 +44,58 @@ function TxRow({ tx, onOpen }: { tx: Deal; onOpen: (id: string) => void }) {
       <span className="dsh-row-ic">{itemIcon(tx.item.title)}</span>
       <span className="dsh-row-main">
         <span className="dsh-row-title">{tx.item.title}</span>
-        <span className="dsh-row-sub tf-mono">{tx.id.slice(0, 10)} · {who}</span>
+        <span className="dsh-row-sub">with {who}</span>
       </span>
-      <span className="dsh-row-amt tf-mono">{naira(tx.item.amount)}</span>
-      <span className="tf-pill" style={{ background: p.bg, color: p.fg }}>{p.label}</span>
+      <span className="dsh-row-right">
+        <span className="dsh-row-amt tf-mono">{naira(tx.item.amount)}</span>
+        <span className="tf-pill" style={{ background: p.bg, color: p.fg }}>{p.label}</span>
+      </span>
     </button>
   );
 }
 
-/** A skeleton placeholder shaped like a transaction row, shown while deals load. */
 function SkelRow() {
   return (
     <div className="dsh-row" style={{ cursor: "default" }} aria-hidden>
-      <span className="dsh-row-ic"><Skeleton circle w={38} h={38} /></span>
+      <span className="dsh-row-ic"><Skeleton circle w={40} h={40} /></span>
       <span className="dsh-row-main"><Skeleton w="55%" h={13} /><Skeleton w="38%" h={11} style={{ marginTop: 7 }} /></span>
       <Skeleton w={62} h={13} />
+    </div>
+  );
+}
+
+/** The radial Trust Score dial. Arc fills to the score; colour + verdict follow
+    the safe / caution / risky bands. Track and text use tokens so it adapts to dark. */
+function TrustDial({ score }: { score: number | null }) {
+  const C = 326.726; // 2·π·52
+  const s = Math.max(0, Math.min(100, score ?? 0));
+  const offset = C * (1 - s / 100);
+  const band =
+    score == null ? { c: "#94A3B8", label: "Build your history" }
+      : s >= 70 ? { c: "#059669", label: "Trusted trader" }
+        : s >= 40 ? { c: "#A16207", label: "Building trust" }
+          : { c: "#DC2626", label: "New here" };
+  return (
+    <div className="tf-card dsh-dial">
+      <svg width="100" height="100" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
+        <circle className="dsh-dial-track" cx="60" cy="60" r="52" fill="none" strokeWidth="12" />
+        {score != null && (
+          <circle cx="60" cy="60" r="52" fill="none" stroke={band.c} strokeWidth="12" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={offset} transform="rotate(-90 60 60)" />
+        )}
+        <text className="dsh-dial-num" x="60" y="57" textAnchor="middle" fontSize="32" fontWeight="700">{score ?? "—"}</text>
+        <text className="dsh-dial-of" x="60" y="76" textAnchor="middle" fontSize="12" fontWeight="600">/ 100</text>
+      </svg>
+      <div className="dsh-dial-body">
+        <div className="dsh-dial-head">
+          <span className="dsh-dial-label">Your Trust Score</span>
+          <span className="dsh-dial-verdict"><span className="dsh-dial-dot" style={{ background: band.c }} />{band.label}</span>
+        </div>
+        <div className="dsh-dial-bands">
+          <span><i style={{ background: "#059669" }} />70 and up. Safe</span>
+          <span><i style={{ background: "#A16207" }} />40 to 69. Caution</span>
+          <span><i style={{ background: "#DC2626" }} />Below 40. Risky</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -76,7 +105,6 @@ export default function DashboardPage() {
   const [user, setUser] = useState({ name: "", first: "there", initials: "", photo: "" });
   const [deals, setDeals] = useState<Deal[] | null>(null);
   const [score, setScore] = useState<number | null>(null);
-  const [tier, setTier] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -93,130 +121,163 @@ export default function DashboardPage() {
       ]);
       if (!alive) return;
       setDeals(d);
-      cacheDeals(d); // warm the cache so opening any deal renders instantly
-      if (rep) { setScore(rep.score); setTier(rep.tierLabel); }
+      cacheDeals(d);
+      if (rep) setScore(rep.score);
       if (prof?.photo) setUser((p) => ({ ...p, photo: prof.photo }));
     })();
     return () => { alive = false; };
   }, []);
 
-  const kpis = useMemo(() => {
+  const held = useMemo(() => {
     const list = deals || [];
-    const held = list.filter((d) => d.status === "funded" || d.status === "shipped");
-    const heldTotal = held.reduce((s, d) => s + (d.item.amount || 0), 0);
-    const active = list.filter((d) => ["created", "funded", "shipped"].includes(d.status));
-    const funded = list.filter((d) => d.status === "funded").length;
-    const delivered = list.filter((d) => d.status === "shipped").length;
-    const completed = list.filter((d) => d.status === "completed" || d.status === "resolved").length;
-    const disputed = list.filter((d) => d.status === "disputed").length;
-    return { heldTotal, held: held.length, active: active.length, funded, delivered, completed, total: list.length, disputed };
+    const inEscrow = list.filter((d) => d.status === "funded" || d.status === "shipped");
+    return { total: inEscrow.reduce((s, d) => s + (d.item.amount || 0), 0), count: inEscrow.length };
   }, [deals]);
 
-  const needsConfirm = (deals || []).find((d) => d.status === "shipped");
   const active = (deals || []).filter((d) => ["created", "funded", "shipped", "disputed", "under_review"].includes(d.status));
-  const riskLabel = score == null ? "" : score >= 70 ? "low risk" : score >= 40 ? "medium risk" : "building trust";
+  const needsConfirm = (deals || []).find((d) => d.status === "shipped");
   const open = (id: string) => { setCurrentDealId(id); router.push("/timeline"); };
   const loading = deals == null;
 
   return (
-    <AppShell current="dashboard" user={{ name: user.name || "You", initials: user.initials, photo: user.photo, score: score ?? undefined }}>
+    <AppShell darkAware current="dashboard" user={{ name: user.name || "You", initials: user.initials, photo: user.photo, score: score ?? undefined }}>
       <style>{css}</style>
 
-      <div className="tf-ph-head dsh-head">
-        <div><div className="tf-eyebrow">Good day</div><h1>{user.first}&apos;s dashboard</h1></div>
-        <Link href="/new-escrow" className="tf-btn tf-btn--primary"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>Start a deal</Link>
-      </div>
-
-      {needsConfirm && (
-        <button className="dsh-ai" onClick={() => open(needsConfirm.id)}>
-          <span className="dsh-ai-chip">AI</span>
-          <span className="dsh-ai-text"><b>{needsConfirm.item.title}</b> is marked delivered and waiting on your confirmation. Review it before the auto-dispute window opens.</span>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6" /></svg>
-        </button>
-      )}
-
-      <div className="dsh-kpis">
-        <div className="tf-card dsh-kpi dsh-kpi-hero">
-          <div className="tf-eyebrow">Held in escrow</div>
-          <div className="dsh-kpi-val tf-mono">{loading ? <Skeleton w={132} h={26} style={{ marginTop: 6 }} /> : <><span className="dsh-naira">₦</span>{naira(kpis.heldTotal).replace("₦", "")}</>}</div>
-          <div className="dsh-kpi-sub">{kpis.held ? `Across ${kpis.held} active deal${kpis.held === 1 ? "" : "s"}` : "Nothing in escrow yet"}</div>
-        </div>
-        <div className="tf-card dsh-kpi">
-          <div className="tf-eyebrow">Trust Score</div>
-          <div className="dsh-kpi-val" style={{ color: "var(--safe)" }}>{loading ? <Skeleton w={52} h={26} style={{ marginTop: 6 }} /> : (score ?? "—")}</div>
-          <div className="dsh-kpi-sub">{score == null ? "Build your history" : `Out of 100 · ${riskLabel}`}</div>
-        </div>
-        <div className="tf-card dsh-kpi">
-          <div className="tf-eyebrow">Successful</div>
-          <div className="dsh-kpi-val">{loading ? <Skeleton w={52} h={26} style={{ marginTop: 6 }} /> : <>{kpis.completed} <span className="dsh-kpi-slash">/ {kpis.total}</span></>}</div>
-          <div className="dsh-kpi-sub">{kpis.disputed ? `${kpis.disputed} in dispute` : tier || "No disputes"}</div>
-        </div>
-        <div className="tf-card dsh-kpi">
-          <div className="tf-eyebrow">Active</div>
-          <div className="dsh-kpi-val">{loading ? <Skeleton w={38} h={26} style={{ marginTop: 6 }} /> : kpis.active}</div>
-          <div className="dsh-kpi-sub">{kpis.funded} funded · {kpis.delivered} delivered</div>
-        </div>
-      </div>
-
-      <div className="dsh-sec">
-        <span className="dsh-sec-title">Active transactions</span>
-        <Link href="/history" className="dsh-sec-link">View all</Link>
-      </div>
-      <div className="dsh-list">
-        {loading ? (
-          [0, 1, 2].map((i) => <SkelRow key={i} />)
-        ) : active.length ? (
-          active.map((tx) => <TxRow key={tx.id} tx={tx} onOpen={open} />)
-        ) : (
-          <div className="dsh-empty">
-            <div className="dsh-empty-txt">No active transactions yet. Start a protected deal and it shows up here.</div>
-            <Link href="/new-escrow" className="tf-btn tf-btn--primary dsh-empty-cta"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>Start a deal</Link>
+      <div className="dsh-wrap">
+        {/* Hero: money held safe */}
+        <div className="dsh-hero">
+          <div className="dsh-hero-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+            Held safe in escrow
           </div>
+          <div className="dsh-hero-val tf-mono">{loading ? <Skeleton w={150} h={34} style={{ marginTop: 8, background: "rgba(255,255,255,.25)" }} /> : naira(held.total)}</div>
+          <div className="dsh-hero-sub">{held.count ? `Across ${held.count} active deal${held.count === 1 ? "" : "s"}` : "Nothing in escrow yet"}</div>
+        </div>
+
+        {/* Round action buttons */}
+        <div className="dsh-actions">
+          <Link href="/new-escrow" className="dsh-act">
+            <span className="dsh-act-ic dsh-act--primary"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg></span>
+            <span className="dsh-act-label">New deal</span>
+          </Link>
+          <Link href="/fund" className="dsh-act">
+            <span className="dsh-act-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg></span>
+            <span className="dsh-act-label">Fund</span>
+          </Link>
+          {needsConfirm ? (
+            <button className="dsh-act" onClick={() => open(needsConfirm.id)}>
+              <span className="dsh-act-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span>
+              <span className="dsh-act-label">Release</span>
+            </button>
+          ) : (
+            <Link href="/history" className="dsh-act">
+              <span className="dsh-act-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span>
+              <span className="dsh-act-label">Release</span>
+            </Link>
+          )}
+          <Link href="/support" className="dsh-act">
+            <span className="dsh-act-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg></span>
+            <span className="dsh-act-label">Support</span>
+          </Link>
+        </div>
+
+        {/* AI nudge */}
+        {needsConfirm && (
+          <button className="dsh-ai" onClick={() => open(needsConfirm.id)}>
+            <span className="dsh-ai-chip">AI</span>
+            <span className="dsh-ai-text"><b>{needsConfirm.item.title}</b> is marked delivered and waiting on your confirmation. Review it before auto-release.</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6" /></svg>
+          </button>
         )}
+
+        {/* Trust Score dial */}
+        <TrustDial score={score} />
+
+        {/* Active deals */}
+        <div className="dsh-sec">
+          <span className="dsh-sec-title">Active deals</span>
+          <Link href="/history" className="dsh-sec-link">See all</Link>
+        </div>
+        <div className="dsh-list">
+          {loading ? (
+            [0, 1, 2].map((i) => <SkelRow key={i} />)
+          ) : active.length ? (
+            active.map((tx) => <TxRow key={tx.id} tx={tx} onOpen={open} />)
+          ) : (
+            <div className="dsh-empty">
+              <div className="dsh-empty-txt">No active deals yet. Start a protected deal and it shows up here.</div>
+              <Link href="/new-escrow" className="tf-btn tf-btn--primary dsh-empty-cta"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>Start a deal</Link>
+            </div>
+          )}
+        </div>
       </div>
     </AppShell>
   );
 }
 
 const css = `
-.dsh-head{ display:none }
-.dsh-ai{ width:100%; text-align:left; border:none; cursor:pointer; margin-bottom:16px; border-radius:16px; background:#0F172A; padding:14px 15px; display:flex; gap:12px; align-items:flex-start; font-family:inherit }
+.dsh-wrap{ max-width:560px; margin:0 auto }
+
+/* hero */
+.dsh-hero{ border-radius:24px; padding:20px; color:#fff; background:linear-gradient(150deg,#059669 0%,#047857 100%); box-shadow:0 18px 38px -20px rgba(4,120,87,.55) }
+.dsh-hero-label{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; letter-spacing:.02em; opacity:.92 }
+.dsh-hero-val{ margin-top:12px; font-size:34px; font-weight:700; letter-spacing:-.02em; line-height:1 }
+.dsh-hero-sub{ margin-top:5px; font-size:13px; font-weight:500; opacity:.9 }
+
+/* round action buttons */
+.dsh-actions{ margin-top:20px; display:grid; grid-template-columns:repeat(4,1fr); gap:8px }
+.dsh-act{ display:flex; flex-direction:column; align-items:center; gap:8px; background:none; border:none; cursor:pointer; font-family:inherit; padding:0 }
+.dsh-act-ic{ width:56px; height:56px; border-radius:18px; display:flex; align-items:center; justify-content:center; background:var(--safe-tint); color:var(--safe-2);
+  transition:transform .14s var(--ease) }
+.dsh-act:active .dsh-act-ic{ transform:scale(.94) }
+.dsh-act--primary{ background:var(--safe); color:#fff; box-shadow:0 10px 20px -10px rgba(5,150,105,.55) }
+.dsh-act-label{ font-size:12px; font-weight:600; color:var(--ink-2) }
+
+/* AI nudge */
+.dsh-ai{ width:100%; text-align:left; border:none; cursor:pointer; margin-top:18px; border-radius:16px; background:#0F172A; padding:14px 15px; display:flex; gap:12px; align-items:flex-start; font-family:inherit }
 .dsh-ai-chip{ font-size:10px; font-weight:700; letter-spacing:.06em; color:#fff; background:#059669; padding:3px 7px; border-radius:5px; flex-shrink:0; margin-top:1px }
 .dsh-ai-text{ flex:1; min-width:0; font-size:13px; line-height:1.5; color:rgba(255,255,255,.9) } .dsh-ai-text b{ color:#fff }
 
-.dsh-kpis{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:26px }
-.dsh-kpi{ padding:16px 17px }
-.dsh-kpi-hero{ grid-column:1 / -1; background:radial-gradient(120% 130% at 88% 0%, #14304A 0%, #0F172A 58%); border:none; color:#fff }
-.dsh-kpi-hero .tf-eyebrow{ color:rgba(255,255,255,.72) }
-.dsh-kpi-val{ font-size:30px; font-weight:700; letter-spacing:-.03em; line-height:1.05; margin-top:6px; color:var(--ink) }
-.dsh-kpi-hero .dsh-kpi-val{ color:#fff; font-size:38px }
-.dsh-naira{ color:#93A4BC; margin-right:1px }
-.dsh-kpi-slash{ font-size:16px; font-weight:500; color:var(--faint) }
-.dsh-kpi-sub{ font-size:12px; color:var(--muted); margin-top:4px } .dsh-kpi-hero .dsh-kpi-sub{ color:#93A4BC }
+/* trust dial */
+.dsh-dial{ margin-top:20px; padding:16px; display:flex; align-items:center; gap:16px }
+.dsh-dial-track{ stroke:var(--line) }
+.dsh-dial-num{ fill:var(--ink) }
+.dsh-dial-of{ fill:var(--muted) }
+.dsh-dial-body{ display:flex; flex-direction:column; gap:10px; flex-grow:1; min-width:0 }
+.dsh-dial-head{ display:flex; flex-direction:column; gap:3px }
+.dsh-dial-label{ font-size:12.5px; font-weight:600; color:var(--muted) }
+.dsh-dial-verdict{ display:flex; align-items:center; gap:7px; font-size:15px; font-weight:700 }
+.dsh-dial-dot{ width:8px; height:8px; border-radius:50% }
+.dsh-dial-bands{ display:flex; flex-direction:column; gap:5px }
+.dsh-dial-bands span{ display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--muted) }
+.dsh-dial-bands i{ width:9px; height:9px; border-radius:3px }
 
-.dsh-sec{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px }
-.dsh-sec-title{ font-size:17px; font-weight:700; letter-spacing:-.01em }
-.dsh-sec-link{ font-size:13.5px; font-weight:600; color:var(--safe) }
+/* sections + rows */
+.dsh-sec{ display:flex; align-items:center; justify-content:space-between; margin:24px 0 12px }
+.dsh-sec-title{ font-size:16px; font-weight:700; letter-spacing:-.01em }
+.dsh-sec-link{ font-size:13px; font-weight:600; color:var(--safe) }
 .dsh-list{ display:flex; flex-direction:column; gap:10px }
-.dsh-empty{ padding:34px 18px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center; background:#fff; border:1px dashed var(--line); border-radius:16px }
-.dsh-empty-txt{ color:var(--faint); font-size:13.5px; max-width:34ch }
+
+.dsh-row{ width:100%; text-align:left; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:12px;
+  background:var(--card); border:1px solid var(--line); border-radius:16px; padding:13px 14px;
+  transition:transform .12s var(--ease), border-color .18s var(--ease) }
+@media (hover:hover) and (pointer:fine){ .dsh-row:hover{ transform:translateY(-1px); border-color:#CBD5E1 } }
+.dsh-row-ic{ width:40px; height:40px; border-radius:12px; background:var(--line-2); color:var(--ink-2); display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+.dsh-row-main{ min-width:0; display:flex; flex-direction:column; gap:2px; flex-grow:1 }
+.dsh-row-title{ font-size:14.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.dsh-row-sub{ font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.dsh-row-right{ display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0 }
+.dsh-row-amt{ font-size:14px; font-weight:700; color:var(--ink); letter-spacing:-.01em }
+.dsh-row .tf-pill{ font-size:11px }
+
+.dsh-empty{ padding:34px 18px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center; background:var(--card); border:1px dashed var(--line); border-radius:16px }
+.dsh-empty-txt{ color:var(--muted); font-size:13.5px; max-width:34ch }
 .dsh-empty-cta{ align-self:center }
 
-.dsh-row{ width:100%; text-align:left; cursor:pointer; font-family:inherit; display:grid; grid-template-columns:44px 1fr auto; grid-template-areas:'ic main amt' 'ic main pill'; gap:2px 13px; align-items:center; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); border-radius:16px; padding:13px 15px; transition:transform .12s var(--ease), box-shadow .18s var(--ease) }
-@media (hover:hover) and (pointer:fine){ .dsh-row:hover{ transform:translateY(-1px); box-shadow:var(--sh-2) } }
-.dsh-row-ic{ grid-area:ic; width:44px; height:44px; border-radius:12px; background:#F1F5F9; display:flex; align-items:center; justify-content:center }
-.dsh-row-main{ grid-area:main; min-width:0; display:flex; flex-direction:column }
-.dsh-row-title{ font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.dsh-row-sub{ font-size:11.5px; color:var(--faint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.dsh-row-amt{ grid-area:amt; font-size:15px; font-weight:600; text-align:right; letter-spacing:-.01em }
-.dsh-row .tf-pill{ grid-area:pill; justify-self:end; margin-top:2px }
-
-@media (min-width:1024px){
-  .dsh-head{ display:flex }
-  .dsh-kpis{ grid-template-columns:repeat(4,1fr) }
-  .dsh-kpi-hero{ grid-column:auto }
-  .dsh-kpi-hero .dsh-kpi-val{ font-size:30px }
-  .dsh-row{ grid-template-columns:44px 1fr auto 150px; grid-template-areas:'ic main amt pill'; align-items:center; padding:14px 18px }
-  .dsh-row-amt{ text-align:right } .dsh-row .tf-pill{ justify-self:end; margin-top:0 }
+/* dark: keep the round-action wells legible (emerald icon on dark tint is too low-contrast) */
+@media (prefers-color-scheme:dark){
+  .tf-dark-aware .dsh-act-ic{ background:#1B2740; color:#CBD5E1 }
+  .tf-dark-aware .dsh-act--primary{ background:var(--safe); color:#fff }
+  .tf-dark-aware .dsh-ai{ background:#0A1424; border:1px solid var(--line) }
 }
 `;
