@@ -56,6 +56,31 @@ const GUIDES = [
     title: "Fake payment alerts: how sellers can protect themselves",
     dek: "The scam run on sellers, the red flags, and the one rule that defeats it.",
   },
+  {
+    slug: "escrow-payment-nigeria-how-it-works",
+    title: "Escrow payment in Nigeria: how paying into escrow works",
+    dek: "You still pay by normal bank transfer. What changes is where the money goes, and when.",
+  },
+  {
+    slug: "buy-a-laptop-safely-online-nigeria",
+    title: "How to buy a laptop safely online in Nigeria",
+    dek: "Confirm the real specs and serial, spot swapped parts and tired batteries, and pay safely.",
+  },
+  {
+    slug: "instagram-vendor-scams-nigeria",
+    title: "Instagram vendor scams: how to buy from IG shops safely",
+    dek: "Fake shops, cloned pages, and deposit scams, and how to buy from an IG store without losing your money.",
+  },
+  {
+    slug: "safe-payment-links-for-nigerian-sellers",
+    title: "Safe payment links for Nigerian sellers",
+    dek: "Why a protected link beats sharing an account number, for both you and the buyer.",
+  },
+  {
+    slug: "get-paid-safely-online-nigeria",
+    title: "How to get paid safely online as a seller in Nigeria",
+    dek: "Avoid fake alerts, overpayment tricks, and reversals, and get paid to an account only you control.",
+  },
 ];
 
 export default function GuidesIndex() {
