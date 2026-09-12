@@ -13,6 +13,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "how-to-verify-an-online-seller-nigeria",
     "buy-a-phone-safely-online-nigeria",
     "fake-payment-alerts-nigeria",
+    "escrow-payment-nigeria-how-it-works",
+    "buy-a-laptop-safely-online-nigeria",
+    "instagram-vendor-scams-nigeria",
+    "safe-payment-links-for-nigerian-sellers",
+    "get-paid-safely-online-nigeria",
   ];
   // Commercial pillar pages — the primary search entry points.
   const pillars = ["escrow-nigeria", "how-it-works", "buyer-protection", "seller-protection"];
