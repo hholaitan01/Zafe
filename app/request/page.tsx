@@ -65,7 +65,7 @@ export default function RequestPage() {
   const canSubmit = amountNum > 0 && !!title.trim() && !!buyer.trim() && !busy;
 
   return (
-    <AppShell current="new" user={{ name: shell.name, initials: shell.initials }}>
+    <AppShell darkAware current="new" user={{ name: shell.name, initials: shell.initials }}>
       <style>{css}</style>
 
       <div className="tf-ph-head rq-head">

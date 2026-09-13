@@ -108,7 +108,7 @@ export default function SellingPage() {
     .reduce((t, d) => t + (d.status === "resolved" ? d.item.amount - (d.partialRefundAmount || 0) : d.item.amount), 0);
 
   return (
-    <AppShell current="new" user={{ name: shell.name, initials: shell.initials }}>
+    <AppShell darkAware current="new" user={{ name: shell.name, initials: shell.initials }}>
       <style>{css}</style>
 
       <div className="tf-ph-head sg-head">
@@ -142,7 +142,6 @@ export default function SellingPage() {
 
         {!verified && (
           <Link href="/seller" className="sg-verify">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z" /></svg>
             <div className="sg-verify-txt"><div className="sg-verify-t">Verify to receive payouts</div><div className="sg-verify-s">Sellers must be verified before money can be released to them.</div></div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
           </Link>
@@ -209,7 +208,7 @@ const css = `
 
 .sg-kpis{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
 .sg-kpi{ padding:15px 16px }
-.sg-kpi-hero{ grid-column:1 / -1; background:radial-gradient(120% 130% at 88% 0%, #14304A 0%, #0F172A 62%); border:none; color:#fff }
+.sg-kpi-hero{ grid-column:1 / -1; background:linear-gradient(150deg,#059669 0%,#047857 100%); border:none; color:#fff }
 .sg-kpi-hero .tf-eyebrow{ color:rgba(255,255,255,.6) }
 .sg-kpi-val{ font-size:24px; font-weight:800; letter-spacing:-.02em; margin-top:6px; line-height:1.1 }
 .sg-kpi-hero .sg-kpi-val{ font-size:30px }
@@ -217,22 +216,21 @@ const css = `
 .sg-kpi-sub{ font-size:12px; color:var(--faint); margin-top:5px; line-height:1.4 }
 .sg-kpi-hero .sg-kpi-sub{ color:rgba(255,255,255,.6) }
 
-.sg-verify{ display:flex; align-items:center; gap:11px; border-radius:16px; padding:14px 15px; background:var(--safe-tint); border:1px solid #C7F0DE; color:inherit }
-.sg-verify svg:first-child{ flex-shrink:0 }
+.sg-verify{ display:flex; align-items:center; gap:11px; border-radius:16px; padding:14px 15px; background:var(--safe-tint); border:1px solid rgba(5,150,105,.28); color:inherit }
 .sg-verify-txt{ flex:1; min-width:0 }
-.sg-verify-t{ font-size:13px; font-weight:700; color:#064E3B }
-.sg-verify-s{ font-size:12px; color:#047857; margin-top:2px; line-height:1.4 }
+.sg-verify-t{ font-size:13px; font-weight:700; color:var(--safe-2) }
+.sg-verify-s{ font-size:12px; color:var(--safe-2); margin-top:2px; line-height:1.4; opacity:.85 }
 
 .sg-request{ display:flex; align-items:center; gap:11px; height:58px; border-radius:16px; background:var(--safe); padding:0 16px; font-weight:600; font-size:15px; color:#fff; box-shadow:0 14px 26px -12px rgba(5,150,105,.55) }
 .sg-request-ic{ width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center }
 
 .sg-label{ margin-top:8px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--faint) }
 .sg-list{ display:flex; flex-direction:column; gap:10px }
-.sg-empty{ padding:26px 18px; text-align:center; color:var(--faint); font-size:13.5px; line-height:1.5; background:#fff; border:1px dashed var(--line); border-radius:16px }
+.sg-empty{ padding:26px 18px; text-align:center; color:var(--faint); font-size:13.5px; line-height:1.5; background:var(--card); border:1px dashed var(--line); border-radius:16px }
 
 .sg-card{ padding:14px 15px }
 .sg-card-top{ width:100%; text-align:left; cursor:pointer; font-family:inherit; background:none; border:none; padding:0; display:flex; align-items:center; gap:13px }
-.sg-ic{ width:46px; height:46px; border-radius:13px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+.sg-ic{ width:46px; height:46px; border-radius:13px; background:var(--line-2); display:flex; align-items:center; justify-content:center; flex-shrink:0 }
 .sg-main{ flex:1; min-width:0; display:flex; flex-direction:column }
 .sg-title{ font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .sg-sub{ font-size:12px; color:var(--faint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }

@@ -40,7 +40,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppShell current="profile" user={{ name: name || "You", initials }}>
+    <AppShell darkAware current="profile" user={{ name: name || "You", initials }}>
       <style>{css}</style>
 
       <div className="tf-ph-head st-head">
@@ -102,13 +102,13 @@ const css = `
 .st-group .st-row:last-child{ border-bottom:none }
 .st-row:not(.st-row-static){ cursor:pointer; transition:background .16s var(--ease) }
 .st-row:not(.st-row-static):hover{ background:var(--bg) }
-.st-ic{ width:38px; height:38px; border-radius:11px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+.st-ic{ width:38px; height:38px; border-radius:11px; background:var(--line-2); display:flex; align-items:center; justify-content:center; flex-shrink:0 }
 .st-ic-safe{ background:var(--safe-tint) }
 .st-main{ flex:1; min-width:0; display:flex; flex-direction:column }
 .st-title{ font-size:14px; font-weight:600 }
 .st-sub{ font-size:12.5px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .st-chev{ flex-shrink:0 }
-.st-signout{ margin-top:24px; width:100%; max-width:320px; height:52px; border-radius:14px; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); color:var(--danger); gap:8px; font-size:15px }
+.st-signout{ margin-top:24px; width:100%; max-width:320px; height:52px; border-radius:14px; background:var(--card); border:1px solid var(--line); box-shadow:var(--sh-1); color:var(--danger); gap:8px; font-size:15px }
 .st-signout:hover{ border-color:#FCA5A5 }
 @media (min-width:1024px){ .st-head{ display:flex } }
 `;

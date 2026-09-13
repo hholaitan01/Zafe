@@ -63,7 +63,7 @@ export default function NewEscrowPage() {
   const canSubmit = amountNum > 0 && !!title.trim() && !busy;
 
   return (
-    <AppShell current="new" user={{ name: "You", initials: "" }}>
+    <AppShell darkAware current="new" user={{ name: "You", initials: "" }}>
       <style>{css}</style>
 
       <div className="tf-ph-head ne-head">

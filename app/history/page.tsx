@@ -137,7 +137,7 @@ export default function ActivityPage() {
   const open = (id: string) => { setCurrentDealId(id); router.push("/timeline"); };
 
   return (
-    <AppShell current="activity" user={{ name: shell.name || "You", initials: shell.initials, photo: shell.photo, score: shell.score }}>
+    <AppShell darkAware current="activity" user={{ name: shell.name || "You", initials: shell.initials, photo: shell.photo, score: shell.score }}>
       <style>{css}</style>
 
       <div className="tf-ph-head ac-head">
@@ -231,10 +231,10 @@ const css = `
 .ac-toolbar{ display:flex; flex-direction:column; gap:12px; margin-bottom:16px }
 .ac-chips{ display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; -ms-overflow-style:none; scrollbar-width:none }
 .ac-chips::-webkit-scrollbar{ display:none }
-.ac-chip{ flex-shrink:0; padding:8px 14px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink-2); font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.02em; cursor:pointer; transition:background .16s var(--ease), border-color .16s var(--ease), color .16s var(--ease) }
+.ac-chip{ flex-shrink:0; padding:8px 14px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--ink-2); font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.02em; cursor:pointer; transition:background .16s var(--ease), border-color .16s var(--ease), color .16s var(--ease) }
 .ac-chip:hover{ border-color:#CBD5E1 }
 .ac-chip.is-on{ background:var(--ink); border-color:var(--ink); color:#fff }
-.ac-search{ display:flex; align-items:center; gap:9px; padding:0 14px; height:44px; border-radius:12px; background:#fff; border:1px solid var(--line); color:var(--faint); box-shadow:var(--sh-1) }
+.ac-search{ display:flex; align-items:center; gap:9px; padding:0 14px; height:44px; border-radius:12px; background:var(--card); border:1px solid var(--line); color:var(--faint); box-shadow:var(--sh-1) }
 .ac-search input{ flex:1; min-width:0; border:none; outline:none; background:transparent; font-family:inherit; font-size:14px; color:var(--ink) }
 .ac-search input::placeholder{ color:var(--faint) }
 
@@ -248,7 +248,7 @@ const css = `
 .ac-rows{ display:flex; flex-direction:column }
 .ac-row{ width:100%; text-align:left; cursor:pointer; font-family:inherit; background:none; border:none; border-top:1px solid var(--line-2); display:flex; align-items:center; gap:13px; padding:14px }
 .ac-row:hover{ background:var(--bg) }
-.ac-ic{ width:44px; height:44px; border-radius:13px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+.ac-ic{ width:44px; height:44px; border-radius:13px; background:var(--line-2); display:flex; align-items:center; justify-content:center; flex-shrink:0 }
 .ac-main{ flex:1; min-width:0; display:flex; flex-direction:column }
 .ac-title{ font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .ac-date{ font-size:11.5px; color:var(--faint); margin-top:3px }
@@ -257,7 +257,7 @@ const css = `
 .ac-amt-in{ color:var(--safe) }
 .ac-pill{ display:inline-flex; align-items:center; padding:3px 9px; border-radius:8px; font-size:11px; font-weight:600; letter-spacing:.01em; white-space:nowrap }
 
-.ac-empty{ padding:40px 20px; text-align:center; color:var(--faint); font-size:13.5px; line-height:1.5; background:#fff; border:1px dashed var(--line); border-radius:16px }
+.ac-empty{ padding:40px 20px; text-align:center; color:var(--faint); font-size:13.5px; line-height:1.5; background:var(--card); border:1px dashed var(--line); border-radius:16px }
 
 @media (min-width:1024px){
   .ac-head{ display:flex }

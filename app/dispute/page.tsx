@@ -204,7 +204,7 @@ export default function DisputePage() {
   const someoneAccepted = !!(selected?.dispute?.buyerAccepted || selected?.dispute?.sellerAccepted);
 
   return (
-    <AppShell current="disputes" user={{ name: shell.name, initials: shell.initials, score: shell.score }}>
+    <AppShell darkAware current="disputes" user={{ name: shell.name, initials: shell.initials, score: shell.score }}>
       <style>{css}</style>
 
       <div className="tf-ph-head dp-head">
@@ -399,7 +399,7 @@ const css = `
 .dp-head{ display:none }
 .dp-loading{ padding:50px 20px; text-align:center; color:var(--faint); font-size:14px }
 
-.dp-empty{ max-width:460px; margin:20px auto; text-align:center; background:#fff; border:1px dashed var(--line); border-radius:18px; padding:40px 28px }
+.dp-empty{ max-width:460px; margin:20px auto; text-align:center; background:var(--card); border:1px dashed var(--line); border-radius:18px; padding:40px 28px }
 .dp-empty-ic{ width:56px; height:56px; margin:0 auto; border-radius:16px; background:var(--bg); display:flex; align-items:center; justify-content:center }
 .dp-empty-t{ margin-top:16px; font-size:18px; font-weight:700; letter-spacing:-.01em }
 .dp-empty-s{ margin-top:8px; font-size:14px; color:var(--muted); line-height:1.6 }
@@ -408,14 +408,14 @@ const css = `
 /* transaction selector */
 .dp-selector{ position:relative; max-width:640px; margin-bottom:16px }
 .dp-sel-label{ font-size:12.5px; font-weight:600; color:var(--ink-2); margin-bottom:8px }
-.dp-sel-btn{ width:100%; text-align:left; cursor:pointer; font-family:inherit; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); border-radius:14px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; transition:border-color .16s var(--ease) }
+.dp-sel-btn{ width:100%; text-align:left; cursor:pointer; font-family:inherit; background:var(--card); border:1px solid var(--line); box-shadow:var(--sh-1); border-radius:14px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; transition:border-color .16s var(--ease) }
 .dp-sel-btn:hover, .dp-sel-btn.is-open{ border-color:#CBD5E1 }
 .dp-sel-cur{ display:flex; flex-direction:column; min-width:0 }
 .dp-sel-cur-t{ font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .dp-sel-cur-s{ font-size:12px; color:var(--faint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .dp-sel-ph{ font-size:15px; color:var(--faint); font-weight:500 }
 .dp-sel-caret{ flex-shrink:0 }
-.dp-sel-menu{ position:absolute; z-index:20; left:0; right:0; margin-top:8px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:var(--sh-2); padding:6px; max-height:340px; overflow-y:auto }
+.dp-sel-menu{ position:absolute; z-index:20; left:0; right:0; margin-top:8px; background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--sh-2); padding:6px; max-height:340px; overflow-y:auto }
 .dp-sel-opt{ width:100%; text-align:left; cursor:pointer; font-family:inherit; background:none; border:none; border-radius:10px; padding:11px 12px; display:flex; align-items:center; justify-content:space-between; gap:12px }
 .dp-sel-opt:hover{ background:var(--bg) }
 .dp-sel-opt.is-sel{ background:var(--safe-tint) }
@@ -426,7 +426,7 @@ const css = `
 .dp-st-funded, .dp-st-completed, .dp-st-resolved, .dp-st-shipped{ background:var(--safe-tint); color:var(--safe-2) }
 .dp-st-disputed{ background:var(--line-2); color:var(--muted) }
 
-.dp-prompt{ background:#fff; border:1px dashed var(--line); border-radius:16px; padding:34px 20px; text-align:center; color:var(--muted); font-size:14px }
+.dp-prompt{ background:var(--card); border:1px dashed var(--line); border-radius:16px; padding:34px 20px; text-align:center; color:var(--muted); font-size:14px }
 
 .dp-wrap{ display:flex; flex-direction:column; gap:16px }
 .dp-form{ display:flex; flex-direction:column; gap:16px }
@@ -451,7 +451,7 @@ const css = `
 .dp-ev-x:hover{ background:var(--line-2); color:var(--ink) }
 .dp-ev-add{ margin-top:10px; display:flex; gap:8px }
 .dp-ev-input{ margin-top:0; flex:1; height:46px }
-.dp-ev-btn{ flex-shrink:0; height:46px; padding:0 16px; border-radius:12px; border:1px solid var(--line); background:#fff; font-family:inherit; font-size:14px; font-weight:700; color:var(--ink-2); cursor:pointer; transition:border-color .16s var(--ease), color .16s var(--ease) }
+.dp-ev-btn{ flex-shrink:0; height:46px; padding:0 16px; border-radius:12px; border:1px solid var(--line); background:var(--card); font-family:inherit; font-size:14px; font-weight:700; color:var(--ink-2); cursor:pointer; transition:border-color .16s var(--ease), color .16s var(--ease) }
 .dp-ev-btn:hover:not(:disabled){ border-color:var(--safe); color:var(--safe) }
 .dp-ev-btn:disabled{ opacity:.5; cursor:not-allowed }
 .dp-ev-file{ display:inline-flex; align-items:center; gap:7px }
@@ -470,7 +470,7 @@ const css = `
 .dp-ctx-row{ font-size:12px; color:var(--faint); margin-top:6px }
 .dp-reco{ padding:20px; background:linear-gradient(150deg,#059669 0%,#047857 100%); border:none; color:#fff; display:flex; flex-direction:column; gap:14px }
 .dp-reco-head{ display:flex; align-items:center; gap:9px }
-.dp-reco-ai{ background:#fff; color:#047857; padding:3px 7px; border-radius:5px; font-size:10px; font-weight:700; letter-spacing:.06em }
+.dp-reco-ai{ background:var(--card); color:#047857; padding:3px 7px; border-radius:5px; font-size:10px; font-weight:700; letter-spacing:.06em }
 .dp-reco-eyebrow{ font-size:11px; font-weight:600; color:rgba(255,255,255,.6); letter-spacing:.10em; text-transform:uppercase }
 .dp-reco-decision{ font-size:28px; font-weight:700; letter-spacing:-.02em; line-height:1.1 }
 .dp-reco-split{ display:flex; gap:18px } .dp-reco-split > div{ flex:1 }
