@@ -148,7 +148,7 @@ const css = `
 .guide{ --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --bg:#F8FAFC; --card:#FFFFFF; --line:#E6EAF0;
   --safe:#059669; --safe-2:#047857; --safe-tint:#ECFDF5; --ease:cubic-bezier(.22,1,.36,1);
   min-height:100dvh; background:var(--bg); color:var(--ink);
-  font-family:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; -webkit-font-smoothing:antialiased }
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; -webkit-font-smoothing:antialiased }
 .guide *{ box-sizing:border-box }
 .guide a{ color:var(--safe); text-decoration:none }
 .guide a:hover{ text-decoration:underline }

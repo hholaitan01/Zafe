@@ -128,7 +128,7 @@ export default function DisputeMediatorPage() {
 
 const cardCss = `
 .med-card{ background:#fff; border:1px solid #E6EAF0; border-radius:16px; padding:18px; box-shadow:0 12px 30px -18px rgba(15,23,42,.22);
-  font-family:'IBM Plex Sans',system-ui,sans-serif }
+  font-family:'Plus Jakarta Sans',system-ui,sans-serif }
 .med-verdict{ font-size:18px; font-weight:800; color:#0F172A; letter-spacing:-.01em }
 .med-splits{ display:flex; gap:12px; margin-top:12px }
 .med-split{ flex:1; background:#F8FAFC; border:1px solid #E6EAF0; border-radius:12px; padding:11px 13px }

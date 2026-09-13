@@ -229,7 +229,7 @@ const css = `
   --panel:rgba(255,255,255,.045); --line:rgba(255,255,255,.10); --safe:#059669; --danger:#FCA5A5;
   --ease:cubic-bezier(.22,1,.36,1);
   position:relative; overflow:hidden; min-height:100dvh; display:flex; align-items:center; justify-content:center;
-  font-family:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; color:var(--text);
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; color:var(--text);
   background:radial-gradient(120% 90% at 50% -10%, #12203A 0%, #0A0F1C 55%); -webkit-font-smoothing:antialiased; padding:32px 22px }
 .wl *{ box-sizing:border-box }
 .wl a{ text-decoration:none; color:inherit }

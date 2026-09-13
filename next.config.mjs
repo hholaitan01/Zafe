@@ -2,7 +2,7 @@ import path from "node:path";
 
 /* Security headers applied to every response. Tuned to what Zafe actually
    loads so nothing breaks:
-   - The font (IBM Plex Sans) is self-hosted under /fonts, so font-src is 'self'
+   - The font (Plus Jakarta Sans) is self-hosted under /fonts, so font-src is 'self'
      only and no external font hosts are allowed.
    - style-src 'unsafe-inline' for the app's inline <style> blocks; script-src
      'unsafe-inline' — Next's App Router injects inline bootstrap scripts (no

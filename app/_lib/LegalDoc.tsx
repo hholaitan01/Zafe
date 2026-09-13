@@ -1,5 +1,5 @@
 /* Shared layout for legal pages (Terms, Privacy). Light "trust fintech" look:
-   navy ink, emerald accents, IBM Plex Sans on the F8FAFC canvas. Server
+   navy ink, emerald accents, Plus Jakarta Sans on the F8FAFC canvas. Server
    component — pure content, no interactivity. Sections are passed as data so
    each legal page stays a readable outline. */
 
@@ -77,7 +77,7 @@ const css = `
 .lg{ --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --faint:#94A3B8; --bg:#F8FAFC;
   --card:#FFFFFF; --border:#E6EAF0; --safe:#059669; --safe-tint:#ECFDF5;
   --ease:cubic-bezier(.22,1,.36,1);
-  font-family:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   color:var(--ink); background:var(--bg); min-height:100dvh; -webkit-font-smoothing:antialiased; line-height:1.6 }
 .lg *{ box-sizing:border-box }
 .lg a{ text-decoration:none }

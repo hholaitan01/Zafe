@@ -105,7 +105,7 @@ function Row({ k, v, strong, mono, last }: { k: string; v: string; strong?: bool
 
 const css = `
 .rc{ --paper:#0E2036; --ink:#0F172A; --muted:#6B7280; --faint:#9CA3AF; --line:#EEF0F3; --safe:#059669;
-  --ease:cubic-bezier(.22,1,.36,1); font-family:'IBM Plex Sans',system-ui,sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1); font-family:'Plus Jakarta Sans',system-ui,sans-serif;
   background:linear-gradient(180deg,#0E2036,#0B1626); min-height:100dvh; display:flex; justify-content:center;
   padding:28px 18px 34px; -webkit-font-smoothing:antialiased }
 .rc *{ box-sizing:border-box }

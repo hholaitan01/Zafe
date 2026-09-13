@@ -119,7 +119,7 @@ export default function GuidesIndex() {
 
 const css = `
 .gx{ --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --bg:#F8FAFC; --card:#FFFFFF; --line:#E6EAF0; --safe:#059669; --ease:cubic-bezier(.22,1,.36,1);
-  min-height:100dvh; background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; -webkit-font-smoothing:antialiased }
+  min-height:100dvh; background:var(--bg); color:var(--ink); font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; -webkit-font-smoothing:antialiased }
 .gx *{ box-sizing:border-box }
 .gx a{ text-decoration:none }
 .gx-top{ display:flex; align-items:center; justify-content:space-between; max-width:760px; margin:0 auto; padding:22px 22px 0 }

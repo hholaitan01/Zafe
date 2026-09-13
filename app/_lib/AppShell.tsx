@@ -5,7 +5,7 @@
 
    • Desktop (>=1024px): a persistent 256px left SideNav + a 64px TopBar, with
      the page content in a max-1200px column. This is the Claude Design app
-     structure, rebuilt in our navy/emerald light system (IBM Plex Sans).
+     structure, rebuilt in our navy/emerald light system (Plus Jakarta Sans).
    • Mobile (<1024px): the SideNav/TopBar collapse; a compact mobile top bar
      and a fixed bottom nav take over, and the content stacks.
 
@@ -136,14 +136,15 @@ const kit = `
   --safe:#059669; --safe-2:#047857; --safe-tint:#ECFDF5; --gold:#A16207; --danger:#DC2626;
   --sh-1:0 1px 2px rgba(15,23,42,.05); --sh-2:0 12px 30px -14px rgba(15,23,42,.18);
   --ease:cubic-bezier(.22,1,.36,1);
-  font-family:var(--font,'IBM Plex Sans',system-ui,sans-serif); color:var(--ink); background:var(--bg);
+  font-family:var(--font,'Plus Jakarta Sans',system-ui,sans-serif); color:var(--ink); background:var(--bg);
   min-height:100dvh; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
   font-optical-sizing:auto; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
 .tf-app *{ box-sizing:border-box }
 .tf-app a{ text-decoration:none; color:inherit }
 
-/* mono for numeric refs */
-.tf-mono{ font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums }
+/* Numeric refs: the brand sans with tabular, lining figures so money and codes
+   stay column-aligned without the dated monospace look. */
+.tf-mono{ font-family:inherit; font-variant-numeric:tabular-nums lining-nums; font-feature-settings:"tnum" 1,"lnum" 1; letter-spacing:0 }
 
 /* ---- desktop shell ---- */
 .tf-side{ display:none }
