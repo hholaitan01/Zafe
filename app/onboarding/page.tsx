@@ -12,24 +12,14 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-// One tile arrangement, reused for every slide. Tuned to a dense, staggered,
-// bleeding-off-the-edges collage like the reference.
-const LAYOUT: { pos: string; rot: number; tall?: boolean }[] = [
-  { pos: "50% 40%", rot: -4 },
-  { pos: "50% 45%", rot: 3, tall: true },
-  { pos: "45% 40%", rot: 5 },
-  { pos: "55% 50%", rot: -5 },
-  { pos: "40% 55%", rot: 4 },
-  { pos: "60% 45%", rot: -3 },
-  { pos: "50% 35%", rot: -4 },
-  { pos: "50% 55%", rot: 4, tall: true },
-  { pos: "45% 45%", rot: 5 },
-  { pos: "55% 40%", rot: -4 },
-  { pos: "40% 50%", rot: 3 },
-  { pos: "60% 55%", rot: -5 },
-  { pos: "50% 45%", rot: 4 },
-  { pos: "50% 40%", rot: -3 },
-];
+// The mosaic is ONE uniformly-tilted grid (the whole grid rotates as a plane,
+// like the reference), not tiles at random angles. 24 equal tiles fill it; each
+// slide has 14 source photos, spread by a coprime stride so the first 14 tiles
+// are all unique and any repeat lands rows away, with a varied crop.
+const TILE_COUNT = 24;
+const IMG_PER_SLIDE = 14;
+const POSITIONS = ["50% 40%", "42% 52%", "58% 44%", "46% 58%", "54% 38%", "50% 50%", "40% 46%", "60% 54%"];
+const imgIndex = (i: number) => ((i * 5) % IMG_PER_SLIDE) + 1; // stride 5, coprime with 14
 
 const SLIDES = [
   { dir: "slide1", title: "Buy from anyone", sub: "Shop from any seller on WhatsApp, Instagram, or Telegram, without the fear of getting scammed." },
@@ -71,9 +61,9 @@ export default function OnboardingPage() {
           <section className="ob-slide" key={s.dir}>
             <div className="ob-mosaic" aria-hidden>
               <div className="ob-grid">
-                {LAYOUT.map((t, i) => (
-                  <div key={i} className={`ob-tile${t.tall ? " ob-tile--tall" : ""}`} style={{ transform: `rotate(${t.rot}deg)` }}>
-                    <span className="ob-photo" style={{ backgroundImage: `url(/images/onboarding/${s.dir}/${String(i + 1).padStart(2, "0")}.jpg)`, backgroundPosition: t.pos }} />
+                {Array.from({ length: TILE_COUNT }).map((_, i) => (
+                  <div className="ob-tile" key={i}>
+                    <span className="ob-photo" style={{ backgroundImage: `url(/images/onboarding/${s.dir}/${String(imgIndex(i)).padStart(2, "0")}.jpg)`, backgroundPosition: POSITIONS[i % POSITIONS.length] }} />
                   </div>
                 ))}
               </div>
@@ -111,13 +101,13 @@ const css = `
 .ob-track::-webkit-scrollbar{ display:none } .ob-track{ scrollbar-width:none }
 .ob-slide{ flex:0 0 100%; scroll-snap-align:start; display:flex; flex-direction:column; overflow:hidden }
 
-/* mosaic — dense, tilted, bleeding off the top and sides */
+/* mosaic — ONE uniformly-tilted grid, bleeding off every edge, like the reference */
 .ob-mosaic{ position:relative; flex:1 1 auto; min-height:0; overflow:hidden; background:#EEF2F6 }
-.ob-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:11px;
-  padding:calc(20px + env(safe-area-inset-top)) 16px 0; transform:scale(1.12); transform-origin:top center }
-.ob-tile{ position:relative; aspect-ratio:1; border-radius:20px; overflow:hidden; background:#E2E8F0;
-  box-shadow:0 14px 30px -18px rgba(15,23,42,.45) }
-.ob-tile--tall{ aspect-ratio:auto; grid-row:span 2 }
+.ob-grid{ position:absolute; top:-15%; left:-27%; width:154%;
+  display:grid; grid-template-columns:repeat(4,1fr); gap:9px;
+  transform:rotate(-7deg); transform-origin:center center }
+.ob-tile{ position:relative; aspect-ratio:1; border-radius:15px; overflow:hidden; background:#E2E8F0;
+  box-shadow:0 12px 26px -18px rgba(15,23,42,.4) }
 .ob-photo{ position:absolute; inset:0; background-size:cover; background-repeat:no-repeat }
 .ob-fade{ position:absolute; left:0; right:0; bottom:0; height:190px; pointer-events:none;
   background:linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--card,#fff) 84%) }
