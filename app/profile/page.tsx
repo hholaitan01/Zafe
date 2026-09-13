@@ -404,7 +404,7 @@ export default function ProfilePage() {
             <div className="pf-chart-head">
               <div><div className="tf-eyebrow">Trust Score history</div><div className="pf-chart-cur">{loading ? <Skeleton w={30} h={20} /> : (score ?? "—")}</div></div>
               <div className="pf-chart-side">
-                <div className="pf-chart-delta tf-mono" style={{ color: delta > 0 ? "var(--safe)" : delta < 0 ? "var(--danger)" : "var(--muted)" }}>
+                <div className="pf-chart-delta tf-mono" style={{ color: delta > 0 ? "var(--safe)" : "var(--muted)" }}>
                   {score == null ? "—" : delta > 0 ? `↑ ${delta} since ${history[0].label}` : delta < 0 ? `↓ ${Math.abs(delta)} since ${history[0].label}` : "No change yet"}
                 </div>
                 <div className="pf-chart-band">{score == null ? "Build your history" : riskBand(score)}</div>

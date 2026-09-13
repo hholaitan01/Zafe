@@ -15,15 +15,19 @@ import { getCurrentUser } from "@/lib/auth";
 import { cacheDeals, getMyReputation, listMyDeals, listMySales, naira, setCurrentDealId } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
+/* One green, one neutral — settled/positive states read emerald, the rest are
+   calm grey chips. Token values so the chips follow light and dark. */
+const POS = { bg: "var(--safe-tint)", fg: "var(--safe-2)" };
+const NEU = { bg: "var(--line-2)", fg: "var(--muted)" };
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string }> = {
-  created: { label: "Awaiting payment", bg: "#F1F5F9", fg: "#475569" },
-  funded: { label: "Funded", bg: "#ECFDF5", fg: "#047857" },
-  shipped: { label: "Delivered", bg: "#FEF3C7", fg: "#A16207" },
-  completed: { label: "Successful", bg: "#ECFDF5", fg: "#047857" },
-  disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C" },
-  under_review: { label: "Under review", bg: "#EDE9FE", fg: "#6D28D9" },
-  refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569" },
-  resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3" },
+  created: { label: "Awaiting payment", ...NEU },
+  funded: { label: "Funded", ...POS },
+  shipped: { label: "Delivered", ...POS },
+  completed: { label: "Successful", ...POS },
+  disputed: { label: "Disputed", ...NEU },
+  under_review: { label: "Under review", ...NEU },
+  refunded: { label: "Refunded", ...NEU },
+  resolved: { label: "Resolved", ...POS },
 };
 
 function itemIcon(t: string, size = 20): React.ReactNode {

@@ -19,9 +19,11 @@ function ago(iso: string): string {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
 }
+/* One green, one neutral: money-in-escrow and settled states get the emerald
+   dot; everything else is a calm grey. */
 const DOT: Record<DealStatus, string> = {
-  created: "#94A3B8", funded: "#A16207", shipped: "#059669", completed: "#059669",
-  disputed: "#DC2626", under_review: "#7C3AED", refunded: "#64748B", resolved: "#4338CA",
+  created: "#94A3B8", funded: "#059669", shipped: "#059669", completed: "#059669",
+  disputed: "#94A3B8", under_review: "#94A3B8", refunded: "#94A3B8", resolved: "#059669",
 };
 
 interface Note { dealId: string; title: string; text: string; at: string; color: string }

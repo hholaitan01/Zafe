@@ -15,15 +15,19 @@ import { getCurrentUser } from "@/lib/auth";
 import { cacheDeals, getSellerProfile, listMySales, loadSellerProfile, naira, setCurrentDealId, shipDeal } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
+/* One green, one neutral. Money-in-escrow and settled states read emerald; the
+   rest are calm grey chips. Token values so chips follow light and dark. */
+const POS = { bg: "var(--safe-tint)", fg: "var(--safe-2)", dot: "var(--safe)" };
+const NEU = { bg: "var(--line-2)", fg: "var(--muted)", dot: "#94A3B8" };
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: string }> = {
-  created: { label: "Awaiting payment", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
-  funded: { label: "Ready to ship", bg: "#FEF3C7", fg: "#A16207", dot: "#E89914" },
-  shipped: { label: "Shipped", bg: "#ECFDF5", fg: "#047857", dot: "#059669" },
-  completed: { label: "Paid out", bg: "#ECFDF5", fg: "#047857", dot: "#059669" },
-  disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C", dot: "#DC2626" },
-  under_review: { label: "Under review", bg: "#EDE9FE", fg: "#6D28D9", dot: "#7C3AED" },
-  refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
-  resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3", dot: "#6366F1" },
+  created: { label: "Awaiting payment", ...NEU },
+  funded: { label: "Ready to ship", ...POS },
+  shipped: { label: "Shipped", ...POS },
+  completed: { label: "Paid out", ...POS },
+  disputed: { label: "Disputed", ...NEU },
+  under_review: { label: "Under review", ...NEU },
+  refunded: { label: "Refunded", ...NEU },
+  resolved: { label: "Resolved", ...POS },
 };
 
 function itemIcon(t: string): React.ReactNode {
@@ -121,7 +125,7 @@ export default function SellingPage() {
           </div>
           <div className="tf-card sg-kpi">
             <div className="tf-eyebrow">To ship</div>
-            <div className="sg-kpi-val" style={{ color: toShip ? "#A16207" : "var(--ink)" }}>{loading ? <Skeleton w={40} h={24} style={{ marginTop: 6 }} /> : toShip}</div>
+            <div className="sg-kpi-val" style={{ color: toShip ? "var(--safe)" : "var(--ink)" }}>{loading ? <Skeleton w={40} h={24} style={{ marginTop: 6 }} /> : toShip}</div>
             <div className="sg-kpi-sub">{toShip ? "Funded, waiting on you" : "Nothing to ship"}</div>
           </div>
           <div className="tf-card sg-kpi">
@@ -131,7 +135,7 @@ export default function SellingPage() {
           </div>
           <div className="tf-card sg-kpi">
             <div className="tf-eyebrow">Disputes</div>
-            <div className="sg-kpi-val" style={{ color: inDispute ? "#B91C1C" : "var(--ink)" }}>{loading ? <Skeleton w={40} h={24} style={{ marginTop: 6 }} /> : inDispute}</div>
+            <div className="sg-kpi-val" style={{ color: "var(--ink)" }}>{loading ? <Skeleton w={40} h={24} style={{ marginTop: 6 }} /> : inDispute}</div>
             <div className="sg-kpi-sub">{inDispute ? "Need your attention" : "All clear"}</div>
           </div>
         </div>

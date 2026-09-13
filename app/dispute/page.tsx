@@ -422,10 +422,9 @@ const css = `
 .dp-sel-opt-main{ display:flex; flex-direction:column; min-width:0 }
 .dp-sel-opt-t{ font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .dp-sel-opt-s{ font-size:11.5px; color:var(--faint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.dp-sel-opt-pill{ flex-shrink:0; font-size:11px; font-weight:600; padding:3px 9px; border-radius:8px; background:#F1F5F9; color:#475569; white-space:nowrap }
-.dp-st-funded, .dp-st-completed, .dp-st-resolved{ background:#ECFDF5; color:#047857 }
-.dp-st-shipped{ background:#FEF3C7; color:#A16207 }
-.dp-st-disputed{ background:#FEE2E2; color:#B91C1C }
+.dp-sel-opt-pill{ flex-shrink:0; font-size:11px; font-weight:600; padding:3px 9px; border-radius:8px; background:var(--line-2); color:var(--muted); white-space:nowrap }
+.dp-st-funded, .dp-st-completed, .dp-st-resolved, .dp-st-shipped{ background:var(--safe-tint); color:var(--safe-2) }
+.dp-st-disputed{ background:var(--line-2); color:var(--muted) }
 
 .dp-prompt{ background:#fff; border:1px dashed var(--line); border-radius:16px; padding:34px 20px; text-align:center; color:var(--muted); font-size:14px }
 
@@ -449,7 +448,7 @@ const css = `
 .dp-ev-text{ flex:1; min-width:0; font-size:13px; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .dp-ev-link{ color:var(--safe); font-weight:600; text-decoration:none } .dp-ev-link:hover{ text-decoration:underline }
 .dp-ev-x{ flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border:none; border-radius:7px; background:none; color:var(--faint); cursor:pointer; transition:background .14s var(--ease), color .14s var(--ease) }
-.dp-ev-x:hover{ background:#FEE2E2; color:#B91C1C }
+.dp-ev-x:hover{ background:var(--line-2); color:var(--ink) }
 .dp-ev-add{ margin-top:10px; display:flex; gap:8px }
 .dp-ev-input{ margin-top:0; flex:1; height:46px }
 .dp-ev-btn{ flex-shrink:0; height:46px; padding:0 16px; border-radius:12px; border:1px solid var(--line); background:#fff; font-family:inherit; font-size:14px; font-weight:700; color:var(--ink-2); cursor:pointer; transition:border-color .16s var(--ease), color .16s var(--ease) }
@@ -469,9 +468,9 @@ const css = `
 .dp-ctx-item{ font-size:16px; font-weight:700; letter-spacing:-.01em; margin-top:8px }
 .dp-ctx-amt{ font-size:24px; font-weight:700; letter-spacing:-.02em; margin-top:4px } .dp-ctx-amt span{ font-size:13px; color:var(--faint); font-weight:600 }
 .dp-ctx-row{ font-size:12px; color:var(--faint); margin-top:6px }
-.dp-reco{ padding:20px; background:radial-gradient(120% 130% at 88% 0%, #14304A 0%, #0F172A 58%); border:none; color:#fff; display:flex; flex-direction:column; gap:14px }
+.dp-reco{ padding:20px; background:linear-gradient(150deg,#059669 0%,#047857 100%); border:none; color:#fff; display:flex; flex-direction:column; gap:14px }
 .dp-reco-head{ display:flex; align-items:center; gap:9px }
-.dp-reco-ai{ background:var(--safe); color:#fff; padding:3px 7px; border-radius:5px; font-size:10px; font-weight:700; letter-spacing:.06em }
+.dp-reco-ai{ background:#fff; color:#047857; padding:3px 7px; border-radius:5px; font-size:10px; font-weight:700; letter-spacing:.06em }
 .dp-reco-eyebrow{ font-size:11px; font-weight:600; color:rgba(255,255,255,.6); letter-spacing:.10em; text-transform:uppercase }
 .dp-reco-decision{ font-size:28px; font-weight:700; letter-spacing:-.02em; line-height:1.1 }
 .dp-reco-split{ display:flex; gap:18px } .dp-reco-split > div{ flex:1 }
