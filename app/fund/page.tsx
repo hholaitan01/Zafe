@@ -20,10 +20,12 @@ import { computeFee } from "@/lib/payments/fee";
 import type { Deal } from "@/lib/deals/types";
 import type { SellerStanding, StandingTone } from "@/lib/seller/standing";
 
-const TONE: Record<StandingTone, { fg: string; bg: string; bd: string }> = {
-  good: { fg: "#047857", bg: "#ECFDF5", bd: "#C7F0DE" },
-  neutral: { fg: "#475569", bg: "#F1F5F9", bd: "#E2E8F0" },
-  warn: { fg: "#B91C1C", bg: "#FEE2E2", bd: "#FCA5A5" },
+/* Seller standing reads emerald when good, calm grey otherwise. No red here —
+   this is a reputation summary, not an active danger prompt. */
+const TONE: Record<StandingTone, "pos" | "neutral"> = {
+  good: "pos",
+  neutral: "neutral",
+  warn: "neutral",
 };
 
 function Shield({ size = 16 }: { size?: number }) {
@@ -38,10 +40,11 @@ function Info({ size = 16 }: { size?: number }) {
 
 function trustBanner(deal: Deal) {
   const t = deal.trust;
-  if (!t) return { fg: "#475569", bg: "#F1F5F9", icon: <Info />, title: "No chat scanned", body: "You didn't paste a chat, so we couldn't check for scam signs. The escrow still protects your money." };
-  if (t.verdict === "safe") return { fg: "#047857", bg: "#ECFDF5", icon: <Shield />, title: `Looks safe · Trust Score ${t.score}/100`, body: t.headline };
-  if (t.verdict === "caution") return { fg: "#B45309", bg: "#FEF3C7", icon: <Warn />, title: `Be careful · Trust Score ${t.score}/100`, body: t.headline };
-  return { fg: "#DC2626", bg: "#FEE2E2", icon: <Warn />, title: `Scam signs detected · Trust Score ${t.score}/100`, body: t.headline };
+  if (!t) return { tone: "neutral", icon: <Info />, title: "No chat scanned", body: "You didn't paste a chat, so we couldn't check for scam signs. The escrow still protects your money." };
+  if (t.verdict === "safe") return { tone: "pos", icon: <Shield />, title: `Looks safe · Trust Score ${t.score}/100`, body: t.headline };
+  if (t.verdict === "caution") return { tone: "neutral", icon: <Warn />, title: `Be careful · Trust Score ${t.score}/100`, body: t.headline };
+  // The one place red stays: an active scam warning on the money-moving screen.
+  return { tone: "danger", icon: <Warn />, title: `Scam signs detected · Trust Score ${t.score}/100`, body: t.headline };
 }
 
 export default function FundPage() {
@@ -112,7 +115,7 @@ export default function FundPage() {
   const payLabel = busy ? "Working…" : awaiting ? "I've transferred, check status" : deal ? `Pay ${amount} into escrow` : "Pay into escrow";
 
   return (
-    <AppShell current="new" user={{ name: "You", initials: "" }}>
+    <AppShell darkAware current="new" user={{ name: "You", initials: "" }}>
       <style>{css}</style>
 
       <div className="tf-ph-head fn-head">
@@ -122,17 +125,17 @@ export default function FundPage() {
       <div className="fn-wrap">
         <div className="fn-main">
           {banner && (
-            <div className="fn-banner" style={{ background: banner.bg, borderColor: `${banner.fg}33`, color: banner.fg }}>
+            <div className={`fn-banner fn-banner--${banner.tone}`}>
               <span className="fn-banner-ic">{banner.icon}</span>
               <div><div className="fn-banner-title">{banner.title}</div><div className="fn-banner-body">{banner.body}</div></div>
             </div>
           )}
 
           {standing && (
-            <div className="tf-card fn-standing" style={{ color: TONE[standing.tone].fg }}>
+            <div className={`tf-card fn-standing fn-standing--${TONE[standing.tone]}`}>
               <div className="fn-standing-top">
                 <span className="fn-standing-label">{standing.tone === "good" ? <Shield /> : standing.tone === "warn" ? <Warn /> : <Info />}{standing.label}</span>
-                <span className="fn-badge" style={standing.verified ? { color: "#047857", background: "#ECFDF5", borderColor: "#C7F0DE" } : { color: "#64748B", background: "#F1F5F9", borderColor: "#E2E8F0" }}>{standing.verified ? "VERIFIED" : "UNVERIFIED"}</span>
+                <span className={`fn-badge fn-badge--${standing.verified ? "on" : "off"}`}>{standing.verified ? "VERIFIED" : "UNVERIFIED"}</span>
               </div>
               <div className="fn-standing-detail">{standing.detail}</div>
             </div>
@@ -206,12 +209,18 @@ const css = `
 .fn-banner{ border:1px solid; border-radius:14px; padding:14px; display:flex; gap:11px }
 .fn-banner-ic{ flex-shrink:0; margin-top:1px }
 .fn-banner-title{ font-size:13.5px; font-weight:700; letter-spacing:-.01em }
-.fn-banner-body{ font-size:12.5px; color:var(--ink-2); line-height:1.5; margin-top:3px }
+.fn-banner-body{ font-size:12.5px; line-height:1.5; margin-top:3px; opacity:.85 }
+.fn-banner--pos{ background:var(--safe-tint); border-color:rgba(5,150,105,.22); color:var(--safe-2) }
+.fn-banner--neutral{ background:var(--line-2); border-color:var(--line); color:var(--ink-2) }
+.fn-banner--danger{ background:#FEF2F2; border-color:#FECACA; color:#B91C1C }
 
 .fn-standing{ padding:14px }
+.fn-standing--pos{ color:var(--safe-2) } .fn-standing--neutral{ color:var(--ink-2) }
 .fn-standing-top{ display:flex; align-items:center; justify-content:space-between; gap:8px }
 .fn-standing-label{ display:inline-flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700 }
 .fn-badge{ font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; border:1px solid; letter-spacing:.04em }
+.fn-badge--on{ color:var(--safe-2); background:var(--safe-tint); border-color:rgba(5,150,105,.28) }
+.fn-badge--off{ color:var(--muted); background:var(--line-2); border-color:var(--line) }
 .fn-standing-detail{ font-size:12.5px; color:var(--muted); line-height:1.5; margin-top:6px }
 
 .fn-pay{ padding:18px }
@@ -226,8 +235,8 @@ const css = `
 .fn-va-k{ font-size:12.5px; color:var(--muted) }
 .fn-va-v{ font-size:14px; font-weight:600; color:var(--ink); text-align:right }
 .fn-va-copy{ display:flex; align-items:center; gap:8px }
-.fn-copy{ font-size:12px; font-weight:600; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:8px; padding:5px 10px; cursor:pointer } .fn-copy:hover{ border-color:#CBD5E1 }
-.fn-wait{ margin-top:8px; font-size:12px; color:#B45309; font-weight:600 }
+.fn-copy{ font-size:12px; font-weight:600; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:8px; padding:5px 10px; cursor:pointer } .fn-copy:hover{ border-color:#CBD5E1 }
+.fn-wait{ margin-top:8px; font-size:12px; color:var(--ink-2); font-weight:600 }
 
 .fn-ack{ width:100%; text-align:left; font-family:inherit; border-radius:14px; background:#FEF2F2; border:1px solid #FECACA; padding:13px 14px; display:flex; align-items:center; gap:11px; font-size:13px; font-weight:600; color:#B91C1C; cursor:pointer }
 .fn-ack-box{ width:22px; height:22px; border-radius:7px; border:2px solid #DC2626; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center }

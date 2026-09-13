@@ -104,12 +104,12 @@ function Row({ k, v, strong, mono, last }: { k: string; v: string; strong?: bool
 }
 
 const css = `
-.rc{ --paper:#0E2036; --ink:#0F172A; --muted:#6B7280; --faint:#9CA3AF; --line:#EEF0F3; --safe:#059669;
+.rc{ --paper:#069169; --ink:#0F172A; --muted:#6B7280; --faint:#9CA3AF; --line:#EEF0F3; --safe:#059669;
   --ease:cubic-bezier(.22,1,.36,1); font-family:'Plus Jakarta Sans',system-ui,sans-serif;
-  background:linear-gradient(180deg,#0E2036,#0B1626); min-height:100dvh; display:flex; justify-content:center;
+  background:linear-gradient(160deg,#059669 0%,#047857 100%); min-height:100dvh; display:flex; justify-content:center;
   padding:28px 18px 34px; -webkit-font-smoothing:antialiased }
 .rc *{ box-sizing:border-box }
-.tf-mono{ font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums }
+.tf-mono{ font-family:inherit; font-variant-numeric:tabular-nums lining-nums; font-feature-settings:"tnum" 1,"lnum" 1 }
 .rc-inner{ width:100%; max-width:460px }
 
 .rc-card{ position:relative; background:#fff; color:var(--ink); border-radius:20px 20px 0 0; padding:22px 22px 26px; box-shadow:0 30px 60px -28px rgba(0,0,0,.55) }
