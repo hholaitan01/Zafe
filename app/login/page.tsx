@@ -22,6 +22,7 @@ function Busy({ children, light = true }: { children: React.ReactNode; light?: b
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -71,8 +72,19 @@ export default function LoginScreen() {
     }
   }
 
+  // A specific, inline check tied to the field itself — not a generic banner far
+  // from where the mistake was made. Runs before we ask the server for anything.
+  function validEmail(v: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+  }
+
   async function handleLink() {
     if (loading) return;
+    if (!validEmail(email)) {
+      setEmailError(email.trim() ? "That email doesn't look right. Check for typos." : "Enter your email to get a login link.");
+      return;
+    }
+    setEmailError(null);
     setError(null);
     setLoading(true);
     try {
@@ -170,15 +182,23 @@ export default function LoginScreen() {
               <input
                 id="email"
                 type="email"
-                className="auth-input"
+                className={`auth-input${emailError ? " is-invalid" : ""}`}
                 placeholder="you@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(null); }}
                 onKeyDown={(e) => e.key === "Enter" && handleLink()}
                 autoComplete="email"
                 enterKeyHint="go"
+                aria-invalid={emailError ? true : undefined}
+                aria-describedby={emailError ? "email-error" : undefined}
               />
-              <button className="auth-btn auth-btn-primary" onClick={handleLink} disabled={loading || !email.trim()}>{loading ? <Busy>Sending…</Busy> : "Email me a login link"}</button>
+              {emailError && (
+                <p id="email-error" className="auth-field-error" role="alert">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
+                  {emailError}
+                </p>
+              )}
+              <button className="auth-btn auth-btn-primary" onClick={handleLink} disabled={loading}>{loading ? <Busy>Sending…</Busy> : "Email me a login link"}</button>
               {error && <p className="auth-error" role="alert">{error}</p>}
             </>
           )}
@@ -262,6 +282,11 @@ const css = `
 .auth-input{ width:100%; height:52px; border-radius:13px; background:#fff; border:1px solid var(--line); padding:0 15px; font-family:inherit; font-size:16px; color:var(--ink); outline:none; transition:border-color .15s var(--ease), box-shadow .15s var(--ease) }
 .auth-input::placeholder{ color:var(--faint) }
 .auth-input:focus{ border-color:var(--safe); box-shadow:0 0 0 3px rgba(5,150,105,.15) }
+.auth-input.is-invalid{ border-color:var(--danger) }
+.auth-input.is-invalid:focus{ box-shadow:0 0 0 3px rgba(220,38,38,.14) }
+/* Inline, field-level error: specific, sits directly under the input it's about. */
+.auth-field-error{ display:flex; align-items:center; gap:6px; margin-top:8px; font-size:13px; line-height:1.45; font-weight:600; color:var(--danger) }
+.auth-field-error svg{ flex-shrink:0 }
 
 .auth-error{ margin-top:13px; font-size:13.5px; line-height:1.5; color:var(--danger); font-weight:500 }
 .auth-hint{ margin-top:14px; font-size:13px; line-height:1.55; color:var(--muted) }

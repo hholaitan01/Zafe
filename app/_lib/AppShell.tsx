@@ -117,14 +117,17 @@ export default function AppShell({
 
         <main className="tf-content">{children}</main>
 
-        {/* Mobile bottom nav */}
-        <nav className="tf-bottom" aria-label="Primary">
-          <Link href="/dashboard" className={`tf-bnav${current === "dashboard" ? " is-active" : ""}`}><NavIcon size={22}><path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" /></NavIcon><span>Home</span></Link>
-          <Link href="/history" className={`tf-bnav${current === "activity" ? " is-active" : ""}`}><NavIcon size={22}><><path d="M8 6h13M8 12h13M8 18h13" /><circle cx="3.5" cy="6" r="1.3" /><circle cx="3.5" cy="12" r="1.3" /><circle cx="3.5" cy="18" r="1.3" /></></NavIcon><span>Activity</span></Link>
+        {/* Mobile bottom nav — a floating pill: the active tab expands to show its
+            label, the rest stay icon-only, and New is a separate action button. */}
+        <div className="tf-bottom">
+          <nav className="tf-bar" aria-label="Primary">
+            <Link href="/dashboard" className={`tf-bnav${current === "dashboard" ? " is-active" : ""}`}><NavIcon size={21}><path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" /></NavIcon><span className="tf-bnav-label">Home</span></Link>
+            <Link href="/history" className={`tf-bnav${current === "activity" ? " is-active" : ""}`}><NavIcon size={21}><><path d="M8 6h13M8 12h13M8 18h13" /><circle cx="3.5" cy="6" r="1.3" /><circle cx="3.5" cy="12" r="1.3" /><circle cx="3.5" cy="18" r="1.3" /></></NavIcon><span className="tf-bnav-label">Activity</span></Link>
+            <Link href="/dispute" className={`tf-bnav${current === "disputes" ? " is-active" : ""}`}><NavIcon size={21}><path d="M12 3v18M5 7l-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0zM7 7h10" /></NavIcon><span className="tf-bnav-label">Disputes</span></Link>
+            <Link href="/profile" className={`tf-bnav${current === "profile" ? " is-active" : ""}`}><NavIcon size={21}><><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></></NavIcon><span className="tf-bnav-label">Profile</span></Link>
+          </nav>
           <Link href="/new-escrow" className="tf-bnav-orb" aria-label="New transaction"><NavIcon size={24}><path d="M12 5v14M5 12h14" /></NavIcon></Link>
-          <Link href="/dispute" className={`tf-bnav${current === "disputes" ? " is-active" : ""}`}><NavIcon size={22}><path d="M12 3v18M5 7l-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0zM7 7h10" /></NavIcon><span>Disputes</span></Link>
-          <Link href="/profile" className={`tf-bnav${current === "profile" ? " is-active" : ""}`}><NavIcon size={22}><><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></></NavIcon><span>Profile</span></Link>
-        </nav>
+        </div>
       </div>
     </div>
   );
@@ -171,20 +174,26 @@ const kit = `
 .tf-mtop-name{ font-size:16.5px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .tf-mtop-actions{ display:flex; gap:10px; flex-shrink:0 }
 
-/* ---- mobile bottom nav ---- */
-.tf-bottom{ position:fixed; left:0; right:0; bottom:0; z-index:30; max-width:520px; margin:0 auto; height:76px;
-  background:linear-gradient(180deg,rgba(248,250,252,0),#F8FAFC 38%);
-  backdrop-filter:blur(16px) saturate(160%); -webkit-backdrop-filter:blur(16px) saturate(160%);
-  display:flex; align-items:center; justify-content:space-around; padding:0 14px 12px; }
-.tf-bnav{ display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--faint); font-size:10px; font-weight:500; padding:6px 8px;
-  transition:color .2s var(--ease), transform .18s var(--ease) }
-.tf-bnav svg{ transition:transform .24s var(--ease) }
-.tf-bnav:active{ transform:scale(.9) }
-.tf-bnav.is-active{ color:var(--ink) }
-.tf-bnav.is-active svg{ transform:scale(1.08) }
-.tf-bnav-orb{ width:56px; height:56px; border-radius:50%; background:var(--safe); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 14px 26px -10px rgba(5,150,105,.6); margin-top:-18px; border:3px solid #F8FAFC;
+/* ---- mobile bottom nav — a floating pill + a detached action button ----
+   The outer row is click-through (pointer-events:none) so taps land on content
+   between the bar and the screen edges; the bar and orb re-enable pointers. */
+.tf-bottom{ position:fixed; left:0; right:0; z-index:30; bottom:calc(env(safe-area-inset-bottom,0px) + 14px);
+  display:flex; align-items:center; justify-content:center; gap:10px; padding:0 16px; pointer-events:none }
+.tf-bar{ pointer-events:auto; display:flex; align-items:center; gap:2px; padding:7px;
+  background:var(--card); border:1px solid var(--line); border-radius:999px; box-shadow:var(--sh-2) }
+.tf-bnav{ display:inline-flex; align-items:center; height:46px; padding:0 13px; border-radius:999px;
+  color:var(--muted); font-size:13.5px; font-weight:700; letter-spacing:-.01em;
+  transition:background .24s var(--ease), color .2s var(--ease), transform .16s var(--ease) }
+.tf-bnav:active{ transform:scale(.94) }
+.tf-bnav-label{ max-width:0; opacity:0; overflow:hidden; white-space:nowrap;
+  transition:max-width .3s var(--ease), opacity .22s var(--ease), margin-left .3s var(--ease) }
+.tf-bnav.is-active{ background:var(--safe-tint); color:var(--safe-2) }
+.tf-bnav.is-active .tf-bnav-label{ max-width:90px; opacity:1; margin-left:7px }
+.tf-bnav-orb{ pointer-events:auto; width:56px; height:56px; border-radius:50%; background:var(--safe); color:#fff;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 14px 26px -10px rgba(5,150,105,.55);
   transition:transform .2s var(--ease), box-shadow .2s var(--ease) }
-.tf-bnav-orb:active{ transform:scale(.9); box-shadow:0 8px 18px -10px rgba(5,150,105,.7) }
+@media (hover:hover) and (pointer:fine){ .tf-bnav-orb:hover{ transform:translateY(-2px); box-shadow:0 18px 30px -12px rgba(5,150,105,.6) } }
+.tf-bnav-orb:active{ transform:scale(.92); box-shadow:0 8px 18px -10px rgba(5,150,105,.7) }
 
 /* ---- shared content atoms ---- */
 .tf-card{ background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--sh-1) }
@@ -233,7 +242,7 @@ const kit = `
 /* Motion off: keep the layout, drop the movement (§reduced motion). */
 @media (prefers-reduced-motion:reduce){
   .tf-content{ animation:none }
-  .tf-btn, .tf-icon-btn, .tf-bnav, .tf-bnav svg, .tf-bnav-orb, .tf-side-item{ transition:none }
+  .tf-btn, .tf-icon-btn, .tf-bnav, .tf-bnav-label, .tf-bnav-orb, .tf-side-item{ transition:none }
 }
 /* Transparency off: the floating chrome goes solid so text never fights a blur. */
 @media (prefers-reduced-transparency:reduce){
@@ -260,8 +269,8 @@ const kit = `
   .tf-app.tf-dark-aware .tf-icon-btn{ background:var(--card); border-color:var(--line); color:var(--ink-2) }
   .tf-app.tf-dark-aware .tf-avatar{ background:#1B2740; color:#F1F5F9 }
   .tf-app.tf-dark-aware .tf-mtop{ background:rgba(11,18,32,.72) }
-  .tf-app.tf-dark-aware .tf-bottom{ background:linear-gradient(180deg,rgba(11,18,32,0),#0B1220 38%) }
-  .tf-app.tf-dark-aware .tf-bnav-orb{ border-color:#0B1220 }
+  .tf-app.tf-dark-aware .tf-bar{ background:var(--card); border-color:var(--line) }
+  .tf-app.tf-dark-aware .tf-bnav.is-active{ background:var(--safe); color:#fff }
   .tf-app.tf-dark-aware .tf-side{ background:#0F1626; border-right-color:var(--line) }
   .tf-app.tf-dark-aware .tf-search{ background:var(--card); border-color:var(--line); color:var(--faint) }
   .tf-app.tf-dark-aware .tf-topbar{ background:rgba(11,18,32,.72); border-bottom-color:rgba(36,50,74,.7) }
