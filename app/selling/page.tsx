@@ -15,15 +15,19 @@ import { getCurrentUser } from "@/lib/auth";
 import { cacheDeals, getSellerProfile, listMySales, loadSellerProfile, naira, setCurrentDealId, shipDeal } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
+/* One green, one neutral. Money-in-escrow and settled states read emerald; the
+   rest are calm grey chips. Token values so chips follow light and dark. */
+const POS = { bg: "var(--safe-tint)", fg: "var(--safe-2)", dot: "var(--safe)" };
+const NEU = { bg: "var(--line-2)", fg: "var(--muted)", dot: "#94A3B8" };
 const PILL: Record<DealStatus, { label: string; bg: string; fg: string; dot: string }> = {
-  created: { label: "Awaiting payment", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
-  funded: { label: "Ready to ship", bg: "#FEF3C7", fg: "#A16207", dot: "#E89914" },
-  shipped: { label: "Shipped", bg: "#ECFDF5", fg: "#047857", dot: "#059669" },
-  completed: { label: "Paid out", bg: "#ECFDF5", fg: "#047857", dot: "#059669" },
-  disputed: { label: "Disputed", bg: "#FEE2E2", fg: "#B91C1C", dot: "#DC2626" },
-  under_review: { label: "Under review", bg: "#EDE9FE", fg: "#6D28D9", dot: "#7C3AED" },
-  refunded: { label: "Refunded", bg: "#F1F5F9", fg: "#475569", dot: "#94A3B8" },
-  resolved: { label: "Resolved", bg: "#E0E7FF", fg: "#3730A3", dot: "#6366F1" },
+  created: { label: "Awaiting payment", ...NEU },
+  funded: { label: "Ready to ship", ...POS },
+  shipped: { label: "Shipped", ...POS },
+  completed: { label: "Paid out", ...POS },
+  disputed: { label: "Disputed", ...NEU },
+  under_review: { label: "Under review", ...NEU },
+  refunded: { label: "Refunded", ...NEU },
+  resolved: { label: "Resolved", ...POS },
 };
 
 function itemIcon(t: string): React.ReactNode {
@@ -104,7 +108,7 @@ export default function SellingPage() {
     .reduce((t, d) => t + (d.status === "resolved" ? d.item.amount - (d.partialRefundAmount || 0) : d.item.amount), 0);
 
   return (
-    <AppShell current="new" user={{ name: shell.name, initials: shell.initials }}>
+    <AppShell darkAware current="new" user={{ name: shell.name, initials: shell.initials }}>
       <style>{css}</style>
 
       <div className="tf-ph-head sg-head">
@@ -121,7 +125,7 @@ export default function SellingPage() {
           </div>
           <div className="tf-card sg-kpi">
             <div className="tf-eyebrow">To ship</div>
-            <div className="sg-kpi-val" style={{ color: toShip ? "#A16207" : "var(--ink)" }}>{loading ? <Skeleton w={40} h={24} style={{ marginTop: 6 }} /> : toShip}</div>
+            <div className="sg-kpi-val" style={{ color: toShip ? "var(--safe)" : "var(--ink)" }}>{loading ? <Skeleton w={40} h={24} style={{ marginTop: 6 }} /> : toShip}</div>
             <div className="sg-kpi-sub">{toShip ? "Funded, waiting on you" : "Nothing to ship"}</div>
           </div>
           <div className="tf-card sg-kpi">
@@ -131,14 +135,13 @@ export default function SellingPage() {
           </div>
           <div className="tf-card sg-kpi">
             <div className="tf-eyebrow">Disputes</div>
-            <div className="sg-kpi-val" style={{ color: inDispute ? "#B91C1C" : "var(--ink)" }}>{loading ? <Skeleton w={40} h={24} style={{ marginTop: 6 }} /> : inDispute}</div>
+            <div className="sg-kpi-val" style={{ color: "var(--ink)" }}>{loading ? <Skeleton w={40} h={24} style={{ marginTop: 6 }} /> : inDispute}</div>
             <div className="sg-kpi-sub">{inDispute ? "Need your attention" : "All clear"}</div>
           </div>
         </div>
 
         {!verified && (
           <Link href="/seller" className="sg-verify">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z" /></svg>
             <div className="sg-verify-txt"><div className="sg-verify-t">Verify to receive payouts</div><div className="sg-verify-s">Sellers must be verified before money can be released to them.</div></div>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
           </Link>
@@ -205,7 +208,7 @@ const css = `
 
 .sg-kpis{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
 .sg-kpi{ padding:15px 16px }
-.sg-kpi-hero{ grid-column:1 / -1; background:radial-gradient(120% 130% at 88% 0%, #14304A 0%, #0F172A 62%); border:none; color:#fff }
+.sg-kpi-hero{ grid-column:1 / -1; background:linear-gradient(150deg,#059669 0%,#047857 100%); border:none; color:#fff }
 .sg-kpi-hero .tf-eyebrow{ color:rgba(255,255,255,.6) }
 .sg-kpi-val{ font-size:24px; font-weight:800; letter-spacing:-.02em; margin-top:6px; line-height:1.1 }
 .sg-kpi-hero .sg-kpi-val{ font-size:30px }
@@ -213,22 +216,21 @@ const css = `
 .sg-kpi-sub{ font-size:12px; color:var(--faint); margin-top:5px; line-height:1.4 }
 .sg-kpi-hero .sg-kpi-sub{ color:rgba(255,255,255,.6) }
 
-.sg-verify{ display:flex; align-items:center; gap:11px; border-radius:16px; padding:14px 15px; background:var(--safe-tint); border:1px solid #C7F0DE; color:inherit }
-.sg-verify svg:first-child{ flex-shrink:0 }
+.sg-verify{ display:flex; align-items:center; gap:11px; border-radius:16px; padding:14px 15px; background:var(--safe-tint); border:1px solid rgba(5,150,105,.28); color:inherit }
 .sg-verify-txt{ flex:1; min-width:0 }
-.sg-verify-t{ font-size:13px; font-weight:700; color:#064E3B }
-.sg-verify-s{ font-size:12px; color:#047857; margin-top:2px; line-height:1.4 }
+.sg-verify-t{ font-size:13px; font-weight:700; color:var(--safe-2) }
+.sg-verify-s{ font-size:12px; color:var(--safe-2); margin-top:2px; line-height:1.4; opacity:.85 }
 
 .sg-request{ display:flex; align-items:center; gap:11px; height:58px; border-radius:16px; background:var(--safe); padding:0 16px; font-weight:600; font-size:15px; color:#fff; box-shadow:0 14px 26px -12px rgba(5,150,105,.55) }
 .sg-request-ic{ width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center }
 
 .sg-label{ margin-top:8px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--faint) }
 .sg-list{ display:flex; flex-direction:column; gap:10px }
-.sg-empty{ padding:26px 18px; text-align:center; color:var(--faint); font-size:13.5px; line-height:1.5; background:#fff; border:1px dashed var(--line); border-radius:16px }
+.sg-empty{ padding:26px 18px; text-align:center; color:var(--faint); font-size:13.5px; line-height:1.5; background:var(--card); border:1px dashed var(--line); border-radius:16px }
 
 .sg-card{ padding:14px 15px }
 .sg-card-top{ width:100%; text-align:left; cursor:pointer; font-family:inherit; background:none; border:none; padding:0; display:flex; align-items:center; gap:13px }
-.sg-ic{ width:46px; height:46px; border-radius:13px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+.sg-ic{ width:46px; height:46px; border-radius:13px; background:var(--line-2); display:flex; align-items:center; justify-content:center; flex-shrink:0 }
 .sg-main{ flex:1; min-width:0; display:flex; flex-direction:column }
 .sg-title{ font-size:14.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .sg-sub{ font-size:12px; color:var(--faint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }

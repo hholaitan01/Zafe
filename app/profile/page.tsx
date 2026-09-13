@@ -125,7 +125,7 @@ function TrustScoreChart({ data }: { data: { label: string; score: number }[] })
         </linearGradient>
       </defs>
       {[25, 50, 75].map((g) => (
-        <line key={g} x1={pad} x2={w - pad} y1={ys(g)} y2={ys(g)} stroke="#EEF2F6" strokeDasharray="2 5" />
+        <line key={g} x1={pad} x2={w - pad} y1={ys(g)} y2={ys(g)} stroke="var(--line)" strokeDasharray="2 5" />
       ))}
       <path d={area} fill="url(#ts-area)" />
       <polyline points={pts} fill="none" stroke="#059669" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
@@ -141,7 +141,7 @@ type Payout = { bankName?: string; accountNumber?: string; accountName?: string 
 function BankCard({ payout, muted = false }: { payout: Payout; muted?: boolean }) {
   const acct = (payout.accountNumber || "").replace(/(\d{4})(?=\d)/g, "$1 ");
   return (
-    <div className="pf-bank" style={muted ? { background: "linear-gradient(150deg,#243a52,#1B2B3E)" } : undefined}>
+    <div className="pf-bank" style={muted ? { background: "linear-gradient(150deg,#334155,#1E293B)" } : undefined}>
       <div className="pf-bank-top">
         <span className="pf-bank-name">{payout.bankName || "Bank account"}</span>
         {muted ? (
@@ -347,7 +347,7 @@ export default function ProfilePage() {
     : "You can edit your names once. After you save, first and last names are locked.";
 
   return (
-    <AppShell current="profile" user={{ name: name || "You", initials, photo, score: score ?? undefined }}>
+    <AppShell darkAware current="profile" user={{ name: name || "You", initials, photo, score: score ?? undefined }}>
       <style>{css}</style>
 
       {/* page head — desktop only */}
@@ -404,7 +404,7 @@ export default function ProfilePage() {
             <div className="pf-chart-head">
               <div><div className="tf-eyebrow">Trust Score history</div><div className="pf-chart-cur">{loading ? <Skeleton w={30} h={20} /> : (score ?? "—")}</div></div>
               <div className="pf-chart-side">
-                <div className="pf-chart-delta tf-mono" style={{ color: delta > 0 ? "var(--safe)" : delta < 0 ? "var(--danger)" : "var(--muted)" }}>
+                <div className="pf-chart-delta tf-mono" style={{ color: delta > 0 ? "var(--safe)" : "var(--muted)" }}>
                   {score == null ? "—" : delta > 0 ? `↑ ${delta} since ${history[0].label}` : delta < 0 ? `↓ ${Math.abs(delta)} since ${history[0].label}` : "No change yet"}
                 </div>
                 <div className="pf-chart-band">{score == null ? "Build your history" : riskBand(score)}</div>
@@ -546,8 +546,8 @@ const css = `
 .pf-hero-score{ font-size:26px; font-weight:700; letter-spacing:-.02em; color:var(--safe); margin-top:6px } .pf-hero-score span{ font-size:14px; color:var(--faint); font-weight:600 }
 
 /* grid + cards */
-.pf-sellcta{ display:flex; align-items:center; gap:16px; padding:16px 18px; margin-bottom:18px; border-radius:16px; border:1px solid var(--border); background:linear-gradient(180deg,#F0FDF8,#FFFFFF) }
-.pf-sellcta--on{ background:#fff }
+.pf-sellcta{ display:flex; align-items:center; gap:16px; padding:16px 18px; margin-bottom:18px; border-radius:16px; border:1px solid var(--line); background:var(--safe-tint) }
+.pf-sellcta--on{ background:var(--card) }
 .pf-sellcta-txt{ flex:1; min-width:0 }
 .pf-sellcta-title{ font-weight:700; font-size:15px; color:var(--ink) }
 .pf-sellcta-sub{ font-size:13px; color:var(--muted); margin-top:2px; line-height:1.4 }
@@ -576,7 +576,7 @@ const css = `
 
 /* bank cards */
 .pf-bank-row{ display:grid; grid-template-columns:1fr; gap:14px }
-.pf-bank{ padding:16px; border-radius:14px; background:linear-gradient(150deg,#14304A,#0F172A); color:#fff; min-height:132px; display:flex; flex-direction:column; justify-content:space-between }
+.pf-bank{ padding:16px; border-radius:14px; background:linear-gradient(150deg,#059669,#047857); color:#fff; min-height:132px; display:flex; flex-direction:column; justify-content:space-between }
 .pf-bank-top{ display:flex; align-items:center; justify-content:space-between }
 .pf-bank-name{ font-size:13px; font-weight:500; color:rgba(255,255,255,.72) }
 .pf-bank-badge{ font-size:10px; padding:2px 7px; background:var(--safe); color:#fff; border-radius:4px; letter-spacing:.08em; font-weight:600 }
@@ -607,7 +607,7 @@ const css = `
 .pf-pref-sub{ font-size:12px; color:var(--muted); margin-top:2px; line-height:1.4 }
 .pf-toggle{ width:40px; height:23px; border-radius:999px; background:#CBD5E1; border:none; position:relative; flex-shrink:0; cursor:pointer; padding:0; transition:background .2s var(--ease) }
 .pf-toggle.is-on{ background:var(--safe) }
-.pf-toggle-dot{ position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.2); transition:transform .2s var(--ease) }
+.pf-toggle-dot{ position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%; background:var(--card); box-shadow:0 1px 2px rgba(15,23,42,.2); transition:transform .2s var(--ease) }
 .pf-toggle.is-on .pf-toggle-dot{ transform:translateX(17px) }
 
 /* identity verification */
@@ -622,7 +622,7 @@ const css = `
 
 /* account / danger */
 .pf-danger-txt{ margin:12px 0 0; font-size:13px; color:var(--muted); line-height:1.5 }
-.pf-signout{ margin-top:14px; width:100%; height:50px; background:#fff; border:1px solid var(--line); box-shadow:var(--sh-1); color:var(--danger) }
+.pf-signout{ margin-top:14px; width:100%; height:50px; background:var(--card); border:1px solid var(--line); box-shadow:var(--sh-1); color:var(--danger) }
 .pf-signout:hover{ border-color:#FCA5A5 }
 /* close account — quiet link until asked, then a clearly destructive confirm */
 .pf-close-link{ display:block; margin:16px auto 2px; background:none; border:none; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--faint); cursor:pointer; text-decoration:underline; text-underline-offset:2px }

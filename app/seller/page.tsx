@@ -98,7 +98,7 @@ export default function SellerPage() {
   }
 
   return (
-    <AppShell current="profile" user={{ name: shell.name, initials: shell.initials }}>
+    <AppShell darkAware current="profile" user={{ name: shell.name, initials: shell.initials }}>
       <style>{css}</style>
 
       <div className="tf-ph-head sl-head">
@@ -108,7 +108,6 @@ export default function SellerPage() {
       <div className="sl-wrap">
         <div className="sl-main">
           <div className="sl-explain">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.9"><path d="M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z" /><path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" /></svg>
             <p><b>Sellers must be verified to receive money.</b> Buyers pay in freely, but payouts only ever go to a verified identity.</p>
           </div>
 
@@ -196,7 +195,7 @@ const css = `
 .sl-mono{ font-family:ui-monospace,'SF Mono',Menlo,monospace; letter-spacing:2px }
 
 .sl-live{ margin-top:12px; display:flex; flex-direction:column; align-items:center; padding:8px 0 4px }
-.sl-live-ring{ width:110px; height:110px; border-radius:50%; background:#F1F5F9; display:flex; align-items:center; justify-content:center; border:3px solid transparent; border-top-color:var(--safe); border-right-color:var(--safe) }
+.sl-live-ring{ width:110px; height:110px; border-radius:50%; background:var(--line-2); display:flex; align-items:center; justify-content:center; border:3px solid transparent; border-top-color:var(--safe); border-right-color:var(--safe) }
 .sl-live-ok{ margin-top:14px; display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--safe); font-weight:600 }
 .sl-live-sub{ margin-top:6px; font-size:11.5px; color:var(--faint) }
 

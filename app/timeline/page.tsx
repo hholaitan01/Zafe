@@ -16,20 +16,23 @@ import { getCurrentUser } from "@/lib/auth";
 import { cacheDeal, confirmReceipt, getCachedDeal, getCurrentDealId, getDeal, naira } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
 
-const VERDICT: Record<string, { label: string; fg: string; bg: string; dot: string }> = {
-  safe: { label: "Low risk", fg: "#047857", bg: "#ECFDF5", dot: "#059669" },
-  caution: { label: "Caution", fg: "#A16207", bg: "#FEF3C7", dot: "#E89914" },
-  risky: { label: "High risk", fg: "#B91C1C", bg: "#FEE2E2", dot: "#DC2626" },
+/* One green, one neutral. "Safe"/settled states read emerald; everything else is
+   a calm grey chip. The word carries the meaning, not a second or third hue. */
+type Tone = "pos" | "neutral";
+const VERDICT: Record<string, { label: string; tone: Tone }> = {
+  safe: { label: "Low risk", tone: "pos" },
+  caution: { label: "Caution", tone: "neutral" },
+  risky: { label: "High risk", tone: "neutral" },
 };
-const STATUS_PILL: Record<DealStatus, { label: string; fg: string; bg: string; dot: string }> = {
-  created: { label: "Awaiting payment", fg: "#475569", bg: "#F1F5F9", dot: "#94A3B8" },
-  funded: { label: "Funded", fg: "#047857", bg: "#ECFDF5", dot: "#059669" },
-  shipped: { label: "Delivered", fg: "#A16207", bg: "#FEF3C7", dot: "#E89914" },
-  completed: { label: "Released", fg: "#047857", bg: "#ECFDF5", dot: "#059669" },
-  disputed: { label: "Disputed", fg: "#B91C1C", bg: "#FEE2E2", dot: "#DC2626" },
-  under_review: { label: "Under review", fg: "#6D28D9", bg: "#EDE9FE", dot: "#7C3AED" },
-  refunded: { label: "Refunded", fg: "#475569", bg: "#F1F5F9", dot: "#94A3B8" },
-  resolved: { label: "Resolved", fg: "#3730A3", bg: "#E0E7FF", dot: "#6366F1" },
+const STATUS_PILL: Record<DealStatus, { label: string; tone: Tone }> = {
+  created: { label: "Awaiting payment", tone: "neutral" },
+  funded: { label: "Funded", tone: "pos" },
+  shipped: { label: "Delivered", tone: "pos" },
+  completed: { label: "Released", tone: "pos" },
+  disputed: { label: "Disputed", tone: "neutral" },
+  under_review: { label: "Under review", tone: "neutral" },
+  refunded: { label: "Refunded", tone: "neutral" },
+  resolved: { label: "Resolved", tone: "pos" },
 };
 
 function fmtTime(iso?: string): string {
@@ -124,7 +127,7 @@ export default function TimelinePage() {
 
   if (status !== "ready" || !deal) {
     return (
-      <AppShell current="activity" user={{ name: me, initials: "" }}>
+      <AppShell darkAware current="activity" user={{ name: me, initials: "" }}>
         {status === "error" ? (
           <ErrorState onRetry={load}>We couldn&apos;t load this transaction. Check your connection and try again.</ErrorState>
         ) : status === "missing" ? (
@@ -163,7 +166,7 @@ export default function TimelinePage() {
   const acct = deal.alatVirtualAccount;
 
   return (
-    <AppShell current="activity" user={{ name: me, initials: initialsOf(me) }}>
+    <AppShell darkAware current="activity" user={{ name: me, initials: initialsOf(me) }}>
       <style>{css}</style>
 
       <div className="tf-ph-head td-head">
@@ -180,7 +183,7 @@ export default function TimelinePage() {
                 <div className="td-item">{deal.item.title}</div>
                 <div className="td-ref tf-mono">{deal.reference || deal.id.slice(0, 12)} · Created {fmtTime(deal.createdAt)}</div>
               </div>
-              <span className="tf-pill" style={{ background: sp.bg, color: sp.fg }}>{sp.label}</span>
+              <span className={`tf-pill td-pill--${sp.tone}`}>{sp.label}</span>
             </div>
             <div className="td-amount"><span className="td-amount-val tf-mono">{naira(deal.item.amount)}</span><span className="tf-eyebrow">{released ? "released to seller" : "held in escrow"}</span></div>
             <div className="td-parties">
@@ -236,7 +239,7 @@ export default function TimelinePage() {
             <div className="tf-eyebrow">Seller Trust Score</div>
             <div className="td-trust-row">
               <div className="td-trust-score">{deal.trust?.score ?? "—"}<span>/100</span></div>
-              {verdict && <span className="tf-pill" style={{ background: verdict.bg, color: verdict.fg }}>{verdict.label}</span>}
+              {verdict && <span className={`tf-pill td-pill--${verdict.tone}`}>{verdict.label}</span>}
             </div>
             <p className="td-trust-sub">{deal.trust ? "Scored from the seller's history and the chat you shared." : "Not scored for this deal."}</p>
           </div>
@@ -291,12 +294,16 @@ const css = `
 .td-step-rail{ display:flex; flex-direction:column; align-items:center }
 .td-dot{ width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0 }
 .td-dot-done{ background:var(--safe) }
-.td-dot-current{ background:#fff; border:2px solid var(--gold); box-shadow:0 0 0 4px rgba(161,98,7,.15) } .td-dot-current span{ width:8px; height:8px; border-radius:50%; background:var(--gold) }
-.td-dot-upcoming{ background:#fff; border:2px solid #E2E8F0 }
-.td-line{ width:2px; flex:1; min-height:20px; background:#E2E8F0; margin:4px 0 } .td-line.is-done{ background:var(--safe) }
+.td-dot-current{ background:var(--card); border:2px solid var(--safe); box-shadow:0 0 0 4px rgba(5,150,105,.15) } .td-dot-current span{ width:8px; height:8px; border-radius:50%; background:var(--safe) }
+.td-dot-upcoming{ background:var(--card); border:2px solid var(--line) }
+.td-line{ width:2px; flex:1; min-height:20px; background:var(--line); margin:4px 0 } .td-line.is-done{ background:var(--safe) }
 .td-step-body{ min-width:0 }
 .td-step-label{ font-size:14.5px; font-weight:600 } .td-step-label.is-upcoming{ color:var(--faint) }
-.td-step-sub{ font-size:12px; color:var(--muted); margin-top:2px } .td-step-sub.is-current{ color:var(--gold); font-weight:600 }
+.td-step-sub{ font-size:12px; color:var(--muted); margin-top:2px } .td-step-sub.is-current{ color:var(--safe); font-weight:600 }
+
+/* status / verdict pills: one green, one neutral */
+.td-pill--pos{ background:var(--safe-tint); color:var(--safe-2) }
+.td-pill--neutral{ background:var(--line-2); color:var(--muted) }
 
 .td-ai{ padding:18px }
 .td-ai-head{ display:flex; align-items:center; gap:9px; margin-bottom:10px }
@@ -309,7 +316,7 @@ const css = `
 .td-secondary{ height:52px; font-size:15px; width:100% }
 .td-state{ height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px }
 .td-state-ok{ background:var(--safe-tint); color:var(--safe) }
-.td-state-warn{ background:#FEF3C7; color:#B45309 }
+.td-state-warn{ background:var(--line-2); color:var(--ink-2) }
 
 .td-side{ display:flex; flex-direction:column; gap:16px }
 .td-trust{ padding:20px }

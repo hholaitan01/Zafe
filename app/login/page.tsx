@@ -92,9 +92,9 @@ export default function LoginScreen() {
       <section className="auth-aside">
         <div className="auth-mark">
           <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-            <path d="M8.5 10.5H23.5" stroke="#F8FAFC" strokeWidth="4.2" strokeLinecap="round" />
-            <path d="M8.5 21.5H23.5" stroke="#F8FAFC" strokeWidth="4.2" strokeLinecap="round" />
-            <path d="M23.5 10.5L8.5 21.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" />
+            <path d="M8.5 10.5H23.5" stroke="#FFFFFF" strokeWidth="4.2" strokeLinecap="round" />
+            <path d="M8.5 21.5H23.5" stroke="#FFFFFF" strokeWidth="4.2" strokeLinecap="round" />
+            <path d="M23.5 10.5L8.5 21.5" stroke="rgba(255,255,255,.55)" strokeWidth="4.2" strokeLinecap="round" />
           </svg>
           <span>Zafe</span>
         </div>
@@ -204,21 +204,16 @@ const css = `
   font-family:'Plus Jakarta Sans',system-ui,sans-serif; color:var(--ink); background:var(--bg);
   min-height:100dvh; display:flex; flex-direction:column; -webkit-font-smoothing:antialiased }
 .auth *{ box-sizing:border-box }
-.tf-mono{ font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums }
+.tf-mono{ font-family:inherit; font-variant-numeric:tabular-nums lining-nums; font-feature-settings:"tnum" 1,"lnum" 1 }
 
-/* ---- aside (mobile: a navy header band) ---- */
-/* A real photograph of a buyer paying a seller sits behind the panel, under a
-   deep navy scrim so it reads as brand-navy with photographic warmth (not a
-   flat block) while keeping the white text fully legible. */
+/* ---- aside (mobile: an emerald header band) ---- */
+/* The brand emerald carries the panel: one accent, white content on it. A soft
+   lighter-emerald glow adds depth without a second hue or a photo. */
 .auth-aside{ position:relative; overflow:hidden; padding:26px 24px 64px; color:#fff;
-  background-color:#0F172A;
+  background:linear-gradient(160deg,#059669 0%,#047857 100%);
   display:flex; flex-direction:column }
-.auth-aside::before{ content:""; position:absolute; inset:0; z-index:0;
-  background:
-    linear-gradient(180deg, rgba(15,23,42,.82) 0%, rgba(15,23,42,.90) 55%, rgba(15,23,42,.96) 100%),
-    url("/images/commerce.jpg") center 22% / cover no-repeat; }
-.auth-aside::after{ content:""; position:absolute; top:-50px; right:-30px; z-index:0; width:170px; height:170px; border-radius:50%;
-  background:radial-gradient(circle at 40% 40%, rgba(5,150,105,.30), transparent 70%) }
+.auth-aside::after{ content:""; position:absolute; top:-60px; right:-40px; z-index:0; width:220px; height:220px; border-radius:50%;
+  background:radial-gradient(circle at 40% 40%, rgba(255,255,255,.16), transparent 70%) }
 .auth-aside > *{ position:relative; z-index:1 }
 .auth-mark{ position:relative; display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:17px; letter-spacing:-.02em; color:#fff }
 .auth-aside-mid{ position:relative }
@@ -227,7 +222,7 @@ const css = `
 .auth-lede{ display:none }
 .auth-live{ position:relative; margin-top:20px; padding:16px; border-radius:16px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10); display:flex; flex-direction:column; gap:11px }
 .auth-live-head{ display:flex; align-items:center; justify-content:space-between; font-size:11px; letter-spacing:.10em; text-transform:uppercase; color:rgba(255,255,255,.55) }
-.auth-live-status{ display:inline-flex; align-items:center; gap:6px; color:var(--safe-2) } .auth-live-status .dot{ width:6px; height:6px; border-radius:50%; background:var(--safe-2) }
+.auth-live-status{ display:inline-flex; align-items:center; gap:6px; color:#fff } .auth-live-status .dot{ width:6px; height:6px; border-radius:50%; background:#fff }
 .auth-live-amt{ font-size:36px; font-weight:700; letter-spacing:-.03em; line-height:1; margin-top:6px } .auth-live-amt span{ color:rgba(255,255,255,.55); margin-right:2px; font-size:22px }
 .auth-live-rule{ height:1px; background:rgba(255,255,255,.10) }
 .auth-live-row{ display:flex; justify-content:space-between; font-size:12px; color:rgba(255,255,255,.72) } .auth-live-row span:first-child{ color:rgba(255,255,255,.5) }
@@ -253,8 +248,8 @@ const css = `
 .auth-btn:active{ transform:scale(.985) }
 .auth-btn:disabled{ opacity:.5; cursor:not-allowed; transform:none }
 .auth-btn:focus-visible{ outline:2px solid var(--safe); outline-offset:2px }
-.auth-btn-primary{ background:var(--ink); color:#fff; box-shadow:0 10px 22px -12px rgba(15,23,42,.55); margin-top:14px }
-@media (hover:hover) and (pointer:fine){ .auth-btn-primary:not(:disabled):hover{ transform:translateY(-1px); box-shadow:0 14px 26px -12px rgba(15,23,42,.6) } }
+.auth-btn-primary{ background:var(--safe); color:#fff; box-shadow:0 10px 22px -12px rgba(5,150,105,.55); margin-top:14px }
+@media (hover:hover) and (pointer:fine){ .auth-btn-primary:not(:disabled):hover{ transform:translateY(-1px); box-shadow:0 14px 26px -12px rgba(5,150,105,.6) } }
 .auth-btn-google{ background:#fff; color:var(--ink); border-color:var(--line); box-shadow:0 1px 2px rgba(15,23,42,.05); margin-top:20px }
 @media (hover:hover) and (pointer:fine){ .auth-btn-google:not(:disabled):hover{ border-color:#cbd5e1; transform:translateY(-1px) } }
 .auth-btn-ghost{ background:transparent; color:var(--ink-2); border-color:var(--line); margin-top:11px }

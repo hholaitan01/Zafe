@@ -17,10 +17,13 @@ export default function SplashPage() {
 
   useEffect(() => {
     let alive = true;
-    // Resolve where to go while the animation plays.
+    // Resolve where to go while the animation plays: signed in → home; first
+    // visit → onboarding; otherwise straight to sign in.
+    let onboarded = false;
+    try { onboarded = localStorage.getItem("zafe.onboarded") === "1"; } catch { /* storage blocked */ }
     getCurrentUser()
-      .then((u) => { if (alive) dest.current = u ? "/dashboard" : "/login"; })
-      .catch(() => { dest.current = "/login"; });
+      .then((u) => { if (alive) dest.current = u ? "/dashboard" : onboarded ? "/login" : "/onboarding"; })
+      .catch(() => { dest.current = onboarded ? "/login" : "/onboarding"; });
 
     const t = setTimeout(() => go(), 1900);
     return () => { alive = false; clearTimeout(t); };

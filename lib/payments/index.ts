@@ -8,6 +8,7 @@
    { ok: false, error } so the caller can decide, exactly like the AI layer.
    ========================================================================== */
 
+import { randomInt } from "node:crypto";
 import type { Deal } from "@/lib/deals/types";
 import { generateVirtualAccount, isValidAlatPayCallback, isAlatPayCallbackSignatureValid, alatPayWebhookSecretConfigured, checkTransactionStatus } from "./alatpay";
 import { accountNameEnquiry, debitWalletTransfer } from "./wallet";
@@ -59,7 +60,8 @@ export async function createCollectionAccount(deal: Deal): Promise<CollectionAcc
 
   if (provider === "mock") {
     // Mock: a believable NUBAN so the payment screen can show something on stage.
-    return { accountNumber: "0" + String(Math.floor(1e9 + Math.random() * 9e9)), bankName: "Wema Bank (demo)", expiresAt, mode: "mock", amountDue };
+    // Uses a CSPRNG (not Math.random) even though this is a throwaway demo number.
+    return { accountNumber: "0" + String(randomInt(1_000_000_000, 10_000_000_000)), bankName: "Wema Bank (demo)", expiresAt, mode: "mock", amountDue };
   }
 
   if (provider === "paystack" || provider === "flutterwave") {

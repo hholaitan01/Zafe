@@ -47,9 +47,16 @@ export async function generateVirtualAccount(input: {
   return res.json();
 }
 
-/** Re-query a transaction's status directly, instead of trusting the callback alone. */
+/** Re-query a transaction's status directly, instead of trusting the callback alone.
+    The id is interpolated into the request URL and can originate from a callback
+    payload, so validate it to a strict token (SSRF / path-injection guard) and
+    URL-encode it before it reaches fetch. */
 export async function checkTransactionStatus(alatTransactionId: string) {
-  const res = await fetch(`${ALATPAY_BASE_URL}/transactions/verify/${alatTransactionId}`, { headers: alatPayHeaders() });
+  if (typeof alatTransactionId !== "string" || !/^[A-Za-z0-9._-]{1,80}$/.test(alatTransactionId)) {
+    throw new Error("Invalid ALATPay transaction id");
+  }
+  const id = encodeURIComponent(alatTransactionId);
+  const res = await fetch(`${ALATPAY_BASE_URL}/transactions/verify/${id}`, { headers: alatPayHeaders() });
   if (!res.ok) throw new Error(`ALATPay status check failed: ${res.status}`);
   return res.json();
 }
