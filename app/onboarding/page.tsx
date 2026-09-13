@@ -1,61 +1,100 @@
 "use client";
 
-/* Onboarding — the first-run welcome, modelled on the "reliable every step"
-   delivery-app onboarding: a collage of tilted, rounded photo tiles fills the
-   top and fades into a white content area with one promise and a single action.
+/* Onboarding — a swipeable 3-slide carousel, modelled on the "reliable every
+   step" delivery-app onboarding. Each slide is a dense collage of tilted photo
+   tiles fading into a white content area, with a headline and one line. A
+   shared footer carries the page dots and the primary action; swipe, tap a dot,
+   or press the button to advance. The last slide hands off to sign in.
 
-   The 12 tiles read from /public/images/onboarding/01.jpg … 12.jpg. Drop real
-   photos in at those names (see the README there for the shot list) and the
-   mosaic becomes fully photographic with no code change. Shown once: the splash
-   routes here only when there's no session and no "zafe.onboarded" flag. */
+   Each slide's tiles read from public/images/onboarding/slideN/01.jpg … 14.jpg.
+   Replace any file at the same name to update the mosaic (see the README). */
 
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-// Each tile: which image slot, how it's cropped, its tilt, and whether it spans
-// two rows. Tuned to the reference's staggered, overlapping density.
-const TILES: { n: string; pos: string; rot: number; tall?: boolean }[] = [
-  { n: "01", pos: "50% 35%", rot: -4 },
-  { n: "02", pos: "50% 40%", rot: 3, tall: true },
-  { n: "03", pos: "40% 50%", rot: 5 },
-  { n: "04", pos: "60% 50%", rot: -5 },
-  { n: "05", pos: "50% 30%", rot: 4 },
-  { n: "06", pos: "30% 60%", rot: -3 },
-  { n: "07", pos: "50% 55%", rot: -4 },
-  { n: "08", pos: "50% 45%", rot: 4, tall: true },
-  { n: "09", pos: "70% 40%", rot: 5 },
-  { n: "10", pos: "40% 40%", rot: -4 },
-  { n: "11", pos: "55% 60%", rot: 3 },
-  { n: "12", pos: "45% 35%", rot: -5 },
+// One tile arrangement, reused for every slide. Tuned to a dense, staggered,
+// bleeding-off-the-edges collage like the reference.
+const LAYOUT: { pos: string; rot: number; tall?: boolean }[] = [
+  { pos: "50% 40%", rot: -4 },
+  { pos: "50% 45%", rot: 3, tall: true },
+  { pos: "45% 40%", rot: 5 },
+  { pos: "55% 50%", rot: -5 },
+  { pos: "40% 55%", rot: 4 },
+  { pos: "60% 45%", rot: -3 },
+  { pos: "50% 35%", rot: -4 },
+  { pos: "50% 55%", rot: 4, tall: true },
+  { pos: "45% 45%", rot: 5 },
+  { pos: "55% 40%", rot: -4 },
+  { pos: "40% 50%", rot: 3 },
+  { pos: "60% 55%", rot: -5 },
+  { pos: "50% 45%", rot: 4 },
+  { pos: "50% 40%", rot: -3 },
+];
+
+const SLIDES = [
+  { dir: "slide1", title: "Buy from anyone", sub: "Shop from any seller on WhatsApp, Instagram, or Telegram, without the fear of getting scammed." },
+  { dir: "slide2", title: "Your money stays safe", sub: "You pay into escrow, not the seller. Zafe holds the money until the deal is done." },
+  { dir: "slide3", title: "Reliable every step", sub: "Your money is released only when you confirm the item arrived. Safe, the whole way." },
 ];
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
 
-  const go = () => {
+  const onScroll = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    setIndex((prev) => (prev === i ? prev : i));
+  }, []);
+
+  const goTo = (i: number) => {
+    const el = trackRef.current;
+    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+  };
+
+  const finish = () => {
     try { localStorage.setItem("zafe.onboarded", "1"); } catch { /* storage blocked */ }
     router.push("/login");
   };
+
+  const onPrimary = () => (index < SLIDES.length - 1 ? goTo(index + 1) : finish());
+  const last = index === SLIDES.length - 1;
 
   return (
     <main className="ob">
       <style>{css}</style>
 
-      <div className="ob-mosaic" aria-hidden>
-        <div className="ob-grid">
-          {TILES.map((t) => (
-            <div key={t.n} className={`ob-tile${t.tall ? " ob-tile--tall" : ""}`} style={{ transform: `rotate(${t.rot}deg)` }}>
-              <span className="ob-photo" style={{ backgroundImage: `url(/images/onboarding/${t.n}.jpg)`, backgroundPosition: t.pos }} />
+      <div className="ob-track" ref={trackRef} onScroll={onScroll}>
+        {SLIDES.map((s) => (
+          <section className="ob-slide" key={s.dir}>
+            <div className="ob-mosaic" aria-hidden>
+              <div className="ob-grid">
+                {LAYOUT.map((t, i) => (
+                  <div key={i} className={`ob-tile${t.tall ? " ob-tile--tall" : ""}`} style={{ transform: `rotate(${t.rot}deg)` }}>
+                    <span className="ob-photo" style={{ backgroundImage: `url(/images/onboarding/${s.dir}/${String(i + 1).padStart(2, "0")}.jpg)`, backgroundPosition: t.pos }} />
+                  </div>
+                ))}
+              </div>
+              <div className="ob-fade" />
             </div>
-          ))}
-        </div>
-        <div className="ob-fade" />
+            <div className="ob-slidebody">
+              <h1 className="ob-title">{s.title}</h1>
+              <p className="ob-sub">{s.sub}</p>
+            </div>
+          </section>
+        ))}
       </div>
 
-      <div className="ob-body">
-        <h1 className="ob-title">Reliable every step</h1>
-        <p className="ob-sub">Shop confidently: your money is held safe from payment to delivery, and released only when you have what you paid for.</p>
-        <button className="ob-cta" onClick={go}>Get started</button>
-        <button className="ob-alt" onClick={go}>I already have an account</button>
+      <div className="ob-foot">
+        <div className="ob-dots" role="tablist" aria-label="Onboarding steps">
+          {SLIDES.map((_, i) => (
+            <button key={i} className={`ob-dot${i === index ? " is-on" : ""}`} aria-label={`Go to step ${i + 1}`} aria-selected={i === index} onClick={() => goTo(i)} />
+          ))}
+        </div>
+        <button className="ob-cta" onClick={onPrimary}>{last ? "Get started" : "Continue"}</button>
+        <button className="ob-alt" onClick={finish}>{last ? "I already have an account" : "Skip"}</button>
       </div>
     </main>
   );
@@ -66,27 +105,35 @@ const css = `
   font-family:var(--font,'Plus Jakarta Sans',system-ui,sans-serif); -webkit-font-smoothing:antialiased }
 .ob *{ box-sizing:border-box }
 
-/* mosaic — bleeds off the top and sides like the reference */
+/* swipeable track */
+.ob-track{ flex:1 1 auto; min-height:0; display:flex; overflow-x:auto; overflow-y:hidden;
+  scroll-snap-type:x mandatory; scroll-behavior:smooth; -webkit-overflow-scrolling:touch }
+.ob-track::-webkit-scrollbar{ display:none } .ob-track{ scrollbar-width:none }
+.ob-slide{ flex:0 0 100%; scroll-snap-align:start; display:flex; flex-direction:column; overflow:hidden }
+
+/* mosaic — dense, tilted, bleeding off the top and sides */
 .ob-mosaic{ position:relative; flex:1 1 auto; min-height:0; overflow:hidden; background:#EEF2F6 }
-.ob-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
-  padding:calc(22px + env(safe-area-inset-top)) 18px 0;
-  transform:scale(1.1); transform-origin:top center }
-.ob-tile{ position:relative; aspect-ratio:1; border-radius:22px; overflow:hidden; background:#E2E8F0;
-  box-shadow:0 16px 32px -18px rgba(15,23,42,.45); animation:obIn .6s var(--ease,cubic-bezier(.22,1,.36,1)) both }
+.ob-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:11px;
+  padding:calc(20px + env(safe-area-inset-top)) 16px 0; transform:scale(1.12); transform-origin:top center }
+.ob-tile{ position:relative; aspect-ratio:1; border-radius:20px; overflow:hidden; background:#E2E8F0;
+  box-shadow:0 14px 30px -18px rgba(15,23,42,.45) }
 .ob-tile--tall{ aspect-ratio:auto; grid-row:span 2 }
 .ob-photo{ position:absolute; inset:0; background-size:cover; background-repeat:no-repeat }
-.ob-tile:nth-child(3n){ animation-delay:.04s } .ob-tile:nth-child(3n+1){ animation-delay:.1s } .ob-tile:nth-child(3n+2){ animation-delay:.16s }
-@keyframes obIn{ from{ opacity:0; transform:translateY(14px) scale(.92) } }
-
-/* fade the collage into the white content area */
-.ob-fade{ position:absolute; left:0; right:0; bottom:0; height:200px; pointer-events:none;
+.ob-fade{ position:absolute; left:0; right:0; bottom:0; height:190px; pointer-events:none;
   background:linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--card,#fff) 84%) }
 
-/* body */
-.ob-body{ flex:0 0 auto; padding:4px 28px calc(30px + env(safe-area-inset-bottom)); text-align:center }
-.ob-title{ font-size:29px; font-weight:800; letter-spacing:-.03em; line-height:1.08 }
-.ob-sub{ margin:12px auto 0; max-width:33ch; font-size:14.5px; line-height:1.55; color:var(--muted,#64748B) }
-.ob-cta{ margin-top:22px; width:100%; height:56px; border:none; border-radius:16px; cursor:pointer;
+/* per-slide text */
+.ob-slidebody{ flex:0 0 auto; padding:2px 28px 8px; text-align:center }
+.ob-title{ font-size:28px; font-weight:800; letter-spacing:-.03em; line-height:1.08 }
+.ob-sub{ margin:11px auto 0; max-width:32ch; font-size:14.5px; line-height:1.55; color:var(--muted,#64748B) }
+
+/* shared footer: dots + actions */
+.ob-foot{ flex:0 0 auto; padding:14px 28px calc(26px + env(safe-area-inset-bottom)) }
+.ob-dots{ display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:16px }
+.ob-dot{ width:8px; height:8px; padding:0; border:none; border-radius:999px; background:var(--line,#E6EAF0); cursor:pointer;
+  transition:width .25s var(--ease,cubic-bezier(.22,1,.36,1)), background .25s ease }
+.ob-dot.is-on{ width:26px; background:var(--safe,#059669) }
+.ob-cta{ width:100%; height:56px; border:none; border-radius:16px; cursor:pointer;
   background:var(--safe,#059669); color:#fff; font-family:inherit; font-size:16px; font-weight:700;
   box-shadow:0 16px 30px -14px rgba(5,150,105,.6); transition:transform .12s var(--ease,cubic-bezier(.22,1,.36,1)), background .18s ease }
 .ob-cta:active{ transform:scale(.985) }
@@ -94,8 +141,6 @@ const css = `
 .ob-alt{ margin-top:10px; width:100%; height:42px; background:none; border:none; cursor:pointer;
   font-family:inherit; font-size:14px; font-weight:600; color:var(--ink-2,#334155) }
 .ob-alt:hover{ color:var(--ink,#0F172A) }
-
-@media (prefers-reduced-motion:reduce){ .ob-tile{ animation:none } }
 
 @media (min-width:560px){
   .ob{ max-width:440px; margin:0 auto; border-left:1px solid var(--line,#E6EAF0); border-right:1px solid var(--line,#E6EAF0) }
