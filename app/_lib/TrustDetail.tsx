@@ -107,7 +107,7 @@ export default function TrustDetail({ fallback = "safe" }: { fallback?: TrustVer
 const css = `
 .ts{ --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --faint:#94A3B8; --bg:#F8FAFC; --card:#fff;
   --line:#E6EAF0; --line-2:#EEF2F6; --safe:#059669; --ease:cubic-bezier(.22,1,.36,1);
-  font-family:'IBM Plex Sans',system-ui,sans-serif; color:var(--ink); background:var(--bg); min-height:100dvh;
+  font-family:'Plus Jakarta Sans',system-ui,sans-serif; color:var(--ink); background:var(--bg); min-height:100dvh;
   display:flex; justify-content:center; padding:16px 20px 40px; -webkit-font-smoothing:antialiased }
 .ts *{ box-sizing:border-box }
 .ts-inner{ width:100%; max-width:520px }

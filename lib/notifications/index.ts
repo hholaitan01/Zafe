@@ -70,7 +70,7 @@ export async function notifySellerOfEscrow(deal: Deal, opts: { isUser: boolean }
   ].join("\n");
 
   const html = `
-  <div style="font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0F172A">
+  <div style="font-family:'Plus Jakarta Sans',system-ui,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0F172A">
     <div style="font-weight:800;font-size:18px;letter-spacing:-.02em;color:#0F172A;margin-bottom:18px">Zafe</div>
     <div style="background:#ECFDF5;border:1px solid #C7EAD9;border-radius:14px;padding:18px 20px">
       <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#059669">Escrow payment</div>
@@ -101,7 +101,7 @@ export async function sendPayoutOtpEmail(to: string, code: string): Promise<Emai
     "If this wasn't you, do not share this code and sign in to review your account. Payouts are held for a short cooldown after any change.",
   ].join("\n");
   const html = `
-  <div style="font-family:'IBM Plex Sans',system-ui,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0F172A">
+  <div style="font-family:'Plus Jakarta Sans',system-ui,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0F172A">
     <div style="font-weight:800;font-size:18px;letter-spacing:-.02em;color:#0F172A;margin-bottom:18px">Zafe</div>
     <div style="background:#ECFDF5;border:1px solid #C7EAD9;border-radius:14px;padding:18px 20px">
       <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#059669">Confirm payout change</div>

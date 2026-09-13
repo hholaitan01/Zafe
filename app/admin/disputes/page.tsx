@@ -186,7 +186,7 @@ const css = `
 .ad{ --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --faint:#94A3B8; --bg:#F8FAFC;
   --card:#FFFFFF; --border:#E6EAF0; --safe:#059669; --safe-tint:#ECFDF5; --danger:#DC2626; --violet:#7C3AED;
   --ease:cubic-bezier(.22,1,.36,1);
-  font-family:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   color:var(--ink); background:var(--bg); min-height:100dvh; -webkit-font-smoothing:antialiased; line-height:1.5 }
 .ad *{ box-sizing:border-box }
 .ad a{ text-decoration:none }

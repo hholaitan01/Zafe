@@ -107,7 +107,7 @@ const css = `
 .ml{ --ground:#F8FAFC; --surface:#FFFFFF; --ink:#0F172A; --ink-2:#334155; --muted:#64748B; --faint:#94A3B8;
   --border:#E6EAF0; --safe:#059669; --report:#B91C1C; --report-bg:#FEE2E2; --review:#B45309; --review-bg:#FEF3C7;
   --info:#475569; --info-bg:#EEF2F6;
-  font-family:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; color:var(--ink); background:var(--ground);
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; color:var(--ink); background:var(--ground);
   min-height:100dvh; -webkit-font-smoothing:antialiased; line-height:1.5 }
 .ml *{ box-sizing:border-box } .ml a{ text-decoration:none }
 .ml-wrap{ width:100%; max-width:840px; margin:0 auto; padding:0 22px }

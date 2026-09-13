@@ -311,7 +311,7 @@ const css = `
   --sh-sm:0 1px 2px rgba(15,23,42,.06); --sh:0 12px 30px -14px rgba(15,23,42,.22);
   --sh-lg:0 30px 60px -24px rgba(15,23,42,.30);
   --r-card:20px; --r-btn:12px;
-  font-family:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family:"Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color:var(--ink); background:var(--bg); min-height:100dvh; -webkit-font-smoothing:antialiased; line-height:1.5;
 }
 .lp a:not(.lp-btn){color:inherit} .lp a{text-decoration:none}

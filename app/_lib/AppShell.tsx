@@ -5,7 +5,7 @@
 
    • Desktop (>=1024px): a persistent 256px left SideNav + a 64px TopBar, with
      the page content in a max-1200px column. This is the Claude Design app
-     structure, rebuilt in our navy/emerald light system (IBM Plex Sans).
+     structure, rebuilt in our navy/emerald light system (Plus Jakarta Sans).
    • Mobile (<1024px): the SideNav/TopBar collapse; a compact mobile top bar
      and a fixed bottom nav take over, and the content stacks.
 
@@ -37,8 +37,8 @@ function NavIcon({ children, size = 20 }: { children: ReactNode; size?: number }
 function Mark({ size = 26 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <path d="M8.5 10.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" />
-      <path d="M8.5 21.5H23.5" stroke="#0F172A" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M8.5 10.5H23.5" stroke="currentColor" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M8.5 21.5H23.5" stroke="currentColor" strokeWidth="4.2" strokeLinecap="round" />
       <path d="M23.5 10.5L8.5 21.5" stroke="#059669" strokeWidth="4.2" strokeLinecap="round" />
     </svg>
   );
@@ -55,17 +55,21 @@ export default function AppShell({
   current,
   user,
   children,
+  darkAware = false,
 }: {
   current: NavId;
   user: ShellUser;
   children: ReactNode;
+  /** Opt in to system dark mode for this screen (follows prefers-color-scheme).
+      Set per-screen so surfaces that aren't dark-ready yet stay light. */
+  darkAware?: boolean;
 }) {
   const avatarStyle = user.photo
     ? { backgroundImage: `url("${user.photo}")`, backgroundSize: "cover", backgroundPosition: "center" }
     : undefined;
 
   return (
-    <div className="tf-app">
+    <div className={`tf-app${darkAware ? " tf-dark-aware" : ""}`}>
       <style>{kit}</style>
       <IdleLogout />
 
@@ -132,14 +136,15 @@ const kit = `
   --safe:#059669; --safe-2:#047857; --safe-tint:#ECFDF5; --gold:#A16207; --danger:#DC2626;
   --sh-1:0 1px 2px rgba(15,23,42,.05); --sh-2:0 12px 30px -14px rgba(15,23,42,.18);
   --ease:cubic-bezier(.22,1,.36,1);
-  font-family:var(--font,'IBM Plex Sans',system-ui,sans-serif); color:var(--ink); background:var(--bg);
+  font-family:var(--font,'Plus Jakarta Sans',system-ui,sans-serif); color:var(--ink); background:var(--bg);
   min-height:100dvh; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
   font-optical-sizing:auto; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
 .tf-app *{ box-sizing:border-box }
 .tf-app a{ text-decoration:none; color:inherit }
 
-/* mono for numeric refs */
-.tf-mono{ font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums }
+/* Numeric refs: the brand sans with tabular, lining figures so money and codes
+   stay column-aligned without the dated monospace look. */
+.tf-mono{ font-family:inherit; font-variant-numeric:tabular-nums lining-nums; font-feature-settings:"tnum" 1,"lnum" 1; letter-spacing:0 }
 
 /* ---- desktop shell ---- */
 .tf-side{ display:none }
@@ -240,5 +245,30 @@ const kit = `
   .tf-card{ border-color:#CBD5E1 }
   .tf-topbar{ border-bottom-color:var(--line) }
   .tf-side-item.is-active{ border-color:#94A3B8 }
+}
+
+/* ---- Dark mode: opt-in per screen (darkAware), follows the OS setting.
+   Only re-tokenises + repaints the chrome that hardcodes a light colour, so a
+   screen authored against the tokens comes out correct without extra work. ---- */
+@media (prefers-color-scheme:dark){
+  .tf-app.tf-dark-aware{
+    --ink:#F1F5F9; --ink-2:#CBD5E1; --muted:#94A3B8; --faint:#64748B;
+    --bg:#0B1220; --card:#131D30; --line:#24324A; --line-2:#1E2A3D;
+    --safe:#059669; --safe-2:#047857; --safe-tint:#10261E; --gold:#C79A3A; --danger:#F87171;
+    --sh-1:0 1px 2px rgba(0,0,0,.4); --sh-2:0 16px 34px -16px rgba(0,0,0,.65);
+  }
+  .tf-app.tf-dark-aware .tf-icon-btn{ background:var(--card); border-color:var(--line); color:var(--ink-2) }
+  .tf-app.tf-dark-aware .tf-avatar{ background:#1B2740; color:#F1F5F9 }
+  .tf-app.tf-dark-aware .tf-mtop{ background:rgba(11,18,32,.72) }
+  .tf-app.tf-dark-aware .tf-bottom{ background:linear-gradient(180deg,rgba(11,18,32,0),#0B1220 38%) }
+  .tf-app.tf-dark-aware .tf-bnav-orb{ border-color:#0B1220 }
+  .tf-app.tf-dark-aware .tf-side{ background:#0F1626; border-right-color:var(--line) }
+  .tf-app.tf-dark-aware .tf-search{ background:var(--card); border-color:var(--line); color:var(--faint) }
+  .tf-app.tf-dark-aware .tf-topbar{ background:rgba(11,18,32,.72); border-bottom-color:rgba(36,50,74,.7) }
+  .tf-app.tf-dark-aware .tf-btn--primary{ background:var(--safe); color:#fff }
+  .tf-app.tf-dark-aware .tf-btn--primary:hover{ background:var(--safe-2) }
+  .tf-app.tf-dark-aware a.tf-btn--primary{ color:#fff }
+  .tf-app.tf-dark-aware .tf-btn--secondary{ background:var(--card); color:var(--ink); border-color:var(--line) }
+  .tf-app.tf-dark-aware a.tf-btn--secondary{ color:var(--ink) }
 }
 `;

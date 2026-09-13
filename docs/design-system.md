@@ -40,7 +40,7 @@ Navy is the trust anchor; emerald carries the core "your money is safe"
 message; gold is a rare premium accent. Primary CTAs are navy; the highest-intent
 "safe" CTA (Get started) may be emerald.
 
-**Type (v2):** IBM Plex Sans (400/500/600/700) — financial, trustworthy. Headings
+**Type (v2):** Plus Jakarta Sans (400/500/600/700) — financial, trustworthy. Headings
 600–700 with tight tracking (`-0.03em`); body 400 at 1.5–1.6 line-height. Tabular
 figures for money and IDs.
 

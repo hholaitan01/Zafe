@@ -27,7 +27,7 @@ export default function NotFound() {
         padding: "48px 24px",
         background: "#F8FAFC",
         color: "#0F172A",
-        fontFamily: "'IBM Plex Sans', system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
       }}
     >
       <p style={{ margin: 0, fontSize: 14, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#059669" }}>
