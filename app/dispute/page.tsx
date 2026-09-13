@@ -44,6 +44,17 @@ function parseFile(entry: string): { name: string; path: string } | null {
   return { name: rest.slice(0, bar), path: rest.slice(bar + 1) };
 }
 
+/* Evidence links are user-supplied text. Only ever put a parsed, http(s) URL in
+   an href, so a javascript:/data: string can never become a live link. */
+function safeHref(url: string): string | null {
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
 interface Reco { label: string; toBuyer: string; toSeller: string; rationale: string }
 
 function recoFrom(amount: number, r: Pick<DisputeResult, "decision" | "splitBuyerPercent" | "rationale">): Reco {
@@ -278,7 +289,7 @@ export default function DisputePage() {
                     <ul className="dp-ev-list">
                       {evidence.map((e, i) => {
                         const file = parseFile(e);
-                        const isLink = /^https?:\/\//i.test(e);
+                        const href = file ? null : safeHref(e);
                         return (
                           <li className="dp-ev-item" key={`${e}-${i}`}>
                             {file ? (
@@ -286,8 +297,8 @@ export default function DisputePage() {
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
                                 {file.name}
                               </a>
-                            ) : isLink ? (
-                              <a href={e} target="_blank" rel="noopener noreferrer" className="dp-ev-text dp-ev-link">{e}</a>
+                            ) : href ? (
+                              <a href={href} target="_blank" rel="noopener noreferrer" className="dp-ev-text dp-ev-link">{e}</a>
                             ) : (
                               <span className="dp-ev-text">{e}</span>
                             )}
