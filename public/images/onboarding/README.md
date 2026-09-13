@@ -1,8 +1,12 @@
 # Onboarding mosaic images
 
 The onboarding screen (`app/onboarding/page.tsx`) builds its tilted collage from
-the 12 files `01.jpg` … `12.jpg` in this folder. Replace each placeholder with a
-real photo at the **same filename** and the mosaic updates with no code change.
+the 12 files `01.jpg` … `12.jpg` in this folder. Replace any of them with a
+different photo at the **same filename** and the mosaic updates with no code change.
+
+The current set was sourced from **Unsplash and Pexels** (free license, commercial
+use, no attribution required) to match the shot list below. Swap in your own or
+brand-generated photos any time — the prompts below produce a cohesive set.
 
 **Specs for every image**
 - Square, at least **1000×1000px**, JPG, optimised (aim < 200 KB each).
