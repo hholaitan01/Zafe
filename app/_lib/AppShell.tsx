@@ -153,7 +153,7 @@ const kit = `
 .tf-side{ display:none }
 .tf-topbar{ display:none }
 .tf-main{ min-height:100dvh; display:flex; flex-direction:column }
-.tf-content{ flex:1; padding:20px 20px 108px; width:100%; max-width:640px; margin:0 auto; animation:tfContentIn .28s var(--ease) both }
+.tf-content{ flex:1; padding:20px 20px 124px; width:100%; max-width:640px; margin:0 auto; animation:tfContentIn .28s var(--ease) both }
 @keyframes tfContentIn{ from{ opacity:0; transform:translateY(6px) } to{ opacity:1; transform:none } }
 
 .tf-avatar{ width:40px; height:40px; border-radius:50%; background:#0F172A; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; overflow:hidden; flex-shrink:0 }

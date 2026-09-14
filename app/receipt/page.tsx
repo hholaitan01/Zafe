@@ -41,16 +41,23 @@ export default function ReceiptPage() {
     return () => { alive = false; };
   }, []);
 
+  // Two receipt modes: money paid INTO escrow (held), and money RELEASED to the
+  // seller. A just-funded deal must not claim it was released.
+  const released = deal?.status === "completed" || deal?.status === "resolved";
   const releasedAt = deal ? [...deal.timeline].reverse().find((e) => e.status === "completed" || e.status === "resolved")?.at || deal.updatedAt : undefined;
+  const paidAt = deal ? [...deal.timeline].find((e) => e.status === "funded")?.at || deal.updatedAt : undefined;
+  const eventAt = released ? releasedAt : paidAt;
   const ref = deal?.reference || deal?.id.slice(0, 12) || "";
   const seller = deal?.seller?.name || "Seller";
   // The full payout account is stripped from API responses (redact.ts); the
   // deal carries a masked hint ("GTBank ****3344") for the receipt instead.
-  const beneficiary = deal?.sellerPayoutMask || "Escrow release account";
+  const beneficiary = released ? deal?.sellerPayoutMask || "Escrow release account" : "Zafe Escrow (held safe)";
 
   function share() {
     if (!deal) return;
-    const text = `Zafe receipt\n${money(deal.item.amount)} released for ${deal.item.title}\nTo: ${seller}\nRef: ${ref}\n${fmtDateTime(releasedAt)}`;
+    const text = released
+      ? `Zafe receipt\n${money(deal.item.amount)} released for ${deal.item.title}\nTo: ${seller}\nRef: ${ref}\n${fmtDateTime(eventAt)}`
+      : `Zafe receipt\n${money(deal.item.amount)} held safe in escrow for ${deal.item.title}\nSeller: ${seller}\nRef: ${ref}\n${fmtDateTime(eventAt)}`;
     if (navigator.share) { navigator.share({ title: "Zafe receipt", text }).catch(() => {}); return; }
     navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {});
   }
@@ -68,18 +75,19 @@ export default function ReceiptPage() {
 
           <div className="rc-status">
             <span className="rc-check"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-            Payment Released
+            {released ? "Payment Released" : "Payment Secured"}
           </div>
 
           <div className="rc-rows">
             <Row k="Total amount" v={deal ? money(deal.item.amount) : ""} strong />
             <Row k="From" v={deal?.buyerEmail ? deal.buyerEmail.split("@")[0].toUpperCase() : "BUYER (ESCROW)"} strong />
-            <Row k="Beneficiary account" v={beneficiary} strong />
+            <Row k={released ? "Beneficiary account" : "Held by"} v={beneficiary} strong />
             <Row k="Recipient" v={seller.toUpperCase()} strong />
+            <Row k="Status" v={released ? "Released to seller" : "Held in escrow"} strong />
             <Row k="Transaction ID" v={ref} mono />
             <Row k="Session ID" v={deal ? sessionId(deal) : ""} mono />
             <Row k="Item" v={deal?.item.title || ""} />
-            <Row k="Date / Time" v={fmtDateTime(releasedAt)} last />
+            <Row k={released ? "Date / Time released" : "Date / Time paid"} v={fmtDateTime(eventAt)} last />
           </div>
 
           <div className="rc-scallop" aria-hidden="true" />
