@@ -42,6 +42,12 @@ export default function SplashPage() {
     <main className={`sp-root${leaving ? " sp-leaving" : ""}`} onClick={go} role="button" aria-label="Enter Zafe">
       <style>{css}</style>
 
+      {/* Blown-up brand photo (a package delivered safely at a green door),
+          held under a heavy emerald wash so it reads as depth, not a stock shot,
+          and white content stays legible. */}
+      <div className="sp-bg" aria-hidden />
+      <div className="sp-wash" aria-hidden />
+
       <div className="sp-center">
         <div className="sp-tile" aria-hidden>
           <svg width="46" height="46" viewBox="0 0 32 32" fill="none">
@@ -63,15 +69,31 @@ export default function SplashPage() {
 
 const css = `
 .sp-root{
-  position:fixed; inset:0; z-index:50;
-  background:linear-gradient(160deg,#059669 0%,#047857 100%);
+  position:fixed; inset:0; z-index:50; overflow:hidden;
+  background:#047857;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   padding:24px; cursor:pointer; user-select:none;
   transition:opacity .26s var(--ease);
 }
 .sp-leaving{ opacity:0 }
 
-.sp-center{ display:flex; flex-direction:column; align-items:center; text-align:center }
+/* Full-bleed photo, blown up past the frame and drifting in slowly for depth. */
+.sp-bg{
+  position:absolute; inset:0; z-index:0;
+  background:url('/images/splash-bg.jpg') center/cover no-repeat;
+  transform:scale(1.12);
+  animation:sp-drift 9s ease-out both;
+}
+/* Emerald wash: strong enough that the screen stays brand-emerald + white, with
+   a darker foot so the wordmark and loading dots keep contrast. */
+.sp-wash{
+  position:absolute; inset:0; z-index:1;
+  background:
+    radial-gradient(120% 90% at 50% 42%, rgba(5,150,105,.62), transparent 60%),
+    linear-gradient(165deg, rgba(5,150,105,.86) 0%, rgba(4,110,80,.90) 46%, rgba(3,68,52,.95) 100%);
+}
+
+.sp-center{ position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; text-align:center }
 
 .sp-tile{
   width:88px; height:88px; border-radius:24px; background:#fff;
@@ -91,7 +113,7 @@ const css = `
   animation:sp-rise .6s var(--ease) .3s forwards;
 }
 
-.sp-foot{ position:absolute; bottom:38px; left:0; right:0; display:flex; justify-content:center }
+.sp-foot{ position:absolute; z-index:2; bottom:38px; left:0; right:0; display:flex; justify-content:center }
 .sp-dots{ display:flex; gap:6px; opacity:0; animation:sp-fade .5s var(--ease) .6s forwards }
 .sp-dots i{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.55); animation:sp-blink 1.1s var(--ease) infinite }
 .sp-dots i:nth-child(2){ animation-delay:.18s } .sp-dots i:nth-child(3){ animation-delay:.36s }
@@ -100,9 +122,11 @@ const css = `
 @keyframes sp-rise{ to{ opacity:1; transform:translateY(0) } }
 @keyframes sp-fade{ to{ opacity:1 } }
 @keyframes sp-blink{ 0%,100%{ opacity:.35 } 50%{ opacity:1 } }
+@keyframes sp-drift{ from{ transform:scale(1.18) } to{ transform:scale(1.12) } }
 
 @media (prefers-reduced-motion:reduce){
   .sp-tile,.sp-word,.sp-tag,.sp-dots{ animation-duration:.01ms; opacity:1; transform:none }
   .sp-dots i{ animation:none }
+  .sp-bg{ animation:none; transform:scale(1.12) }
 }
 `;
