@@ -89,8 +89,8 @@ const css = `
 .sp-wash{
   position:absolute; inset:0; z-index:1;
   background:
-    radial-gradient(120% 90% at 50% 42%, rgba(5,150,105,.62), transparent 60%),
-    linear-gradient(165deg, rgba(5,150,105,.86) 0%, rgba(4,110,80,.90) 46%, rgba(3,68,52,.95) 100%);
+    radial-gradient(90% 55% at 50% 60%, rgba(4,95,70,.52), transparent 60%),
+    linear-gradient(170deg, rgba(5,150,105,.40) 0%, rgba(4,110,80,.50) 55%, rgba(3,72,54,.74) 100%);
 }
 
 .sp-center{ position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; text-align:center }
