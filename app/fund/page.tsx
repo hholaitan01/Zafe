@@ -11,8 +11,10 @@
    account to transfer into and never mark the deal funded ourselves — a
    verified webhook does that, and the button re-checks status. */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { CheckIcon, type CheckIconHandle } from "@animateicons/react/lucide/check-icon";
 import AppShell from "@/app/_lib/AppShell";
 import { createEscrowAccount, getCurrentDealId, getDeal, getSellerStanding, naira } from "@/lib/client";
 import type { CollectionAccount } from "@/lib/payments";
@@ -58,6 +60,10 @@ export default function FundPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  // The payment overlay: "confirm" = a review sheet before we move money;
+  // "sent" = the held-safe confirmation. "none" while paying inline (live VA).
+  const [sheet, setSheet] = useState<"none" | "confirm" | "sent">("none");
+  const checkRef = useRef<CheckIconHandle>(null);
 
   useEffect(() => {
     const id = getCurrentDealId();
@@ -79,28 +85,50 @@ export default function FundPage() {
   const risky = deal?.trust?.verdict === "risky";
   const awaiting = !!acct;
 
-  async function fund() {
+  // Draw the check once the success sheet mounts.
+  useEffect(() => {
+    if (sheet === "sent") {
+      const t = setTimeout(() => checkRef.current?.startAnimation(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [sheet]);
+
+  // Open the review sheet. The risk gate stays in front of it: a flagged deal
+  // must be acknowledged before we'll even show Confirm.
+  function openConfirm() {
     if (busy) return;
     if (risky && !acked) { setNudge(true); return; }
+    setError("");
+    setSheet("confirm");
+  }
+
+  // Confirm tapped inside the sheet: this is where money actually moves.
+  async function confirmPay() {
+    if (busy) return;
     const id = getCurrentDealId();
     if (!id) { router.push("/locked"); return; }
     setBusy(true);
     setError("");
-
-    // Live mode, account already shown: re-check whether the webhook confirmed.
-    if (awaiting) {
-      const d = await getDeal(id).catch(() => null);
-      if (d && d.status !== "created") { router.push("/locked"); return; }
-      setWaitNote(true);
-      setBusy(false);
-      return;
-    }
-
     const res = await createEscrowAccount(id).catch(() => null);
-    if (res?.funded) { router.push("/locked"); return; } // demo: server funded it
+    if (res?.funded) { setBusy(false); setSheet("sent"); return; } // demo: server funded it
     if (!res) { setError("Couldn't start the payment just now. Please try again."); setBusy(false); return; }
-    // Live: show the account and wait for the verified webhook.
+    // Live: close the sheet and show the account to transfer into; a verified
+    // webhook marks it funded and the button below re-checks status.
     setAcct(res.account);
+    setBusy(false);
+    setSheet("none");
+  }
+
+  // Live mode, account already shown: re-check whether the webhook confirmed.
+  async function checkStatus() {
+    if (busy) return;
+    const id = getCurrentDealId();
+    if (!id) { router.push("/locked"); return; }
+    setBusy(true);
+    setError("");
+    const d = await getDeal(id).catch(() => null);
+    if (d && d.status !== "created") { router.push("/locked"); return; }
+    setWaitNote(true);
     setBusy(false);
   }
 
@@ -190,13 +218,64 @@ export default function FundPage() {
           <div className="fn-sum-row"><span>Item</span><span>{deal?.item.title || "—"}</span></div>
           <div className="fn-sum-row"><span>Seller</span><span>{deal?.seller?.name || "—"}</span></div>
           <div className="fn-sum-row fn-sum-last"><span>Released</span><span>On your confirm</span></div>
-          <button className="tf-btn tf-btn--verify fn-pay-btn" disabled={busy || !deal} onClick={() => void fund()}>
+          <button className="tf-btn tf-btn--verify fn-pay-btn" disabled={busy || !deal} onClick={() => (awaiting ? void checkStatus() : openConfirm())}>
             {!busy && !awaiting && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"><path d="M6 10V8a6 6 0 0 1 12 0v2M5 10h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z" /></svg>}
             {payLabel}
           </button>
           <div className="fn-safe"><Shield size={13} />Money is held safe. Encrypted end to end.</div>
         </aside>
       </div>
+
+      {sheet !== "none" && createPortal(
+        <div className="pm-scrim" onClick={() => { if (busy) return; sheet === "sent" ? router.push("/locked") : setSheet("none"); }}>
+          <div className="pm-sheet" role="dialog" aria-modal="true" aria-label={sheet === "confirm" ? "Confirm payment" : "Payment secured"} onClick={(e) => e.stopPropagation()}>
+            {sheet === "confirm" ? (
+              <>
+                <div className="pm-head">
+                  <div className="pm-title">Confirm payment</div>
+                  <button className="pm-x" aria-label="Close" onClick={() => !busy && setSheet("none")}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                  </button>
+                </div>
+
+                <div className="pm-method">
+                  <span className="pm-method-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M4 10h16M5 10 12 4l7 6M6 10v11M18 10v11M10 10v11M14 10v11" /></svg></span>
+                  <div><div className="pm-method-t">Bank transfer</div><div className="pm-method-s">Into a dedicated escrow account</div></div>
+                </div>
+
+                <div className="pm-sum">
+                  <div className="pm-sum-h">Summary</div>
+                  <div className="pm-row"><span>Paying</span><span>{deal?.item.title || "Escrow deal"}</span></div>
+                  <div className="pm-row"><span>To</span><span>{deal?.seller?.name || "Seller"}, in escrow</span></div>
+                  <div className="pm-row"><span>Escrow fee (your half)</span><span className="tf-mono">{deal ? naira(buyerFee) : "—"}</span></div>
+                  <div className="pm-row pm-total"><span>Total</span><span className="tf-mono">{amount}</span></div>
+                </div>
+
+                {error && <p className="pm-err" role="alert">{error}</p>}
+
+                <button className="pm-cta" disabled={busy} onClick={() => void confirmPay()}>
+                  {busy ? <span className="pm-spin" aria-hidden /> : null}
+                  {busy ? "Confirming…" : "Confirm payment"}
+                </button>
+                <div className="pm-safe">
+                  <Shield size={13} />Held safe. Released only when you confirm delivery.
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="pm-done-ic" aria-hidden>
+                  <CheckIcon ref={checkRef} size={34} color="#ffffff" duration={0.55} />
+                </div>
+                <div className="pm-done-t">Payment secured</div>
+                <p className="pm-done-s">Your <b>{amount}</b> is held safe in escrow. The seller can ship now. It&apos;s released only when you confirm the item arrived.</p>
+                <button className="pm-cta" onClick={() => router.push("/locked")}>View my escrow</button>
+                <button className="pm-alt" onClick={() => router.push("/dashboard")}>Back to home</button>
+              </>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </AppShell>
   );
 }
@@ -260,5 +339,63 @@ const css = `
   .fn-main{ gap:16px }
   .fn-pay{ padding:22px }
   .fn-summary{ position:sticky; top:88px }
+}
+
+/* ---- payment overlay: confirm sheet + secured card ---- */
+.pm-scrim{ position:fixed; inset:0; z-index:70; background:rgba(8,15,30,.55);
+  backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+  display:flex; align-items:flex-end; justify-content:center; animation:pmFade .22s var(--ease) both }
+.pm-sheet{ width:100%; max-width:460px; background:var(--card); color:var(--ink);
+  border-radius:24px 24px 0 0; padding:20px 20px calc(22px + env(safe-area-inset-bottom,0px));
+  box-shadow:0 -22px 50px -20px rgba(8,15,30,.45); animation:pmUp .34s var(--ease) both }
+.pm-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px }
+.pm-title{ font-size:18px; font-weight:700; letter-spacing:-.01em }
+.pm-x{ width:34px; height:34px; border-radius:50%; border:none; background:var(--line-2); color:var(--ink-2);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .16s var(--ease) }
+.pm-x:hover{ background:var(--line) }
+.pm-method{ display:flex; align-items:center; gap:12px; padding:13px; border-radius:14px; background:var(--safe-tint); border:1px solid rgba(5,150,105,.18) }
+.pm-method-ic{ width:38px; height:38px; border-radius:11px; background:var(--safe); display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+.pm-method-t{ font-size:14px; font-weight:600 }
+.pm-method-s{ font-size:12px; color:var(--muted); margin-top:1px }
+.pm-sum{ margin-top:14px; border:1px solid var(--line); border-radius:14px; padding:13px 15px }
+.pm-sum-h{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--faint,#94A3B8); margin-bottom:8px }
+.pm-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; font-size:13.5px; padding:6px 0 }
+.pm-row span:first-child{ color:var(--muted); flex-shrink:0 }
+.pm-row span:last-child{ font-weight:600; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0 }
+.pm-total{ margin-top:4px; padding-top:11px; border-top:1px solid var(--line); font-size:15px }
+.pm-total span:last-child{ font-weight:800 }
+.pm-err{ margin-top:12px; font-size:13px; font-weight:500; color:var(--danger); background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; padding:11px 13px }
+.pm-cta{ width:100%; height:54px; margin-top:16px; border:none; border-radius:14px; background:var(--safe); color:#fff;
+  font-family:inherit; font-size:15.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:9px;
+  box-shadow:0 12px 24px -12px rgba(5,150,105,.55); transition:transform .12s var(--ease), background .18s var(--ease) }
+.pm-cta:hover{ background:var(--safe-2) }
+.pm-cta:active{ transform:scale(.99) }
+.pm-cta:disabled{ opacity:.6; cursor:not-allowed }
+.pm-spin{ width:16px; height:16px; border-radius:50%; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; animation:pmSpin .6s linear infinite }
+.pm-safe{ display:flex; align-items:center; justify-content:center; gap:7px; margin-top:12px; font-size:12px; color:var(--muted) }
+.pm-alt{ width:100%; height:46px; margin-top:6px; border:none; background:transparent; color:var(--ink-2); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer }
+.pm-alt:hover{ color:var(--ink) }
+/* secured (sent) state */
+.pm-done-ic{ width:72px; height:72px; margin:8px auto 0; border-radius:50%; background:var(--safe);
+  display:flex; align-items:center; justify-content:center; box-shadow:0 16px 32px -12px rgba(5,150,105,.6); animation:pmPop .42s var(--ease) both }
+.pm-done-ic > div{ display:flex; align-items:center; justify-content:center }
+.pm-done-t{ text-align:center; margin-top:16px; font-size:20px; font-weight:800; letter-spacing:-.02em }
+.pm-done-s{ text-align:center; margin:8px auto 0; font-size:14px; line-height:1.6; color:var(--muted); max-width:34ch }
+.pm-done-s b{ color:var(--ink); font-weight:700 }
+
+@keyframes pmFade{ from{ opacity:0 } to{ opacity:1 } }
+@keyframes pmUp{ from{ transform:translateY(100%) } to{ transform:none } }
+@keyframes pmPop{ from{ transform:scale(.5); opacity:0 } to{ transform:scale(1); opacity:1 } }
+@keyframes pmSpin{ to{ transform:rotate(360deg) } }
+
+@media (min-width:1024px){
+  .pm-scrim{ align-items:center; padding:24px }
+  .pm-sheet{ border-radius:22px; max-width:420px; padding:24px; animation:pmPopIn .3s var(--ease) both }
+}
+@keyframes pmPopIn{ from{ opacity:0; transform:translateY(10px) scale(.98) } to{ opacity:1; transform:none } }
+
+@media (prefers-reduced-motion:reduce){
+  .pm-scrim, .pm-sheet, .pm-done-ic{ animation:none }
+  .pm-spin{ animation-duration:1s }
 }
 `;
