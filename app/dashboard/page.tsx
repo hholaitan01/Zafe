@@ -10,6 +10,7 @@ import { Skeleton } from "@/app/_lib/States";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
+import VerifiedBadge from "@/app/_lib/VerifiedBadge";
 import { getCurrentUser } from "@/lib/auth";
 import { cacheDeals, getMyReputation, listMyDeals, loadUserProfile, naira, setCurrentDealId } from "@/lib/client";
 import type { Deal, DealStatus } from "@/lib/deals/types";
@@ -46,7 +47,7 @@ function TxRow({ tx, onOpen }: { tx: Deal; onOpen: (id: string) => void }) {
       <span className="dsh-row-ic">{itemIcon(tx.item.title)}</span>
       <span className="dsh-row-main">
         <span className="dsh-row-title">{tx.item.title}</span>
-        <span className="dsh-row-sub">with {who}</span>
+        <span className="dsh-row-sub">with {who}{tx.seller?.verified && tx.seller?.name ? <> <VerifiedBadge size={13} /></> : null}</span>
       </span>
       <span className="dsh-row-right">
         <span className="dsh-row-amt tf-mono">{naira(tx.item.amount)}</span>

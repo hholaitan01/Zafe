@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { CheckIcon, type CheckIconHandle } from "@animateicons/react/lucide/check-icon";
 import AppShell from "@/app/_lib/AppShell";
+import VerifiedBadge from "@/app/_lib/VerifiedBadge";
 import { createEscrowAccount, getCurrentDealId, getDeal, getSellerStanding, naira } from "@/lib/client";
 import type { CollectionAccount } from "@/lib/payments";
 import { computeFee } from "@/lib/payments/fee";
@@ -216,7 +217,7 @@ export default function FundPage() {
           <div className="fn-sum-row"><span>Item price</span><span>{deal ? naira(deal.item.amount) : "—"}</span></div>
           <div className="fn-sum-row"><span>Escrow fee (your half)</span><span>{deal ? naira(buyerFee) : "—"}</span></div>
           <div className="fn-sum-row"><span>Item</span><span>{deal?.item.title || "—"}</span></div>
-          <div className="fn-sum-row"><span>Seller</span><span>{deal?.seller?.name || "—"}</span></div>
+          <div className="fn-sum-row"><span>Seller</span><span>{deal?.seller?.name || "—"}{deal?.seller?.verified ? <> <VerifiedBadge size={13} /></> : null}</span></div>
           <div className="fn-sum-row fn-sum-last"><span>Released</span><span>On your confirm</span></div>
           <button className="tf-btn tf-btn--verify fn-pay-btn" disabled={busy || !deal} onClick={() => (awaiting ? void checkStatus() : openConfirm())}>
             {!busy && !awaiting && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"><path d="M6 10V8a6 6 0 0 1 12 0v2M5 10h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z" /></svg>}
@@ -246,7 +247,7 @@ export default function FundPage() {
                 <div className="pm-sum">
                   <div className="pm-sum-h">Summary</div>
                   <div className="pm-row"><span>Paying</span><span>{deal?.item.title || "Escrow deal"}</span></div>
-                  <div className="pm-row"><span>To</span><span>{deal?.seller?.name || "Seller"}, in escrow</span></div>
+                  <div className="pm-row"><span>To</span><span>{deal?.seller?.name || "Seller"}{deal?.seller?.verified ? <> <VerifiedBadge size={12} /></> : null}, in escrow</span></div>
                   <div className="pm-row"><span>Escrow fee (your half)</span><span className="tf-mono">{deal ? naira(buyerFee) : "—"}</span></div>
                   <div className="pm-row pm-total"><span>Total</span><span className="tf-mono">{amount}</span></div>
                 </div>

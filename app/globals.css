@@ -39,6 +39,16 @@
   --font: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Verified-seller seal (app/_lib/VerifiedBadge.tsx). A filled emerald seal with
+   a white check. On dark-aware screens in dark mode it flips to a white seal
+   with an emerald check, so it stays legible on a dark surface. */
+.zvb-seal { fill: var(--safe, #059669); }
+.zvb-check { stroke: #ffffff; }
+@media (prefers-color-scheme: dark) {
+  .tf-app.tf-dark-aware .zvb-seal { fill: #ffffff; }
+  .tf-app.tf-dark-aware .zvb-check { stroke: var(--safe, #059669); }
+}
+
 html,
 body {
   min-height: 100%;
