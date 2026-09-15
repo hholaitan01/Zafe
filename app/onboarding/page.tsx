@@ -10,7 +10,7 @@
    Replace any file at the same name to update the mosaic (see the README). */
 
 import { useCallback, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import LoginSheet from "@/app/_lib/LoginSheet";
 
 // The mosaic is ONE uniformly-tilted grid (the whole grid rotates as a plane,
 // like the reference), not tiles at random angles. 24 equal tiles fill it; each
@@ -28,9 +28,9 @@ const SLIDES = [
 ];
 
 export default function OnboardingPage() {
-  const router = useRouter();
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const onScroll = useCallback(() => {
     const el = trackRef.current;
@@ -44,13 +44,13 @@ export default function OnboardingPage() {
     if (el) el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
   };
 
-  const finish = () => {
+  // Both footer actions open the sign-in sheet over this screen. Reaching for it
+  // means onboarding is done, so we set the flag now (so splash won't send them
+  // back here); the sheet itself handles the actual sign-in + routing.
+  const openAuth = () => {
     try { localStorage.setItem("zafe.onboarded", "1"); } catch { /* storage blocked */ }
-    router.push("/login");
+    setAuthOpen(true);
   };
-
-  const onPrimary = () => (index < SLIDES.length - 1 ? goTo(index + 1) : finish());
-  const last = index === SLIDES.length - 1;
 
   return (
     <main className="ob">
@@ -83,9 +83,11 @@ export default function OnboardingPage() {
             <button key={i} className={`ob-dot${i === index ? " is-on" : ""}`} aria-label={`Go to step ${i + 1}`} aria-selected={i === index} onClick={() => goTo(i)} />
           ))}
         </div>
-        <button className="ob-cta" onClick={onPrimary}>{last ? "Get started" : "Continue"}</button>
-        <button className="ob-alt" onClick={finish}>{last ? "I already have an account" : "Skip"}</button>
+        <button className="ob-cta" onClick={openAuth}>Get started</button>
+        <button className="ob-alt" onClick={openAuth}>Login</button>
       </div>
+
+      <LoginSheet open={authOpen} onClose={() => setAuthOpen(false)} />
     </main>
   );
 }
@@ -128,9 +130,12 @@ const css = `
   box-shadow:0 16px 30px -14px rgba(5,150,105,.6); transition:transform .12s var(--ease,cubic-bezier(.22,1,.36,1)), background .18s ease }
 .ob-cta:active{ transform:scale(.985) }
 @media (hover:hover) and (pointer:fine){ .ob-cta:hover{ background:var(--safe-2,#047857) } }
-.ob-alt{ margin-top:10px; width:100%; height:42px; background:none; border:none; cursor:pointer;
-  font-family:inherit; font-size:14px; font-weight:600; color:var(--ink-2,#334155) }
-.ob-alt:hover{ color:var(--ink,#0F172A) }
+.ob-alt{ margin-top:10px; width:100%; height:52px; border-radius:16px; cursor:pointer;
+  background:var(--card,#fff); border:1px solid var(--line,#E6EAF0);
+  font-family:inherit; font-size:15.5px; font-weight:700; color:var(--ink,#0F172A);
+  transition:border-color .18s ease, transform .12s var(--ease,cubic-bezier(.22,1,.36,1)) }
+.ob-alt:active{ transform:scale(.985) }
+@media (hover:hover) and (pointer:fine){ .ob-alt:hover{ border-color:#CBD5E1 } }
 
 @media (min-width:560px){
   .ob{ max-width:440px; margin:0 auto; border-left:1px solid var(--line,#E6EAF0); border-right:1px solid var(--line,#E6EAF0) }

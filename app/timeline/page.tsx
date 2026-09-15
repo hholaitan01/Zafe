@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/_lib/AppShell";
+import VerifiedBadge from "@/app/_lib/VerifiedBadge";
 import { EmptyState, ErrorState, Skeleton } from "@/app/_lib/States";
 import { getCurrentUser } from "@/lib/auth";
 import { cacheDeal, confirmReceipt, getCachedDeal, getCurrentDealId, getDeal, naira } from "@/lib/client";
@@ -189,7 +190,7 @@ export default function TimelinePage() {
             <div className="td-parties">
               <div className="td-party"><span className="td-av td-av-safe">{initialsOf(me)}</span><div><div className="td-party-name">You</div><div className="td-party-role">Buyer</div></div></div>
               <svg className="td-swap" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 8h14M7 8l4-4M7 8l4 4M17 16H3M17 16l-4-4M17 16l-4 4" /></svg>
-              <div className="td-party td-party-r"><div style={{ textAlign: "right" }}><div className="td-party-name">{sellerName}</div><div className="td-party-role">Seller{deal.trust ? ` · TS ${deal.trust.score}` : ""}</div></div><span className="td-av td-av-ink">{initialsOf(sellerName)}</span></div>
+              <div className="td-party td-party-r"><div style={{ textAlign: "right" }}><div className="td-party-name">{sellerName}{deal.seller.verified ? <> <VerifiedBadge size={14} /></> : null}</div><div className="td-party-role">Seller{deal.trust ? ` · TS ${deal.trust.score}` : ""}</div></div><span className="td-av td-av-ink">{initialsOf(sellerName)}</span></div>
             </div>
           </div>
 
